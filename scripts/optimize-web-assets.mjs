@@ -19,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions';
-import { draco, dedup, prune, resample } from '@gltf-transform/functions';
+import { draco, dedup, resample } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import sharp from 'sharp';
 
@@ -76,7 +76,6 @@ async function optimizeGlb(inputPath, outputPath) {
   const doc = await io.read(inputPath);
   await doc.transform(
     dedup(),
-    prune(),
     resample(),
     draco({ quantizationVolume: 'scene' })
   );
