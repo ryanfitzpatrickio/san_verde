@@ -372,7 +372,14 @@ async function bootstrap() {
   const contactShadow = createVehicleContactShadow();
   const agentMount = agentSystem.agentRoot;
   const navigationDebugMount = agentSystem.debugRoot;
-  const stage = await createStage(state.selectedStageId, { disposeObjectTree, gltfLoader, loadingManager });
+  setLoadScreen(2, 'Preparing world…');
+  const stage = await createStage(state.selectedStageId, {
+    disposeObjectTree,
+    gltfLoader,
+    loadingManager,
+    onProgress: (pct, label) => setLoadScreen(pct, label),
+  });
+  setLoadScreen(90, 'Loading assets…');
   initializeStageSamplingAndPhysics(stage);
   applyStageShadowPolicy(stage);
   activeStage = stage;
@@ -405,19 +412,12 @@ async function bootstrap() {
     characterMount
   );
 
-  loadingManager.onStart = () => {
-    setProgress(12);
-    setLoadScreen(12, 'Loading…');
-  };
   loadingManager.onProgress = (_url, loaded, total) => {
-    const ratio = total > 0 ? loaded / total : 0.2;
-    const pct = Math.round(12 + ratio * 78);
-    setProgress(pct);
-    setLoadScreen(pct, `Loading… ${pct}%`);
+    const ratio = total > 0 ? loaded / total : 0;
+    setLoadScreen(Math.round(90 + ratio * 7), 'Loading assets…');
   };
   loadingManager.onLoad = () => {
-    setProgress(90);
-    setLoadScreen(90, 'Finalizing…');
+    setLoadScreen(97, 'Loading character…');
   };
 
   vehicleManager.mountCarAsset(carMount, wheelMount, createFallbackCar(), { isFallback: true });
@@ -594,8 +594,15 @@ async function bootstrap() {
 }
 
 async function rebuildStage(context, stageId) {
+  setLoadDone(false);
+  setLoadScreen(2, 'Preparing world…');
   destroyStageResources(activeStage);
-  const stage = await createStage(stageId, { disposeObjectTree, gltfLoader: context.gltfLoader, loadingManager: context.loadingManager });
+  const stage = await createStage(stageId, {
+    disposeObjectTree,
+    gltfLoader: context.gltfLoader,
+    loadingManager: context.loadingManager,
+    onProgress: (pct, label) => setLoadScreen(pct, label),
+  });
   initializeStageSamplingAndPhysics(stage);
   applyStageShadowPolicy(stage);
   activeStage = stage;
@@ -621,6 +628,9 @@ async function rebuildStage(context, stageId) {
   }
   updateBloomvilleMinimapOverlay(context);
   agentSystem.syncStage(stage, playerSystem.getActiveStagePosition(context));
+
+  setLoadScreen(100, 'Ready');
+  setTimeout(() => setLoadDone(true), 400);
 
   if (state.driveMode) {
     applyGarageSnapshot(snapGarageCamera(context.gameRuntime));

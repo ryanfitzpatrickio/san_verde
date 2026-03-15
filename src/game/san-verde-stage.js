@@ -15,6 +15,14 @@ import {
 import { buildRoadGraphAgentNavigation } from './navigation-network.js';
 import SAN_VERDE_MAP_DATA from './san-verde-map.json';
 import { resolveModelUrl } from '../assets/asset-base-url.js';
+import { ChunkGrid } from './chunk-grid.js';
+
+function yieldToMain() {
+  if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+    return scheduler.yield();
+  }
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
 
 const SAN_VERDE_CATALOG_MODULES = import.meta.glob('./bloomville/catalogs/*.json', {
   eager: true,
@@ -327,28 +335,37 @@ function normalizeCatalogEntry(entry) {
   };
 }
 
-export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = {}) {
+export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK, onProgress } = {}) {
+  const report = (pct, label) => onProgress?.(Math.round(pct), label);
+
+  report(3, 'Loading map data…');
   const data = await loadMapData();
+
   const catalogs = loadCatalogEntries();
   const activeCatalogs = buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY
     ? await filterCatalogEntriesForGlb(catalogs)
     : catalogs;
+
   const group = new THREE.Group();
   const collisionGroup = new THREE.Group();
   const riverFields = buildRiverFields(data.rivers);
   const coastlineFields = buildCoastlineFields(data.coastlines, data.spawn);
   const roadSurfaceSegments = buildRoadSurfaceSegments(data.roads);
-
   const graph = buildRoadGraph(data);
-  const groundField = buildGroundField(
+
+  report(7, 'Building terrain…');
+  const groundField = await buildGroundField(
     data.bounds,
     roadSurfaceSegments,
     riverFields,
     coastlineFields,
     TERRAIN_TOP_Y,
-    GROUND_FIELD_CELL_SIZE
+    GROUND_FIELD_CELL_SIZE,
+    (t) => report(7 + t * 10, 'Building terrain…')
   );
 
+  report(18, 'Creating roads & zones…');
+  await yieldToMain();
   group.add(createTerrain(groundField));
   group.add(createAllZones(data.zones, data.rivers));
   group.add(createAllRivers(data.rivers, riverFields));
@@ -357,15 +374,34 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     group.add(createOcean());
     group.add(createAllCoastlines(data.coastlines, coastlineFields));
   }
-  group.add(createZoneBuildings(data.zones, data.roads, activeCatalogs, { gltfLoader, buildingAssetMode }));
+
+  const chunkGrid = new ChunkGrid(800);
+  await createZoneBuildings(
+    data.zones, data.roads, activeCatalogs, chunkGrid,
+    (t) => report(20 + t * 55, 'Placing buildings…'),
+    { gltfLoader, buildingAssetMode }
+  );
+
+  report(76, 'Generating city LODs…');
+  await chunkGrid.buildMassGeometry(
+    (t) => report(76 + t * 9, 'Generating city LODs…')
+  );
+
+  report(86, 'Adding trees & clouds…');
+  await yieldToMain();
+  group.add(chunkGrid.root);
+  const skylineMesh = chunkGrid.buildSkylineMesh();
+  if (skylineMesh) group.add(skylineMesh);
   group.add(createTrees(data.zones));
   group.add(createClouds(data.bounds));
-  
+
   collisionGroup.add(createCollisionTerrain(groundField));
-  
+
+  report(89, 'Finalizing…');
+
   const spawn = data.spawn || { x: 0, z: 0, yaw: 0 };
   const spawnPosition = new THREE.Vector3(spawn.x, 0, spawn.z);
-  
+
   const stage = {
     id: 'san_verde',
     buildingAssetMode,
@@ -379,7 +415,9 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     agentNavigationRevision: 0,
     overviewBounds: data.bounds,
     sampleGround: createGroundFieldSampler(groundField),
-    update() {}
+    update(playerPos) {
+      if (playerPos) chunkGrid.update(playerPos);
+    }
   };
 
   return stage;
@@ -580,17 +618,15 @@ function createTrees(zones) {
   return createTreeInstances(placements);
 }
 
-function createZoneBuildings(zones, roads, catalogs, dependencies = {}) {
-  const group = new THREE.Group();
-  group.userData.noCollision = true;
-  group.userData.noSuspension = true;
-
+async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress, dependencies = {}) {
   const roadSegments = buildRoadSegments(roads);
+  const activeZones = (zones || []).filter(z => z.type !== 'park' && (z.points || []).length >= 3);
+  const totalZones = Math.max(activeZones.length, 1);
+  let zonesDone = 0;
 
-  for (const zone of zones || []) {
+  for (const zone of activeZones) {
     const points = (zone.points || []).map(normalizePoint).filter(Boolean);
-    if (points.length < 3) continue;
-    if (zone.type === 'park') continue;
+    if (points.length < 3) { zonesDone++; continue; }
 
     const savedPlots = (zone.plots || [])
       .map(normalizePlot)
@@ -600,7 +636,7 @@ function createZoneBuildings(zones, roads, catalogs, dependencies = {}) {
     const activeCatalogs = zoneCatalogs.length
       ? zoneCatalogs
       : catalogs.filter((entry) => entry.districts.includes('mixed_main'));
-    if (!activeCatalogs.length) continue;
+    if (!activeCatalogs.length) { zonesDone++; continue; }
 
     const placements = savedPlots.length
       ? savedPlots
@@ -624,12 +660,21 @@ function createZoneBuildings(zones, roads, catalogs, dependencies = {}) {
       building.quaternion.copy(createPlotQuaternion(plot));
       building.userData.noCollision = true;
       building.userData.noSuspension = true;
-      group.add(building);
+      const zoneStyle = ZONE_BUILDING_STYLE[zone.type];
+      const estHeight = zoneStyle
+        ? (zoneStyle.heightMin + zoneStyle.heightMax) * 0.5
+        : 12;
+      chunkGrid.addBuilding(building, plot.x, plot.z, frontage, depth, estHeight, plot.angle || 0);
+
+      if (plotIndex % 20 === 0) {
+        const t = (zonesDone + plotIndex / Math.max(placements.length, 1)) / totalZones;
+        onProgress?.(t);
+        await yieldToMain();
+      }
       plotIndex += 1;
     }
+    zonesDone += 1;
   }
-
-  return group;
 }
 
 function generateRuntimeZonePlots(points, zoneType, roadSegments) {
@@ -777,7 +822,7 @@ function createTreeInstances(placements) {
   return group;
 }
 
-function buildGroundField(bounds, roadSurfaceSegments, riverFields, coastlineFields, baseY, cellSize) {
+async function buildGroundField(bounds, roadSurfaceSegments, riverFields, coastlineFields, baseY, cellSize, onProgress) {
   const width = bounds.maxX - bounds.minX + TERRAIN_PADDING;
   const depth = bounds.maxZ - bounds.minZ + TERRAIN_PADDING;
   const segmentsX = Math.max(10, Math.round(width / Math.max(4, cellSize)));
@@ -792,6 +837,10 @@ function buildGroundField(bounds, roadSurfaceSegments, riverFields, coastlineFie
 
   let index = 0;
   for (let zIndex = 0; zIndex <= segmentsZ; zIndex += 1) {
+    if (zIndex % 30 === 0) {
+      onProgress?.(zIndex / segmentsZ);
+      await yieldToMain();
+    }
     const z = minZ + cellSizeZ * zIndex;
     for (let xIndex = 0; xIndex <= segmentsX; xIndex += 1) {
       const x = minX + cellSizeX * xIndex;
