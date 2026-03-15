@@ -1,16 +1,17 @@
 import * as THREE from 'three';
 
 import { createDefaultEngineState } from './engine-system.js';
+import { resolveModelUrl } from './assets/asset-base-url.js';
 
 export const MODEL_CONFIG = {
   defaultCarId: 'mustang',
   defaultStageId: 'test_course',
   defaultDrivingStyle: 'arcade',
-  defaultCarUrl: '/models/mustang.glb',
-  defaultTireUrl: '/models/tire_s.glb',
-  defaultSteeringWheelUrl: '/models/steering_wheel.glb',
-  bikeBodyUrl: '/models/triumph.glb',
-  bikeWheelUrl: '/models/motorcycle_wheel.glb',
+  defaultCarUrl: resolveModelUrl('/models/mustang.glb'),
+  defaultTireUrl: resolveModelUrl('/models/tire_s.glb'),
+  defaultSteeringWheelUrl: resolveModelUrl('/models/steering_wheel.glb'),
+  bikeBodyUrl: resolveModelUrl('/models/triumph.glb'),
+  bikeWheelUrl: resolveModelUrl('/models/motorcycle_wheel.glb'),
   steeringWheelDiameter: 0.38,
   steeringWheelRotation: [0, Math.PI, 0],
   steeringWheelTurnRatio: -6.2,

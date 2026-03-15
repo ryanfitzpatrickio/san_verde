@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:game
+        env:
+          VITE_ASSETS_BASE_URL: ${{ vars.ASSETS_BASE_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
