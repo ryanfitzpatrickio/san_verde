@@ -1,4 +1,5 @@
 import './style.css';
+import { resolvePublicUrl } from './assets/asset-base-url.js';
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -345,10 +346,10 @@ async function bootstrap() {
 
   const loadingManager = new THREE.LoadingManager();
   const dracoLoader = new DRACOLoader(loadingManager);
-  dracoLoader.setDecoderPath('/vendor/draco/');
+  dracoLoader.setDecoderPath(resolvePublicUrl('/vendor/draco/'));
 
   const ktx2Loader = new KTX2Loader(loadingManager);
-  ktx2Loader.setTranscoderPath('/vendor/basis/');
+  ktx2Loader.setTranscoderPath(resolvePublicUrl('/vendor/basis/'));
   ktx2Loader.detectSupport(renderer);
 
   const gltfLoader = new GLTFLoader(loadingManager);
