@@ -86,12 +86,11 @@ async function optimizeGlb(inputPath, outputPath) {
 // ─── texture optimization ─────────────────────────────────────────────────────
 
 async function optimizePng(inputPath, outputPath) {
-  // Convert to WebP — same visual quality, ~40% smaller
-  const webpPath = outputPath.replace(/\.png$/i, '.webp');
+  // Compress PNG in-place — keeps filenames identical, no code changes needed
   await sharp(inputPath)
-    .webp({ quality: 85, effort: 6 })
-    .toFile(webpPath);
-  return webpPath;
+    .png({ quality: 85, compressionLevel: 9, effort: 10 })
+    .toFile(outputPath);
+  return outputPath;
 }
 
 // ─── directory walker ─────────────────────────────────────────────────────────
@@ -131,7 +130,7 @@ async function processDir(inputDir, outputDir) {
     } else if (!MODELS_ONLY && ext === '.png') {
       try {
         const actualOut = await optimizePng(inPath, outPath);
-        await report(entry.name + ' → .webp', inPath, actualOut);
+        await report(entry.name, inPath, actualOut);
       } catch (err) {
         console.warn(`  ! Skipped ${entry.name}: ${err.message}`);
         await fs.copyFile(inPath, outPath);

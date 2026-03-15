@@ -14,7 +14,7 @@ import {
 } from './catalog-lod.js';
 import { buildRoadGraphAgentNavigation } from './navigation-network.js';
 import SAN_VERDE_MAP_DATA from './san-verde-map.json';
-import { resolvePublicUrl } from '../assets/asset-base-url.js';
+import { resolveModelUrl } from '../assets/asset-base-url.js';
 
 const SAN_VERDE_CATALOG_MODULES = import.meta.glob('./bloomville/catalogs/*.json', {
   eager: true,
@@ -42,7 +42,7 @@ function loadTexture(name) {
   if (repeat) {
     texture.repeat.set(repeat[0], repeat[1]);
   }
-  loadTextureImage(texture, resolvePublicUrl(`/full%20textures/${name}.png`), resolvePublicUrl(`/textures/${name}.png`));
+  loadTextureImage(texture, resolveModelUrl(`/full%20textures/${name}.png`), resolveModelUrl(`/textures/${name}.png`));
   TEXTURE_CACHE.set(name, texture);
   return texture;
 }

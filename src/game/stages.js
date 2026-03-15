@@ -4,6 +4,7 @@ import { createBloomvilleStage } from './bloomville-stage.js';
 import { BUILDING_ASSET_MODE_GLB_ONLY } from './catalog-lod.js';
 import { createCityStage } from './city-stage.js';
 import { createSanVerdeStage } from './san-verde-stage.js';
+import { resolveModelUrl } from '../assets/asset-base-url.js';
 
 let testGroundTexture = null;
 
@@ -133,7 +134,7 @@ function getTestGroundTexture() {
     return testGroundTexture;
   }
 
-  testGroundTexture = new THREE.TextureLoader().load('/texture.png');
+  testGroundTexture = new THREE.TextureLoader().load(resolveModelUrl('/texture.png'));
   testGroundTexture.wrapS = THREE.RepeatWrapping;
   testGroundTexture.wrapT = THREE.RepeatWrapping;
   testGroundTexture.repeat.set(5, 5);
