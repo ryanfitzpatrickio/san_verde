@@ -248,15 +248,15 @@ export const MODEL_CONFIG = {
     }
   },
   character: {
-    modelUrl: resolvePublicUrl('/models/norm.fbx'),
+    modelUrl: resolveModelUrl('/models/norm.fbx'),
     animationUrls: {
-      idle: resolvePublicUrl('/models/Locomotion Pack/idle.fbx'),
-      walk: resolvePublicUrl('/models/Locomotion Pack/walking.fbx'),
-      run: resolvePublicUrl('/models/Locomotion Pack/running.fbx'),
-      enterCar: resolvePublicUrl('/models/Locomotion Pack/Entering Car.fbx'),
-      drive: resolvePublicUrl('/models/Locomotion Pack/Driving.fbx'),
-      exitCar: resolvePublicUrl('/models/Locomotion Pack/Exiting Car.fbx'),
-      honk: resolvePublicUrl('/models/Locomotion Pack/Honking Horn.fbx')
+      idle: resolveModelUrl('/models/Locomotion Pack/idle.fbx'),
+      walk: resolveModelUrl('/models/Locomotion Pack/walking.fbx'),
+      run: resolveModelUrl('/models/Locomotion Pack/running.fbx'),
+      enterCar: resolveModelUrl('/models/Locomotion Pack/Entering Car.fbx'),
+      drive: resolveModelUrl('/models/Locomotion Pack/Driving.fbx'),
+      exitCar: resolveModelUrl('/models/Locomotion Pack/Exiting Car.fbx'),
+      honk: resolveModelUrl('/models/Locomotion Pack/Honking Horn.fbx')
     },
     height: 1.9,
     walkSpeed: 3.4,
