@@ -42,34 +42,16 @@ function loadTexture(name) {
   if (repeat) {
     texture.repeat.set(repeat[0], repeat[1]);
   }
-  loadTextureImage(texture, resolveModelUrl(`/full%20textures/${name}.png`), resolveModelUrl(`/textures/${name}.png`));
+  IMAGE_LOADER.load(
+    resolveModelUrl(`/textures/${name}.png`),
+    (image) => { texture.image = image; texture.needsUpdate = true; },
+    undefined,
+    () => console.warn(`Texture not found: /textures/${name}.png`)
+  );
   TEXTURE_CACHE.set(name, texture);
   return texture;
 }
 
-function loadTextureImage(texture, primaryUrl, fallbackUrl) {
-  IMAGE_LOADER.load(
-    primaryUrl,
-    (image) => {
-      texture.image = image;
-      texture.needsUpdate = true;
-    },
-    undefined,
-    () => {
-      IMAGE_LOADER.load(
-        fallbackUrl,
-        (image) => {
-          texture.image = image;
-          texture.needsUpdate = true;
-        },
-        undefined,
-        () => {
-          console.warn(`Texture not found in full textures or textures: ${fallbackUrl}`);
-        }
-      );
-    }
-  );
-}
 
 const ROAD_KIND_STYLE = {
   boulevard: { roadWidth: 28, sidewalkWidth: 7, medianWidth: 5 },

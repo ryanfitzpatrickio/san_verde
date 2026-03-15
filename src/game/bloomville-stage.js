@@ -32,34 +32,16 @@ function loadTexture(name) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
-  loadTextureImage(texture, resolveModelUrl(`/full%20textures/${name}.png`), resolveModelUrl(`/textures/${name}.png`));
+  IMAGE_LOADER.load(
+    resolveModelUrl(`/textures/${name}.png`),
+    (image) => { texture.image = image; texture.needsUpdate = true; },
+    undefined,
+    () => console.warn(`Texture not found: /textures/${name}.png`)
+  );
   TEXTURE_CACHE.set(name, texture);
   return texture;
 }
 
-function loadTextureImage(texture, primaryUrl, fallbackUrl) {
-  IMAGE_LOADER.load(
-    primaryUrl,
-    (image) => {
-      texture.image = image;
-      texture.needsUpdate = true;
-    },
-    undefined,
-    () => {
-      IMAGE_LOADER.load(
-        fallbackUrl,
-        (image) => {
-          texture.image = image;
-          texture.needsUpdate = true;
-        },
-        undefined,
-        () => {
-          console.warn(`Texture not found in full textures or textures: ${fallbackUrl}`);
-        }
-      );
-    }
-  );
-}
 
 // Preload commonly used textures
 const COMMON_TEXTURES = [
