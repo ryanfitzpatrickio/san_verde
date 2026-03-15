@@ -1,0 +1,30 @@
+{
+  "bounds": {
+    "minX": -280,
+    "maxX": 280,
+    "minZ": -260,
+    "maxZ": 260
+  },
+  "spawn": {
+    "position": [0, 0, 214],
+    "yaw": 3.141592653589793
+  },
+  "roads": [
+    { "id": "harbor_drive", "orientation": "horizontal", "center": [0, 190], "length": 520, "width": 24, "kind": "avenue" },
+    { "id": "blossom_way", "orientation": "horizontal", "center": [0, 24], "length": 560, "width": 30, "kind": "boulevard" },
+    { "id": "orchard_street", "orientation": "horizontal", "center": [0, -142], "length": 520, "width": 22, "kind": "avenue" },
+    { "id": "west_loop", "orientation": "vertical", "center": [-182, 0], "length": 520, "width": 22, "kind": "avenue" },
+    { "id": "civic_axis", "orientation": "vertical", "center": [0, 0], "length": 520, "width": 30, "kind": "boulevard" },
+    { "id": "east_market", "orientation": "vertical", "center": [172, 0], "length": 520, "width": 22, "kind": "street" }
+  ],
+  "blocks": [
+    { "id": "northwest_homes", "center": [-92, 104], "size": [156, 112], "district": "residential_low", "frontages": ["north", "south", "east", "west"] },
+    { "id": "northeast_courts", "center": [88, 104], "size": [148, 112], "district": "residential_mid", "frontages": ["north", "south", "east", "west"] },
+    { "id": "mainstreet_west", "center": [-92, -58], "size": [156, 112], "district": "mixed_main", "frontages": ["north", "south", "east", "west"] },
+    { "id": "civic_square", "center": [88, -58], "size": [148, 112], "district": "civic", "kind": "plaza" },
+    { "id": "orchard_yards", "center": [-92, -206], "size": [156, 84], "district": "industrial_light", "frontages": ["north", "east", "west"] },
+    { "id": "meadow_park", "center": [88, -206], "size": [148, 84], "district": "park", "kind": "park" },
+    { "id": "outer_west_row", "center": [-232, 24], "size": [72, 296], "district": "residential_low", "frontages": ["north", "south", "east"] },
+    { "id": "outer_east_row", "center": [232, 24], "size": [72, 296], "district": "mixed_main", "frontages": ["north", "south", "west"] }
+  ]
+}

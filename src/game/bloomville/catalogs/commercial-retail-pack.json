@@ -1,0 +1,2801 @@
+{
+  "packId": "commercial-retail-pack",
+  "entries": [
+    {
+      "id": "corner_store",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          10,
+          14
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          1,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#d4c8b8",
+        "accent": "#8a5a40",
+        "roof": "#4a4d55",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            8,
+            4.5,
+            8
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "features": {
+        "awning": {
+          "width": 6,
+          "depth": 1.2,
+          "height": 0.2,
+          "y": 2.8,
+          "material": "accent",
+          "texture": "metal_panel"
+        }
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "trim_wood",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "convenience_store",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          1.5,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#c04830",
+        "roof": "#454850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            11,
+            5,
+            11
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            11.5,
+            1.2,
+            0.4
+          ],
+          "offset": [
+            0,
+            4.2,
+            5.2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "wood_oak",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "small_supermarket",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#b8b4ac",
+        "accent": "#387848",
+        "roof": "#505250",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            6.5,
+            22
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            5.5,
+            0.6
+          ],
+          "offset": [
+            0,
+            2.75,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "supermarket",
+      "districts": [
+        "commercial_general"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          36,
+          52
+        ],
+        "depth": [
+          32,
+          48
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#b0aca4",
+        "accent": "#286838",
+        "roof": "#484a48",
+        "glass": "#849cb5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            8,
+            28
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14,
+            6,
+            0.8
+          ],
+          "offset": [
+            0,
+            5,
+            13.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "hypermarket",
+      "districts": [
+        "commercial_regional"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          56,
+          80
+        ],
+        "depth": [
+          48,
+          72
+        ],
+        "setback": [
+          16,
+          28
+        ]
+      },
+      "palette": {
+        "body": "#a8a49c",
+        "accent": "#185830",
+        "roof": "#404240",
+        "glass": "#8298b2"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            50,
+            10,
+            42
+          ],
+          "offset": [
+            0,
+            5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20,
+            8,
+            1
+          ],
+          "offset": [
+            0,
+            6,
+            20.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.6,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "trim_wood",
+        "roof": "roof_metal",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "farmers_market",
+      "districts": [
+        "mixed_main",
+        "civic"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          32
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#c8b898",
+        "accent": "#688848",
+        "roof": "#605840",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "accent",
+          "size": [
+            18,
+            4,
+            18
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            8,
+            2.5,
+            8
+          ],
+          "offset": [
+            0,
+            1.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.5,
+        "overhang": 1.5,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "textures": {
+        "body": "siding_tan",
+        "accent": "wood_weathered",
+        "roof": "wood_cedar",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "strip_mall",
+      "districts": [
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#c0b8ac",
+        "accent": "#7a6858",
+        "roof": "#505250",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            34,
+            6,
+            14
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            35,
+            0.6,
+            0.8
+          ],
+          "offset": [
+            0,
+            4.5,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.42,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "awning_solid",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "shopping_mall",
+      "districts": [
+        "commercial_regional"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          56,
+          84
+        ],
+        "depth": [
+          44,
+          68
+        ],
+        "setback": [
+          12,
+          24
+        ]
+      },
+      "palette": {
+        "body": "#b8b4ac",
+        "accent": "#606870",
+        "roof": "#484a50",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            48,
+            14,
+            38
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16,
+            12,
+            10
+          ],
+          "offset": [
+            0,
+            6,
+            15
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "concrete_block",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "department_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          36
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#c8c4bc",
+        "accent": "#685850",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            12,
+            18
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            4,
+            8.8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            8,
+            8.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "trim_wood",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "boutique",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          1.5
+        ]
+      },
+      "palette": {
+        "body": "#e0d4c4",
+        "accent": "#a05848",
+        "roof": "#484550",
+        "glass": "#90acc4"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            4.5,
+            7
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "features": {
+        "awning": {
+          "width": 4,
+          "depth": 0.9,
+          "height": 0.18,
+          "y": 2.6,
+          "material": "accent",
+          "texture": "brick_brown"
+        }
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "wood_oak",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "chain_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#c84838",
+        "roof": "#454850",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5.5,
+            10
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10.5,
+            1.4,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.2,
+            4.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "wood_oak",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "flagship_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          20,
+          30
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#d0ccc4",
+        "accent": "#585860",
+        "roof": "#404248",
+        "glass": "#90aac0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            14,
+            16
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.5,
+            1.2
+          ],
+          "offset": [
+            0,
+            5,
+            8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.5,
+            1.2
+          ],
+          "offset": [
+            0,
+            9,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "metal_panel",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "pharmacy",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#e8e4d8",
+        "accent": "#3878b8",
+        "roof": "#484a50",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5,
+            10
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            4,
+            3.5,
+            0.4
+          ],
+          "offset": [
+            0,
+            3.25,
+            4.9
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "glass_blue",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "hardware_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          14,
+          22
+        ],
+        "depth": [
+          16,
+          24
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#c4b8a4",
+        "accent": "#c86828",
+        "roof": "#505048",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            5.5,
+            14
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12.5,
+            1,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.2,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "brick_tan",
+        "accent": "wood_oak",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "home_improvement",
+      "districts": [
+        "commercial_general",
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          36,
+          54
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          10,
+          18
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a0",
+        "accent": "#c85828",
+        "roof": "#484a48",
+        "glass": "#849cb5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            9,
+            24
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14,
+            7,
+            0.8
+          ],
+          "offset": [
+            0,
+            5.5,
+            11.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "awning_solid",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "furniture_store",
+      "districts": [
+        "commercial_general"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          26,
+          40
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#d0c8b8",
+        "accent": "#685848",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            22,
+            7,
+            16
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            22.5,
+            0.6,
+            1
+          ],
+          "offset": [
+            0,
+            5.2,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_corrugated",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "electronics_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          14,
+          22
+        ],
+        "depth": [
+          14,
+          22
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#b0b4bc",
+        "accent": "#2868c8",
+        "roof": "#404550",
+        "glass": "#849cb5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            6,
+            12
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12.5,
+            1.5,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.5,
+            5.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "metal_panel_blue"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_panel_blue",
+        "roof": "metal_panel_blue",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "bookstore",
+      "districts": [
+        "mixed_main",
+        "civic"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          10,
+          16
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#d8ccc0",
+        "accent": "#586848",
+        "roof": "#504840",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            9,
+            5.5,
+            11
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "features": {
+        "awning": {
+          "width": 7,
+          "depth": 1,
+          "height": 0.18,
+          "y": 3,
+          "material": "accent",
+          "texture": "trim_wood"
+        }
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "metal_corrugated",
+        "roof": "wood_cedar",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "clothing_store",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          8,
+          14
+        ],
+        "depth": [
+          10,
+          16
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#e4d8c8",
+        "accent": "#a85878",
+        "roof": "#484850",
+        "glass": "#8ca8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            7,
+            4.5,
+            9
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "awning_solid",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "thrift_store",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#688058",
+        "roof": "#505048",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5,
+            10
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10.5,
+            0.8,
+            0.4
+          ],
+          "offset": [
+            0,
+            3.8,
+            4.9
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.36,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "brick_weathered",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "antique_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#d0c0a8",
+        "accent": "#705838",
+        "roof": "#484038",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.2,
+        "overhang": 0.4,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "brick_orange",
+        "accent": "trim_wood",
+        "roof": "wood_cedar",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "pet_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#b87848",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5.5,
+            10
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10.5,
+            1.2,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.2,
+            4.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "awning_solid",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "toy_store",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          10,
+          16
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          1.5,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#e0d8cc",
+        "accent": "#e85838",
+        "roof": "#484850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            9,
+            5,
+            11
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            9.5,
+            1.4,
+            0.4
+          ],
+          "offset": [
+            0,
+            3.8,
+            5.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "wood_oak",
+        "roof": "roof_shingles_black",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "jewelry_store",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          1.5
+        ]
+      },
+      "palette": {
+        "body": "#f0e8dc",
+        "accent": "#c8a858",
+        "roof": "#484550",
+        "glass": "#90acc4"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            4.5,
+            7
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "wood_oak",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "florist",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c8",
+        "accent": "#68a868",
+        "roof": "#505850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "features": {
+        "awning": {
+          "width": 4,
+          "depth": 0.8,
+          "height": 0.15,
+          "y": 2.4,
+          "material": "accent",
+          "texture": "wood_weathered"
+        }
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_weathered",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "garden_center",
+      "districts": [
+        "commercial_general",
+        "residential_low"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          40
+        ],
+        "depth": [
+          22,
+          36
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b0",
+        "accent": "#488848",
+        "roof": "#605848",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            6,
+            12
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20,
+            3.5,
+            18
+          ],
+          "offset": [
+            0,
+            1.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.2,
+        "overhang": 1.2,
+        "material": "roof",
+        "texture": "roof_shingles_brown"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_corrugated",
+        "roof": "roof_tile_clay",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "gift_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          1.5
+        ]
+      },
+      "palette": {
+        "body": "#e0d4c8",
+        "accent": "#a86868",
+        "roof": "#484850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_black",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "newsstand",
+      "districts": [
+        "mixed_main",
+        "civic"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          3,
+          5
+        ],
+        "depth": [
+          3,
+          5
+        ],
+        "setback": [
+          0.2,
+          0.5
+        ]
+      },
+      "palette": {
+        "body": "#d0c8b8",
+        "accent": "#c85838",
+        "roof": "#504840",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            2.5,
+            2.5,
+            2.5
+          ],
+          "offset": [
+            0,
+            1.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.2,
+        "inset": 0.15,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "stone_fieldstone",
+        "roof": "wood_cedar",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "liquor_store",
+      "districts": [
+        "mixed_main",
+        "commercial_general"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          8,
+          14
+        ],
+        "depth": [
+          10,
+          16
+        ],
+        "setback": [
+          1.5,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#c0b8ac",
+        "accent": "#6a4868",
+        "roof": "#484850",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            7,
+            5,
+            9
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            7.5,
+            0.8,
+            0.4
+          ],
+          "offset": [
+            0,
+            3.8,
+            4.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "coffee_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#e8dcc8",
+        "accent": "#6a4830",
+        "roof": "#484850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4,
+            8
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "features": {
+        "awning": {
+          "width": 5,
+          "depth": 1,
+          "height": 0.18,
+          "y": 2.4,
+          "material": "accent",
+          "texture": "metal_corrugated"
+        }
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "trim_wood",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "bakery",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#f0e4d4",
+        "accent": "#c89848",
+        "roof": "#504840",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4.2,
+            8
+          ],
+          "offset": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.2,
+        "overhang": 0.5,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "features": {
+        "awning": {
+          "width": 5,
+          "depth": 0.9,
+          "height": 0.15,
+          "y": 2.5,
+          "material": "accent",
+          "texture": "brick_red"
+        }
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_brown",
+        "roof": "wood_cedar",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "butcher_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#a84838",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4,
+            8
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "trim_wood",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "fish_market",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          10,
+          14
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#c8d0d8",
+        "accent": "#4888a8",
+        "roof": "#505860",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            8,
+            3.8,
+            8
+          ],
+          "offset": [
+            0,
+            1.9,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_shingles_blue"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "storefront_aluminum",
+        "roof": "metal_corrugated",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "greengrocer",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#e0d8cc",
+        "accent": "#488848",
+        "roof": "#505850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            3.8,
+            7
+          ],
+          "offset": [
+            0,
+            1.9,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.28,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "metal_corrugated",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "flower_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#f0e8dc",
+        "accent": "#88a868",
+        "roof": "#605848",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.28,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "features": {
+        "awning": {
+          "width": 4,
+          "depth": 0.8,
+          "height": 0.15,
+          "y": 2.4,
+          "material": "accent",
+          "texture": "wood_weathered"
+        }
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "stone_limestone",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "barbershop",
+      "districts": [
+        "mixed_main",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          1.5
+        ]
+      },
+      "palette": {
+        "body": "#d0c8bc",
+        "accent": "#c85838",
+        "roof": "#504840",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "salon",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#e8e0d4",
+        "accent": "#c878a8",
+        "roof": "#484850",
+        "glass": "#90acc4"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4.2,
+            8
+          ],
+          "offset": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.24,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "concrete_gray",
+        "roof": "roof_metal",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "tattoo_parlor",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          8,
+          12
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#383840",
+        "accent": "#a83838",
+        "roof": "#303038",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5,
+            4,
+            7
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.28,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "concrete_dark",
+        "accent": "metal_corrugated",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "record_store",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          10,
+          14
+        ],
+        "depth": [
+          12,
+          16
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#484850",
+        "accent": "#f0c838",
+        "roof": "#383840",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            8,
+            4.5,
+            10
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "metal_aluminum",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "comic_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          10,
+          14
+        ],
+        "depth": [
+          12,
+          16
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#3868c8",
+        "roof": "#505058",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            8,
+            4.2,
+            10
+          ],
+          "offset": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_panel_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "vintage_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#d0c0a8",
+        "accent": "#705838",
+        "roof": "#484038",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4.5,
+            8
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.4,
+        "overhang": 0.5,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "brick_orange",
+        "accent": "metal_corrugated",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "music_store",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#983838",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5,
+            10
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "trim_wood",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "camera_shop",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#d0ccc4",
+        "accent": "#383838",
+        "roof": "#404248",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4.5,
+            8
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "optician",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          10,
+          14
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#f0e8dc",
+        "accent": "#4888b8",
+        "roof": "#484a50",
+        "glass": "#90acc4"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            4.2,
+            8
+          ],
+          "offset": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "glass_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    }
+  ]
+}

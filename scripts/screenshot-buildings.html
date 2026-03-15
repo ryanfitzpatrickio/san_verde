@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Catalog Screenshots</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: system-ui, sans-serif; 
+      background: #1a1a1a; 
+      color: #fff;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 320px;
+      background: #222;
+      padding: 16px;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
+    #controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 16px;
+      background: #3a7d3a;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #4a8d4a; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    #prevBtn, #nextBtn { background: #2a5a8a; }
+    #prevBtn:hover, #nextBtn:hover { background: #3a6a9a; }
+    #building-info {
+      background: #333;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    #building-info h3 { margin-bottom: 8px; color: #8fa; }
+    #building-info p { font-size: 12px; color: #aaa; margin: 4px 0; }
+    #catalog-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #catalog-list button {
+      text-align: left;
+      background: #333;
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+    #catalog-list button:hover { background: #444; }
+    #catalog-list button.active { background: #3a7d3a; }
+    #viewer {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas { 
+      background: linear-gradient(180deg, #87ceeb 0%, #b0d4e8 50%, #d4e4d1 100%);
+      border-radius: 8px;
+    }
+    #status {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: #333;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    #auto-controls {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #444;
+    }
+    #auto-controls label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    #auto-controls input {
+      width: 60px;
+      padding: 4px;
+      border-radius: 3px;
+      border: 1px solid #555;
+      background: #333;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <div id="controls">
+      <button id="prevBtn">Prev</button>
+      <button id="nextBtn">Next</button>
+      <button id="saveBtn">Save PNG</button>
+    </div>
+    <div id="building-info">
+      <h3 id="building-name">Loading...</h3>
+      <p id="building-pack">Pack: -</p>
+      <p id="building-districts">Districts: -</p>
+      <p id="building-count">Building 0 / 0</p>
+    </div>
+    <div id="catalog-list"></div>
+    <div id="auto-controls">
+      <label>
+        Delay (ms): <input type="number" id="delay-input" value="500">
+      </label>
+      <button id="autoBtn">Auto Save All</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
+  </div>
+  <div id="viewer">
+    <canvas id="canvas" width="800" height="600"></canvas>
+  </div>
+  <div id="status">Ready</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const CATALOG_MODULES = import.meta.glob('../src/game/bloomville/catalogs/*.json', { eager: true, import: 'default' });
+
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, preserveDrawingBuffer: true, antialias: true });
+    renderer.setSize(800, 600);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#87ceeb');
+
+    const camera = new THREE.PerspectiveCamera(30, 800 / 600, 0.1, 1000);
+    
+    const isoAngle = Math.atan(1 / Math.sqrt(2));
+    const isoRotation = Math.PI / 4;
+    camera.position.set(40, 40, 40);
+    camera.lookAt(0, 0, 0);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(20, 40, 20);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 100;
+    directionalLight.shadow.camera.left = -30;
+    directionalLight.shadow.camera.right = 30;
+    directionalLight.shadow.camera.top = 30;
+    directionalLight.shadow.camera.bottom = -30;
+    scene.add(directionalLight);
+
+    const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: '#7a9970', roughness: 0.95 });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const BOX_GEOMETRY_CACHE = new Map();
+    const GABLE_ROOF_GEOMETRY_CACHE = new Map();
+
+    function getBoxGeometry(size) {
+      const key = size.join(':');
+      if (!BOX_GEOMETRY_CACHE.has(key)) {
+        const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+        BOX_GEOMETRY_CACHE.set(key, geometry);
+      }
+      return BOX_GEOMETRY_CACHE.get(key);
+    }
+
+    function getGableRoofGeometry(width, depth, height) {
+      const key = `${width}:${depth}:${height}`;
+      if (!GABLE_ROOF_GEOMETRY_CACHE.has(key)) {
+        const halfWidth = width * 0.5;
+        const halfDepth = depth * 0.5;
+        const geometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+          -halfWidth, 0, -halfDepth,
+          halfWidth, 0, -halfDepth,
+          0, height, -halfDepth,
+
+          -halfWidth, 0, halfDepth,
+          0, height, halfDepth,
+          halfWidth, 0, halfDepth,
+
+          -halfWidth, 0, -halfDepth,
+          0, height, -halfDepth,
+          0, height, halfDepth,
+          -halfWidth, 0, halfDepth,
+
+          halfWidth, 0, -halfDepth,
+          halfWidth, 0, halfDepth,
+          0, height, halfDepth,
+          0, height, -halfDepth,
+
+          -halfWidth, 0, -halfDepth,
+          -halfWidth, 0, halfDepth,
+          halfWidth, 0, halfDepth,
+          halfWidth, 0, -halfDepth
+        ]);
+        const indices = [
+          0, 1, 2,
+          3, 4, 5,
+          6, 7, 8,
+          6, 8, 9,
+          10, 11, 12,
+          10, 12, 13,
+          14, 15, 16,
+          14, 16, 17
+        ];
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        GABLE_ROOF_GEOMETRY_CACHE.set(key, geometry);
+      }
+      return GABLE_ROOF_GEOMETRY_CACHE.get(key);
+    }
+
+    function createPaletteMaterials(palette) {
+      const result = {};
+      for (const [key, color] of Object.entries(palette)) {
+        result[key] = new THREE.MeshStandardMaterial({
+          color,
+          roughness: key === 'glass' ? 0.24 : 0.9,
+          metalness: key === 'glass' ? 0.12 : 0.03
+        });
+      }
+      return result;
+    }
+
+    function addBuildingFeatures(group, entry, materials) {
+      if (entry.features?.porch) {
+        const porch = entry.features.porch;
+        const mesh = new THREE.Mesh(
+          getBoxGeometry([porch.width, porch.height || 0.4, porch.depth]),
+          materials[porch.material || 'accent'] || materials.accent
+        );
+        mesh.position.set(0, (porch.height || 0.4) * 0.5, porch.depth * 0.5 + 0.4);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+
+      if (entry.features?.awning) {
+        const awning = entry.features.awning;
+        const mesh = new THREE.Mesh(
+          getBoxGeometry([awning.width, awning.height || 0.22, awning.depth]),
+          materials[awning.material || 'accent'] || materials.accent
+        );
+        mesh.position.set(0, awning.y || 3.4, awning.depth * 0.5 + 0.2);
+        mesh.castShadow = true;
+        group.add(mesh);
+      }
+
+      if (entry.features?.signBand) {
+        const band = entry.features.signBand;
+        const mesh = new THREE.Mesh(
+          getBoxGeometry([band.width, band.height || 0.55, band.depth || 0.25]),
+          materials[band.material || 'accent'] || materials.accent
+        );
+        mesh.position.set(0, band.y || 3.1, band.z || 5.4);
+        group.add(mesh);
+      }
+
+      if (entry.features?.garage) {
+        const garage = entry.features.garage;
+        const mesh = new THREE.Mesh(
+          getBoxGeometry([garage.width, garage.height, garage.depth]),
+          materials[garage.material || 'accent'] || materials.accent
+        );
+        mesh.position.set(garage.width / 2 + 6, garage.height / 2, 0);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+
+      if (entry.features?.gatehouse) {
+        const gatehouse = entry.features.gatehouse;
+        const mesh = new THREE.Mesh(
+          getBoxGeometry([gatehouse.width, gatehouse.height, gatehouse.depth]),
+          materials[gatehouse.material || 'accent'] || materials.accent
+        );
+        mesh.position.set(0, gatehouse.height / 2, gatehouse.depth / 2 + 8);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+    }
+
+    function createRoofMesh(roof, buildingGroup, materials) {
+      const bounds = new THREE.Box3().setFromObject(buildingGroup);
+      const size = bounds.getSize(new THREE.Vector3());
+      const center = bounds.getCenter(new THREE.Vector3());
+
+      if (roof.type === 'gable') {
+        const geometry = getGableRoofGeometry(
+          size.x + (roof.overhang || 0.6) * 2,
+          size.z + (roof.overhang || 0.6) * 2,
+          roof.height || 1.8
+        );
+        const mesh = new THREE.Mesh(geometry, materials[roof.material || 'roof'] || materials.roof);
+        mesh.position.set(center.x, bounds.max.y + (roof.height || 1.8) * 0.5 - 0.05, center.z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      }
+
+      const flatHeight = roof.height || 0.35;
+      const inset = roof.inset || 0.45;
+      const mesh = new THREE.Mesh(
+        getBoxGeometry([Math.max(1, size.x - inset * 2), flatHeight, Math.max(1, size.z - inset * 2)]),
+        materials[roof.material || 'roof'] || materials.roof
+      );
+      mesh.position.set(center.x, bounds.max.y + flatHeight * 0.5, center.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function createBuildingFromEntry(entry) {
+      const group = new THREE.Group();
+      const materials = createPaletteMaterials(entry.palette);
+
+      for (const piece of entry.pieces) {
+        const mesh = new THREE.Mesh(getBoxGeometry(piece.size), materials[piece.material || 'body'] || materials.body);
+        mesh.position.set(piece.offset[0], piece.offset[1], piece.offset[2]);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+
+      addBuildingFeatures(group, entry, materials);
+      if (entry.roof) {
+        group.add(createRoofMesh(entry.roof, group, materials));
+      }
+
+      return group;
+    }
+
+    function normalizeCatalogEntry(entry) {
+      if (!entry?.id || !Array.isArray(entry?.districts) || !Array.isArray(entry?.pieces) || !entry.pieces.length) {
+        return null;
+      }
+      return {
+        ...entry,
+        weight: entry.weight ?? 1,
+        lot: {
+          frontage: entry.lot?.frontage || [12, 18],
+          depth: entry.lot?.depth || [16, 24],
+          setback: entry.lot?.setback || [4, 10]
+        },
+        palette: {
+          body: entry.palette?.body || '#cfc3b4',
+          accent: entry.palette?.accent || '#867869',
+          roof: entry.palette?.roof || '#5c4f49',
+          glass: entry.palette?.glass || '#8fa4b6'
+        },
+        textures: entry.textures || {},
+        roof: entry.roof || null,
+        features: entry.features || {}
+      };
+    }
+
+    function loadCatalogEntries() {
+      const entries = [];
+      for (const [path, pack] of Object.entries(CATALOG_MODULES)) {
+        const packId = pack.packId || path.split('/').pop().replace('.json', '');
+        if (pack.entries) {
+          for (const entry of pack.entries) {
+            const normalized = normalizeCatalogEntry(entry);
+            if (normalized) {
+              entries.push({ ...normalized, packId });
+            }
+          }
+        }
+      }
+      return entries;
+    }
+
+    const allBuildings = loadCatalogEntries();
+    let currentIndex = 0;
+    let currentBuilding = null;
+
+    function updateBuildingInfo() {
+      const entry = allBuildings[currentIndex];
+      document.getElementById('building-name').textContent = entry.id;
+      document.getElementById('building-pack').textContent = `Pack: ${entry.packId}`;
+      document.getElementById('building-districts').textContent = `Districts: ${entry.districts.join(', ')}`;
+      document.getElementById('building-count').textContent = `Building ${currentIndex + 1} / ${allBuildings.length}`;
+    }
+
+    function renderCurrentBuilding() {
+      if (currentBuilding) {
+        scene.remove(currentBuilding);
+      }
+
+      const entry = allBuildings[currentIndex];
+      currentBuilding = createBuildingFromEntry(entry);
+      
+      const bounds = new THREE.Box3().setFromObject(currentBuilding);
+      const size = bounds.getSize(new THREE.Vector3());
+      const center = bounds.getCenter(new THREE.Vector3());
+      
+      currentBuilding.position.sub(center);
+      currentBuilding.position.y = -bounds.min.y;
+      scene.add(currentBuilding);
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim * 2;
+      camera.position.set(distance, distance * 0.8, distance);
+      camera.lookAt(0, size.y / 3, 0);
+
+      updateBuildingInfo();
+      updateCatalogList();
+      renderer.render(scene, camera);
+    }
+
+    function updateCatalogList() {
+      const list = document.getElementById('catalog-list');
+      list.innerHTML = '';
+      
+      const packGroups = {};
+      for (let i = 0; i < allBuildings.length; i++) {
+        const entry = allBuildings[i];
+        if (!packGroups[entry.packId]) {
+          packGroups[entry.packId] = [];
+        }
+        packGroups[entry.packId].push({ entry, index: i });
+      }
+
+      for (const [packId, buildings] of Object.entries(packGroups)) {
+        const packDiv = document.createElement('div');
+        packDiv.style.marginBottom = '8px';
+        
+        const packHeader = document.createElement('div');
+        packHeader.style.fontSize = '11px';
+        packHeader.style.color = '#888';
+        packHeader.style.marginBottom = '4px';
+        packHeader.textContent = packId;
+        packDiv.appendChild(packHeader);
+
+        for (const { entry, index } of buildings) {
+          const btn = document.createElement('button');
+          btn.textContent = entry.id;
+          if (index === currentIndex) {
+            btn.classList.add('active');
+          }
+          btn.onclick = () => {
+            currentIndex = index;
+            renderCurrentBuilding();
+          };
+          packDiv.appendChild(btn);
+        }
+        
+        list.appendChild(packDiv);
+      }
+    }
+
+    document.getElementById('prevBtn').onclick = () => {
+      currentIndex = (currentIndex - 1 + allBuildings.length) % allBuildings.length;
+      renderCurrentBuilding();
+    };
+
+    document.getElementById('nextBtn').onclick = () => {
+      currentIndex = (currentIndex + 1) % allBuildings.length;
+      renderCurrentBuilding();
+    };
+
+    document.getElementById('saveBtn').onclick = () => {
+      const entry = allBuildings[currentIndex];
+      const link = document.createElement('a');
+      link.download = `${entry.id}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      setStatus(`Saved: ${entry.id}.png`);
+    };
+
+    let autoRunning = false;
+    let autoStartIndex = 0;
+
+    document.getElementById('autoBtn').onclick = async () => {
+      if (autoRunning) return;
+      autoRunning = true;
+      autoStartIndex = currentIndex;
+      
+      document.getElementById('autoBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      
+      const delay = parseInt(document.getElementById('delay-input').value) || 500;
+      
+      for (let i = 0; i < allBuildings.length && autoRunning; i++) {
+        currentIndex = i;
+        renderCurrentBuilding();
+        
+        await new Promise(r => setTimeout(r, 100));
+        
+        const entry = allBuildings[currentIndex];
+        const link = document.createElement('a');
+        link.download = `${entry.id}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        setStatus(`Saved ${i + 1}/${allBuildings.length}: ${entry.id}.png`);
+        
+        await new Promise(r => setTimeout(r, delay));
+      }
+      
+      autoRunning = false;
+      document.getElementById('autoBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      setStatus('Auto save complete!');
+    };
+
+    document.getElementById('stopBtn').onclick = () => {
+      autoRunning = false;
+      document.getElementById('autoBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      setStatus('Stopped');
+    };
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        currentIndex = (currentIndex - 1 + allBuildings.length) % allBuildings.length;
+        renderCurrentBuilding();
+      } else if (e.key === 'ArrowRight') {
+        currentIndex = (currentIndex + 1) % allBuildings.length;
+        renderCurrentBuilding();
+      } else if (e.key === 's' || e.key === 'S') {
+        document.getElementById('saveBtn').click();
+      }
+    });
+
+    renderCurrentBuilding();
+    setStatus(`Loaded ${allBuildings.length} buildings from ${Object.keys(CATALOG_MODULES).length} catalogs`);
+  </script>
+</body>
+</html>

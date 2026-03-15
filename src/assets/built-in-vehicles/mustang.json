@@ -1,0 +1,26 @@
+{
+  "id": "mustang",
+  "order": 10,
+  "label": "Mustang",
+  "kind": "car",
+  "body": {
+    "url": "/models/mustang.glb",
+    "sourceLabel": "public/models/mustang.glb"
+  },
+  "tires": null,
+  "preset": {
+    "exposure": 1.15,
+    "environmentIntensity": 1.2,
+    "tireScale": 0.93,
+    "frontAxleRatio": 0.18,
+    "rearAxleRatio": 0.245,
+    "rideHeight": 0.105,
+    "chassisHeight": 0.11,
+    "sideInset": 0.07,
+    "tireRotation": [
+      0,
+      3.141592653589793,
+      0
+    ]
+  }
+}

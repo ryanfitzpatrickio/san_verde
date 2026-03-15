@@ -1,0 +1,1724 @@
+{
+  "packId": "civic-pack",
+  "entries": [
+    {
+      "id": "city_hall",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          32,
+          48
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#e0dcd0",
+        "accent": "#7888a0",
+        "roof": "#484a50",
+        "glass": "#90aac0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            14,
+            24
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            16,
+            8
+          ],
+          "offset": [
+            0,
+            8,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            28.5,
+            0.6,
+            1.2
+          ],
+          "offset": [
+            0,
+            10,
+            11.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.65,
+        "inset": 0.6,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "storefront_aluminum",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "courthouse",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          32,
+          48
+        ],
+        "depth": [
+          28,
+          42
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#d8d4c8",
+        "accent": "#707888",
+        "roof": "#484850",
+        "glass": "#8ea4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            12,
+            20
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            14,
+            6
+          ],
+          "offset": [
+            0,
+            7,
+            8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            24.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            9,
+            9.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.6,
+        "inset": 0.55,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "metal_panel_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "police_station",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          24,
+          36
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#c8c8d0",
+        "accent": "#2848a8",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            8,
+            18
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            1.2,
+            0.8
+          ],
+          "offset": [
+            0,
+            6.2,
+            8.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.42,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "concrete_dark",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "fire_station",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          22,
+          34
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d0c8c0",
+        "accent": "#c83828",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            7,
+            16
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            6.5,
+            4
+          ],
+          "offset": [
+            0,
+            3.25,
+            6
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "library_small",
+      "districts": [
+        "civic",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          18,
+          28
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#5a6848",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            15,
+            6.5,
+            15
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            15.5,
+            0.8,
+            1
+          ],
+          "offset": [
+            0,
+            5,
+            7.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2,
+        "overhang": 0.7,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "library_main",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          26,
+          40
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#e0d8cc",
+        "accent": "#586848",
+        "roof": "#484850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            10,
+            22
+          ],
+          "offset": [
+            0,
+            5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            11,
+            6
+          ],
+          "offset": [
+            0,
+            5.5,
+            9
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            24.5,
+            0.6,
+            1.2
+          ],
+          "offset": [
+            0,
+            8,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "metal_corrugated",
+        "roof": "roof_shingles_black",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "elementary_school",
+      "districts": [
+        "civic",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#e0dcd0",
+        "accent": "#b87848",
+        "roof": "#687858",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            6.5,
+            22
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            32.5,
+            0.6,
+            0.8
+          ],
+          "offset": [
+            0,
+            5,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.8,
+        "overhang": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_brown"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "awning_solid",
+        "roof": "wood_cedar",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "high_school",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          52,
+          80
+        ],
+        "depth": [
+          36,
+          56
+        ],
+        "setback": [
+          12,
+          24
+        ]
+      },
+      "palette": {
+        "body": "#d8d4c8",
+        "accent": "#7888a0",
+        "roof": "#505858",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            46,
+            9,
+            28
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            46.5,
+            0.8,
+            1
+          ],
+          "offset": [
+            0,
+            7,
+            13.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.42,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "glass_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "community_college",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          56,
+          88
+        ],
+        "depth": [
+          44,
+          68
+        ],
+        "setback": [
+          14,
+          28
+        ]
+      },
+      "palette": {
+        "body": "#c8c4bc",
+        "accent": "#586878",
+        "roof": "#484850",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            50,
+            11,
+            36
+          ],
+          "offset": [
+            0,
+            5.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16,
+            9,
+            12
+          ],
+          "offset": [
+            0,
+            4.5,
+            14
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            50.5,
+            0.6,
+            1
+          ],
+          "offset": [
+            0,
+            8.5,
+            17.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.48,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "storefront_aluminum",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "university_building",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#d0ccc4",
+        "accent": "#6878a8",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            30,
+            14,
+            22
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            12,
+            6
+          ],
+          "offset": [
+            0,
+            6,
+            9
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            30.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            10,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.6,
+        "inset": 0.55,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "hospital_small",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          32,
+          48
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#e8e8e8",
+        "accent": "#38a8a8",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            26,
+            14,
+            22
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            26.5,
+            0.8,
+            1
+          ],
+          "offset": [
+            0,
+            10,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.48,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "glass_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "hospital_main",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          48,
+          72
+        ],
+        "depth": [
+          40,
+          60
+        ],
+        "setback": [
+          12,
+          22
+        ]
+      },
+      "palette": {
+        "body": "#f0f0f0",
+        "accent": "#28a8a8",
+        "roof": "#484a50",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            42,
+            18,
+            34
+          ],
+          "offset": [
+            0,
+            9,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14,
+            16,
+            10
+          ],
+          "offset": [
+            0,
+            8,
+            14
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            42.5,
+            0.8,
+            1.2
+          ],
+          "offset": [
+            0,
+            14,
+            16.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.65,
+        "inset": 0.58,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "clinic",
+      "districts": [
+        "civic",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          16,
+          26
+        ],
+        "depth": [
+          16,
+          26
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#e8e4e0",
+        "accent": "#48a8a8",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            6.5,
+            14
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.8,
+            0.8
+          ],
+          "offset": [
+            0,
+            5,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.42,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "metal_panel_blue",
+        "roof": "roof_metal",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "community_center",
+      "districts": [
+        "civic",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          38
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#d8d4c8",
+        "accent": "#788858",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            7,
+            18
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.8,
+            1
+          ],
+          "offset": [
+            0,
+            5.5,
+            8.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.48,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "stone_limestone",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "recreation_center",
+      "districts": [
+        "civic"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          32,
+          48
+        ],
+        "depth": [
+          28,
+          42
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#c8c8c8",
+        "accent": "#5898c8",
+        "roof": "#484850",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            26,
+            9,
+            22
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            26.5,
+            1,
+            0.8
+          ],
+          "offset": [
+            0,
+            7,
+            10.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.42,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_panel_blue",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "museum",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          30,
+          46
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#e8e4d8",
+        "accent": "#786858",
+        "roof": "#484850",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            10,
+            24
+          ],
+          "offset": [
+            0,
+            5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12,
+            12,
+            8
+          ],
+          "offset": [
+            0,
+            6,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            28.5,
+            0.6,
+            1.2
+          ],
+          "offset": [
+            0,
+            8,
+            11.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "art_gallery",
+      "districts": [
+        "civic",
+        "mixed_main"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          22,
+          34
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#f0f0f0",
+        "accent": "#a85878",
+        "roof": "#404248",
+        "glass": "#90acc0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            8,
+            16
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.6,
+            1.2
+          ],
+          "offset": [
+            0,
+            6.2,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.48,
+        "inset": 0.42,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "wood_oak",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "theater",
+      "districts": [
+        "civic",
+        "mixed_main"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          26,
+          40
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#984848",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            12,
+            22
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            10,
+            6
+          ],
+          "offset": [
+            0,
+            5,
+            9
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.48,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "metal_corrugated",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "church",
+      "districts": [
+        "civic",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          34
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#e8e4d8",
+        "accent": "#6a6858",
+        "roof": "#484550",
+        "glass": "#8aa8c0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            9,
+            20
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            18,
+            4
+          ],
+          "offset": [
+            0,
+            9,
+            6
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 3.5,
+        "overhang": 0.8,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "park_restroom",
+      "districts": [
+        "park",
+        "civic"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          6,
+          10
+        ],
+        "setback": [
+          1,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#588848",
+        "roof": "#687858",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5.5,
+            3,
+            5.5
+          ],
+          "offset": [
+            0,
+            1.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.25,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "trim_wood",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "transit_station",
+      "districts": [
+        "civic",
+        "mixed_main"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          24,
+          38
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#b8b8c0",
+        "accent": "#4868a8",
+        "roof": "#505860",
+        "glass": "#86a0b8"
+      },
+      "pieces": [
+        {
+          "material": "accent",
+          "size": [
+            22,
+            5,
+            12
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            8,
+            4,
+            6
+          ],
+          "offset": [
+            0,
+            2,
+            3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "metal_panel_blue"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "storefront_aluminum",
+        "roof": "metal_panel_blue",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "train_station",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          32,
+          50
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d0ccc4",
+        "accent": "#785848",
+        "roof": "#484550",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            9,
+            14
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            7,
+            5
+          ],
+          "offset": [
+            0,
+            3.5,
+            5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 3,
+        "overhang": 1.2,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "metal_panel",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "stadium_small",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          64,
+          96
+        ],
+        "depth": [
+          48,
+          72
+        ],
+        "setback": [
+          16,
+          32
+        ]
+      },
+      "palette": {
+        "body": "#c0c0c8",
+        "accent": "#4878a8",
+        "roof": "#484a50",
+        "glass": "#849cb5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            56,
+            12,
+            40
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            56.5,
+            1.5,
+            1
+          ],
+          "offset": [
+            0,
+            10,
+            19.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.6,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "cemetery_chapel",
+      "districts": [
+        "civic"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d8d4c8",
+        "accent": "#585868",
+        "roof": "#484850",
+        "glass": "#88a4bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            6,
+            12
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            3,
+            10,
+            2.5
+          ],
+          "offset": [
+            0,
+            5,
+            4.5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2,
+        "overhang": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "metal_panel",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    }
+  ]
+}

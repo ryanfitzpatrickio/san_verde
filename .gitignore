@@ -1,0 +1,19 @@
+node_modules
+dist
+.tmp
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# Large binary model assets — keep directory via .gitkeep
+public/models/*.glb
+public/models/*.fbx
+public/models/*.vrm
+public/models/*.zip
+public/models/Locomotion Pack/
+public/models/Pistol_Handgun Locomotion Pack/
+public/models/Pro Rifle Pack (1)/
+
+# Python cache
+scripts/__pycache__/

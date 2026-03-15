@@ -1,0 +1,35 @@
+{
+  "id": "valkyrie",
+  "order": 999,
+  "label": "Valkyrie",
+  "kind": "car",
+  "body": {
+    "url": "/models/valkyrie.glb",
+    "sourceLabel": "public/models/valkyrie.glb"
+  },
+  "tires": {
+    "front": {
+      "url": "/models/valktire.glb",
+      "sourceLabel": "public/models/valktire.glb"
+    },
+    "rear": {
+      "url": "/models/valktire.glb",
+      "sourceLabel": "public/models/valktire.glb"
+    }
+  },
+  "preset": {
+    "exposure": 1.15,
+    "environmentIntensity": 1.2,
+    "tireScale": 0.93,
+    "frontAxleRatio": 0.18,
+    "rearAxleRatio": 0.245,
+    "rideHeight": 0.0105,
+    "chassisHeight": 0.011,
+    "sideInset": 0.07,
+    "tireRotation": [
+      0,
+      3.141592653589793,
+      0
+    ]
+  }
+}

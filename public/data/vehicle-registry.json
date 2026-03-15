@@ -1,0 +1,230 @@
+{
+  "vehicles": [
+    {
+      "id": "mustang",
+      "order": 10,
+      "label": "Mustang",
+      "kind": "car",
+      "body": {
+        "url": "/models/mustang.glb",
+        "sourceLabel": "public/models/mustang.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "camaro",
+      "order": 20,
+      "label": "Camaro",
+      "kind": "car",
+      "body": {
+        "url": "/models/camaro.glb",
+        "sourceLabel": "public/models/camaro.glb"
+      },
+      "tires": {
+        "front": {
+          "url": "/models/fronttire.glb",
+          "sourceLabel": "public/models/fronttire.glb"
+        },
+        "rear": {
+          "url": "/models/widetire.glb",
+          "sourceLabel": "public/models/widetire.glb"
+        }
+      },
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "car",
+      "order": 30,
+      "label": "Car",
+      "kind": "car",
+      "body": {
+        "url": "/models/car_s.glb",
+        "sourceLabel": "public/models/car_s.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "car2",
+      "order": 40,
+      "label": "Car 2",
+      "kind": "car",
+      "body": {
+        "url": "/models/car2.glb",
+        "sourceLabel": "public/models/car2.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 0.6,
+        "environmentIntensity": 2.4,
+        "tireScale": 0.85,
+        "frontAxleRatio": 0.2,
+        "rearAxleRatio": 0.23,
+        "rideHeight": -0.08,
+        "chassisHeight": 0.25,
+        "sideInset": 0.085,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "challenger",
+      "order": 50,
+      "label": "Challenger",
+      "kind": "car",
+      "body": {
+        "url": "/models/challenger_s.glb",
+        "sourceLabel": "public/models/challenger_s.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "transam",
+      "order": 60,
+      "label": "Trans Am",
+      "kind": "car",
+      "body": {
+        "url": "/models/transam_s.glb",
+        "sourceLabel": "public/models/transam_s.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "sedan",
+      "order": 999,
+      "label": "Sedan",
+      "kind": "car",
+      "body": {
+        "url": "/models/sedan.glb",
+        "sourceLabel": "public/models/sedan.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    },
+    {
+      "id": "valkyrie",
+      "order": 999,
+      "label": "Valkyrie",
+      "kind": "car",
+      "body": {
+        "url": "/models/valkyrie.glb",
+        "sourceLabel": "public/models/valkyrie.glb"
+      },
+      "tires": {
+        "front": {
+          "url": "/models/valktire.glb",
+          "sourceLabel": "public/models/valktire.glb"
+        },
+        "rear": {
+          "url": "/models/valktire.glb",
+          "sourceLabel": "public/models/valktire.glb"
+        }
+      },
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.0105,
+        "chassisHeight": 0.011,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ]
+      }
+    }
+  ]
+}

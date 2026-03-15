@@ -1,0 +1,257 @@
+{
+  "packId": "mainstreet-pack",
+  "entries": [
+    {
+      "id": "corner_shop",
+      "districts": [
+        "mixed_main",
+        "civic"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          1.5,
+          3.5
+        ]
+      },
+      "palette": {
+        "body": "#d9ccbb",
+        "accent": "#9a6149",
+        "roof": "#4f525e",
+        "glass": "#9ab2c3"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            7.8,
+            14
+          ],
+          "offset": [
+            0,
+            3.9,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.7,
+            1.1
+          ],
+          "offset": [
+            0,
+            3.4,
+            6.2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_blue"
+      },
+      "features": {
+        "awning": {
+          "width": 10.5,
+          "depth": 1.8,
+          "height": 0.24,
+          "y": 2.9,
+          "material": "accent",
+          "texture": "awning_solid"
+        }
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "stone_fieldstone",
+        "roof": "metal_panel_blue",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "mainstreet_loft",
+      "districts": [
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          30
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          1.5,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#c9c0b5",
+        "accent": "#6c7786",
+        "roof": "#4a4d56",
+        "glass": "#93acc0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            15,
+            13.8,
+            13
+          ],
+          "offset": [
+            0,
+            6.9,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16,
+            0.8,
+            1.2
+          ],
+          "offset": [
+            0,
+            3.2,
+            5.6
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            15.6,
+            0.55,
+            1.1
+          ],
+          "offset": [
+            0,
+            9.8,
+            5.1
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.48,
+        "inset": 0.55,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "features": {
+        "signBand": {
+          "width": 10.8,
+          "height": 0.42,
+          "depth": 0.22,
+          "y": 2.55,
+          "z": 5.75,
+          "material": "accent",
+          "texture": "metal_panel_blue"
+        }
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "civic_hall",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          26,
+          40
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          3,
+          7
+        ]
+      },
+      "palette": {
+        "body": "#d6d0c5",
+        "accent": "#7f8d98",
+        "roof": "#5b6067",
+        "glass": "#9ab2c5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            11.5,
+            18
+          ],
+          "offset": [
+            0,
+            5.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            13.5,
+            4.2
+          ],
+          "offset": [
+            0,
+            6.75,
+            7.3
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14,
+            1,
+            2
+          ],
+          "offset": [
+            0,
+            4.2,
+            8.7
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.62,
+        "inset": 0.75,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "storefront_aluminum",
+        "roof": "roof_shingles_black",
+        "glass": "glass_green"
+      }
+    }
+  ]
+}

@@ -1,0 +1,515 @@
+{
+  "packId": "downtown-pack",
+  "entries": [
+    {
+      "id": "iconic_central_tower",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [36, 52],
+        "depth": [36, 52],
+        "setback": [6, 12]
+      },
+      "palette": {
+        "body": "#c8d0d8",
+        "accent": "#2a3a4a",
+        "roof": "#1a2a3a",
+        "glass": "#6a8ab0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [28, 140, 28],
+          "offset": [0, 70, 0]
+        },
+        {
+          "material": "accent",
+          "size": [29, 0.6, 1.2],
+          "offset": [0, 35, 13.8]
+        },
+        {
+          "material": "accent",
+          "size": [29, 0.6, 1.2],
+          "offset": [0, 70, 13.8]
+        },
+        {
+          "material": "accent",
+          "size": [29, 0.6, 1.2],
+          "offset": [0, 105, 13.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1.2,
+        "inset": 1,
+        "material": "roof",
+        "texture": "metal_corrugated"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_panel_blue",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "glass_monolith",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [30, 44],
+        "depth": [30, 44],
+        "setback": [4, 8]
+      },
+      "palette": {
+        "body": "#7898b8",
+        "accent": "#4a6888",
+        "roof": "#2a3848",
+        "glass": "#5878a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [22, 120, 22],
+          "offset": [0, 60, 0]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.5, 1],
+          "offset": [0, 30, 10.8]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.5, 1],
+          "offset": [0, 60, 10.8]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.5, 1],
+          "offset": [0, 90, 10.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1,
+        "inset": 0.8,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "glass_blue",
+        "accent": "metal_panel",
+        "roof": "metal_panel",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "art_deco_landmark",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [32, 48],
+        "depth": [32, 48],
+        "setback": [5, 10]
+      },
+      "palette": {
+        "body": "#b8b8a8",
+        "accent": "#8a7a5a",
+        "roof": "#6a5a3a",
+        "glass": "#708090"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [24, 100, 24],
+          "offset": [0, 50, 0]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 1, 1.5],
+          "offset": [0, 25, 11.8]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 1, 1.5],
+          "offset": [0, 50, 11.8]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 1, 1.5],
+          "offset": [0, 75, 11.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1.5,
+        "inset": 1.2,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_light",
+        "accent": "metal_panel",
+        "roof": "metal_corrugated",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "twin_spire_plaza",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [40, 56],
+        "depth": [40, 56],
+        "setback": [8, 14]
+      },
+      "palette": {
+        "body": "#a0a8b0",
+        "accent": "#3a4858",
+        "roof": "#2a3a4a",
+        "glass": "#6888a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [32, 110, 32],
+          "offset": [0, 55, 0]
+        },
+        {
+          "material": "accent",
+          "size": [32.5, 0.5, 1],
+          "offset": [0, 27.5, 15.8]
+        },
+        {
+          "material": "accent",
+          "size": [32.5, 0.5, 1],
+          "offset": [0, 55, 15.8]
+        },
+        {
+          "material": "accent",
+          "size": [32.5, 0.5, 1],
+          "offset": [0, 82.5, 15.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1.4,
+        "inset": 1,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_corrugated",
+        "roof": "metal_panel",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "modernist_slab",
+      "districts": ["downtown"],
+      "weight": 2,
+      "lot": {
+        "frontage": [44, 60],
+        "depth": [28, 40],
+        "setback": [4, 8]
+      },
+      "palette": {
+        "body": "#c0c4c8",
+        "accent": "#4a5a6a",
+        "roof": "#3a4a5a",
+        "glass": "#7898b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [36, 90, 20],
+          "offset": [0, 45, 0]
+        },
+        {
+          "material": "accent",
+          "size": [36.5, 0.4, 0.8],
+          "offset": [0, 22.5, 9.8]
+        },
+        {
+          "material": "accent",
+          "size": [36.5, 0.4, 0.8],
+          "offset": [0, 45, 9.8]
+        },
+        {
+          "material": "accent",
+          "size": [36.5, 0.4, 0.8],
+          "offset": [0, 67.5, 9.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.8,
+        "inset": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_light",
+        "accent": "metal_panel",
+        "roof": "metal_corrugated",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "crystalline_tower",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [28, 40],
+        "depth": [28, 40],
+        "setback": [4, 8]
+      },
+      "palette": {
+        "body": "#8aa8c8",
+        "accent": "#5a7898",
+        "roof": "#3a4858",
+        "glass": "#6898c8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [18, 130, 18],
+          "offset": [0, 65, 0]
+        },
+        {
+          "material": "accent",
+          "size": [18.5, 0.4, 0.8],
+          "offset": [0, 32.5, 8.8]
+        },
+        {
+          "material": "accent",
+          "size": [18.5, 0.4, 0.8],
+          "offset": [0, 65, 8.8]
+        },
+        {
+          "material": "accent",
+          "size": [18.5, 0.4, 0.8],
+          "offset": [0, 97.5, 8.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1.8,
+        "inset": 1.5,
+        "material": "roof",
+        "texture": "metal_corrugated"
+      },
+      "textures": {
+        "body": "glass_blue",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "brutalist_monolith",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [38, 54],
+        "depth": [38, 54],
+        "setback": [6, 12]
+      },
+      "palette": {
+        "body": "#a8a098",
+        "accent": "#787068",
+        "roof": "#585048",
+        "glass": "#5a6878"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [30, 95, 30],
+          "offset": [0, 47.5, 0]
+        },
+        {
+          "material": "accent",
+          "size": [30.5, 0.8, 1.2],
+          "offset": [0, 23.75, 14.8]
+        },
+        {
+          "material": "accent",
+          "size": [30.5, 0.8, 1.2],
+          "offset": [0, 47.5, 14.8]
+        },
+        {
+          "material": "accent",
+          "size": [30.5, 0.8, 1.2],
+          "offset": [0, 71.25, 14.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1,
+        "inset": 0.8,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_dark",
+        "accent": "concrete_light",
+        "roof": "metal_panel",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "setback_skyscraper",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [34, 50],
+        "depth": [34, 50],
+        "setback": [6, 12]
+      },
+      "palette": {
+        "body": "#b8bcc0",
+        "accent": "#5a6878",
+        "roof": "#3a4858",
+        "glass": "#7088a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [28, 60, 28],
+          "offset": [0, 30, 0]
+        },
+        {
+          "material": "body",
+          "size": [22, 50, 22],
+          "offset": [0, 85, 0]
+        },
+        {
+          "material": "accent",
+          "size": [28.5, 0.5, 1],
+          "offset": [0, 30, 13.8]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.5, 1],
+          "offset": [0, 85, 10.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 1.2,
+        "inset": 1,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_corrugated",
+        "roof": "metal_panel",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "green_glass_cathedral",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [32, 46],
+        "depth": [32, 46],
+        "setback": [5, 10]
+      },
+      "palette": {
+        "body": "#68a888",
+        "accent": "#3a6858",
+        "roof": "#2a4838",
+        "glass": "#58b878"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [24, 105, 24],
+          "offset": [0, 52.5, 0]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 0.5, 1],
+          "offset": [0, 26.25, 11.8]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 0.5, 1],
+          "offset": [0, 52.5, 11.8]
+        },
+        {
+          "material": "accent",
+          "size": [24.5, 0.5, 1],
+          "offset": [0, 78.75, 11.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 2,
+        "inset": 1.5,
+        "material": "roof",
+        "texture": "metal_corrugated"
+      },
+      "textures": {
+        "body": "glass_green",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "golden_crown_tower",
+      "districts": ["downtown"],
+      "weight": 1,
+      "lot": {
+        "frontage": [30, 44],
+        "depth": [30, 44],
+        "setback": [5, 10]
+      },
+      "palette": {
+        "body": "#c8b898",
+        "accent": "#a89858",
+        "roof": "#d8c868",
+        "glass": "#8898a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [22, 115, 22],
+          "offset": [0, 57.5, 0]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.6, 1.2],
+          "offset": [0, 28.75, 10.8]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.6, 1.2],
+          "offset": [0, 57.5, 10.8]
+        },
+        {
+          "material": "accent",
+          "size": [22.5, 0.6, 1.2],
+          "offset": [0, 86.25, 10.8]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 2.5,
+        "inset": 2,
+        "material": "roof",
+        "texture": "metal_panel"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_corrugated",
+        "roof": "metal_panel",
+        "glass": "glass_blue"
+      }
+    }
+  ]
+}

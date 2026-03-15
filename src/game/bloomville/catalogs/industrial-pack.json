@@ -1,0 +1,2393 @@
+{
+  "packId": "industrial-pack",
+  "entries": [
+    {
+      "id": "flex_warehouse",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          24,
+          40
+        ],
+        "depth": [
+          24,
+          42
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#b8ad9d",
+        "accent": "#77736c",
+        "roof": "#66635f",
+        "glass": "#8ea4b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            8.5,
+            20
+          ],
+          "offset": [
+            0,
+            4.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            5.5,
+            5
+          ],
+          "offset": [
+            -5.5,
+            2.75,
+            7.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_panel",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "maker_yard",
+      "districts": [
+        "industrial_light",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#c4b8aa",
+        "accent": "#816857",
+        "roof": "#595a5f",
+        "glass": "#90a6ba"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            6.5,
+            14
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            7,
+            4.5,
+            9
+          ],
+          "offset": [
+            6.5,
+            2.25,
+            -2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            11,
+            0.8,
+            1.2
+          ],
+          "offset": [
+            0,
+            3.1,
+            6.1
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.36,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "awning_solid",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "distribution_center",
+      "districts": [
+        "industrial_light",
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          44,
+          68
+        ],
+        "depth": [
+          36,
+          56
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#a8a090",
+        "accent": "#686860",
+        "roof": "#585850",
+        "glass": "#8ca0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            40,
+            10,
+            32
+          ],
+          "offset": [
+            0,
+            5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16,
+            8,
+            8
+          ],
+          "offset": [
+            0,
+            4,
+            14
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_aluminum",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "manufacturing_plant",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          32,
+          50
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#b0a898",
+        "accent": "#585850",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            12,
+            28
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            10,
+            6
+          ],
+          "offset": [
+            0,
+            5,
+            12
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            32.5,
+            0.6,
+            0.8
+          ],
+          "offset": [
+            0,
+            9,
+            13.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_corrugated",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "factory_large",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          48,
+          76
+        ],
+        "depth": [
+          40,
+          64
+        ],
+        "setback": [
+          10,
+          20
+        ]
+      },
+      "palette": {
+        "body": "#a8a08c",
+        "accent": "#505048",
+        "roof": "#484840",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            44,
+            14,
+            36
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12,
+            12,
+            8
+          ],
+          "offset": [
+            0,
+            6,
+            16
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            44.5,
+            0.7,
+            0.9
+          ],
+          "offset": [
+            0,
+            11,
+            17.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "metal_panel_green",
+        "accent": "metal_panel",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "light_industrial_unit",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          16,
+          26
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a0",
+        "accent": "#707068",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            6,
+            16
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.6,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.8,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "concrete_gray",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "workshop",
+      "districts": [
+        "industrial_light",
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          14,
+          22
+        ],
+        "depth": [
+          16,
+          24
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#c0b4a4",
+        "accent": "#786858",
+        "roof": "#585550",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            5.5,
+            14
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12.5,
+            0.5,
+            0.6
+          ],
+          "offset": [
+            0,
+            4.2,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "stone_fieldstone",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "storage_yard",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          24,
+          38
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#a8a498",
+        "accent": "#686860",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            5,
+            20
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            4,
+            4
+          ],
+          "offset": [
+            0,
+            2,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "cold_storage",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          38
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#c8d0d8",
+        "accent": "#5878a0",
+        "roof": "#505860",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            8,
+            18
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.7,
+            0.6
+          ],
+          "offset": [
+            0,
+            6.2,
+            8.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "metal_corrugated"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_blue",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "truck_depot",
+      "districts": [
+        "industrial_light",
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          32,
+          50
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#b0a898",
+        "accent": "#585850",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            7,
+            24
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            5.5,
+            6
+          ],
+          "offset": [
+            0,
+            2.75,
+            10
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "auto_body_shop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          28
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#d87828",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            6,
+            16
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16.5,
+            0.6,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.8,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "brick_red",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "commercial_bakery",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          34
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#b87848",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            7,
+            16
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.8,
+            0.6
+          ],
+          "offset": [
+            0,
+            5.5,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.42,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "brick_brown",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "food_processing",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          24,
+          38
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#d0d0d0",
+        "accent": "#488848",
+        "roof": "#505858",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            8,
+            20
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            24.5,
+            0.7,
+            0.7
+          ],
+          "offset": [
+            0,
+            6.2,
+            9.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "print_shop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          32
+        ],
+        "depth": [
+          18,
+          28
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#c8c4bc",
+        "accent": "#4868a8",
+        "roof": "#505058",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            7,
+            15
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16.5,
+            0.7,
+            0.6
+          ],
+          "offset": [
+            0,
+            5.5,
+            7.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "storefront_aluminum",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "chemical_storage",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          32,
+          50
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#c0c0c0",
+        "accent": "#c8a828",
+        "roof": "#505858",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            6,
+            24
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            4,
+            5
+          ],
+          "offset": [
+            0,
+            2,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            4,
+            5
+          ],
+          "offset": [
+            -8,
+            2,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            4,
+            5
+          ],
+          "offset": [
+            8,
+            2,
+            10
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "power_substation",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          24,
+          38
+        ],
+        "depth": [
+          20,
+          32
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#b8b8b8",
+        "accent": "#387838",
+        "roof": "#485048",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "accent",
+          "size": [
+            20,
+            5,
+            16
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            8,
+            6,
+            6
+          ],
+          "offset": [
+            0,
+            3,
+            6
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.3,
+        "inset": 0.22,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "water_treatment",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          32,
+          50
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#c8d0d0",
+        "accent": "#4888a8",
+        "roof": "#505860",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            5,
+            28
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            8,
+            8
+          ],
+          "offset": [
+            0,
+            4,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            8,
+            8
+          ],
+          "offset": [
+            -10,
+            4,
+            10
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            8,
+            8
+          ],
+          "offset": [
+            10,
+            4,
+            10
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_blue"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "storefront_aluminum",
+        "roof": "roof_shingles_blue",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "recycling_center",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          32,
+          50
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#a8a898",
+        "accent": "#388838",
+        "roof": "#505850",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            8,
+            24
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            28.5,
+            0.8,
+            0.6
+          ],
+          "offset": [
+            0,
+            6.2,
+            11.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "metal_corrugated",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "concrete_plant",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          30,
+          46
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#a0a098",
+        "accent": "#686860",
+        "roof": "#505048",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            32,
+            6,
+            26
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            12,
+            8
+          ],
+          "offset": [
+            0,
+            6,
+            8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            10,
+            6
+          ],
+          "offset": [
+            -10,
+            5,
+            8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            10,
+            6
+          ],
+          "offset": [
+            10,
+            5,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_aluminum",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "steel_fabrication",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          44,
+          68
+        ],
+        "depth": [
+          36,
+          56
+        ],
+        "setback": [
+          10,
+          18
+        ]
+      },
+      "palette": {
+        "body": "#989890",
+        "accent": "#585850",
+        "roof": "#484840",
+        "glass": "#8898a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            40,
+            12,
+            32
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12,
+            10,
+            8
+          ],
+          "offset": [
+            0,
+            5,
+            14
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            40.5,
+            0.6,
+            0.8
+          ],
+          "offset": [
+            0,
+            9,
+            15.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "small_workshop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          12,
+          18
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#686860",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5,
+            12
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.32,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_panel",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "cabinet_shop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#c0b4a4",
+        "accent": "#786858",
+        "roof": "#585550",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            6,
+            16
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.5,
+            0.5
+          ],
+          "offset": [
+            0,
+            4.2,
+            7.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "brick_red",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "metal_fabrication",
+      "districts": [
+        "industrial_light",
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#a0a098",
+        "accent": "#585850",
+        "roof": "#505048",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            7,
+            20
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            5,
+            5
+          ],
+          "offset": [
+            0,
+            2.5,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "plumbing_supply",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          28
+        ],
+        "depth": [
+          20,
+          30
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a0",
+        "accent": "#4878a8",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            6,
+            16
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_panel_blue",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "electrical_supply",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          16,
+          24
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          3,
+          7
+        ]
+      },
+      "palette": {
+        "body": "#c0b8a8",
+        "accent": "#f0c828",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            5.5,
+            14
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "awning_solid",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "auto_parts",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          20,
+          30
+        ],
+        "depth": [
+          22,
+          32
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#b0a898",
+        "accent": "#c84828",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            6.5,
+            18
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "brick_red",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "tire_shop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#c84828",
+        "roof": "#505048",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            5.5,
+            14
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.36,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "brick_red",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "upholstery_shop",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          14,
+          22
+        ],
+        "depth": [
+          16,
+          24
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#c4b8a8",
+        "accent": "#885848",
+        "roof": "#585550",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            11,
+            5,
+            13
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.34,
+        "inset": 0.26,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "sign_shop",
+      "districts": [
+        "industrial_light",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          14,
+          22
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#b8b4ac",
+        "accent": "#4868a8",
+        "roof": "#505058",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            11,
+            5.5,
+            12
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "machine_shop",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          28,
+          42
+        ],
+        "depth": [
+          26,
+          38
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#989890",
+        "accent": "#585850",
+        "roof": "#484840",
+        "glass": "#8898a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            8,
+            22
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            6,
+            5
+          ],
+          "offset": [
+            0,
+            3,
+            9
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "concrete_dark",
+        "roof": "roof_tile_slate",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "welding_shop",
+      "districts": [
+        "industrial_light",
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          16,
+          24
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#a8a098",
+        "accent": "#484848",
+        "roof": "#505048",
+        "glass": "#889cb0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            13,
+            5.5,
+            15
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.36,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "equipment_rental",
+      "districts": [
+        "industrial_light"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#b8b0a4",
+        "accent": "#f0a828",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            22,
+            6,
+            18
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            4,
+            6
+          ],
+          "offset": [
+            0,
+            2,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.32,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "brick_red",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "wholesale_warehouse",
+      "districts": [
+        "industrial_light",
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          32,
+          50
+        ],
+        "depth": [
+          28,
+          44
+        ],
+        "setback": [
+          6,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#a8a498",
+        "accent": "#686860",
+        "roof": "#585850",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            28,
+            9,
+            24
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.38,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "metal_aluminum",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "lumber_yard",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          36,
+          56
+        ],
+        "depth": [
+          30,
+          46
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#b8a888",
+        "accent": "#7a5838",
+        "roof": "#605848",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            30,
+            7,
+            24
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            12,
+            5,
+            8
+          ],
+          "offset": [
+            0,
+            2.5,
+            10
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.42,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "stucco_peach",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_red",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "salvage_yard",
+      "districts": [
+        "industrial_heavy"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          40,
+          60
+        ],
+        "depth": [
+          32,
+          50
+        ],
+        "setback": [
+          8,
+          16
+        ]
+      },
+      "palette": {
+        "body": "#888880",
+        "accent": "#585850",
+        "roof": "#505048",
+        "glass": "#8898a8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            5,
+            16
+          ],
+          "offset": [
+            0,
+            2.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "trim_wood",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_blue"
+      }
+    }
+  ]
+}

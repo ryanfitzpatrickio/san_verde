@@ -1,0 +1,2523 @@
+{
+  "packId": "residential-pack",
+  "entries": [
+    {
+      "id": "bungalow_suburban",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#d8c5b2",
+        "accent": "#f0e7dd",
+        "roof": "#64473c",
+        "glass": "#8ea4bb"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            4.4,
+            14
+          ],
+          "offset": [
+            0,
+            2.2,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.2,
+        "overhang": 0.8,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "features": {
+        "porch": {
+          "width": 4,
+          "depth": 2,
+          "height": 0.4,
+          "material": "accent",
+          "texture": "concrete_gray"
+        }
+      },
+      "textures": {
+        "body": "brick_red",
+        "accent": "metal_aluminum",
+        "roof": "roof_shingles_red",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "bungalow_urban",
+      "districts": [
+        "residential_low",
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          16,
+          22
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#e2d5c4",
+        "accent": "#c9b8a0",
+        "roof": "#5a4538",
+        "glass": "#8ca0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            4.2,
+            11
+          ],
+          "offset": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.8,
+        "overhang": 0.6,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_brown",
+        "roof": "wood_cedar",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "large_family_home",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          32,
+          48
+        ],
+        "depth": [
+          36,
+          52
+        ],
+        "setback": [
+          12,
+          20
+        ]
+      },
+      "palette": {
+        "body": "#f0e6d8",
+        "accent": "#d4c4a8",
+        "roof": "#5c4a3d",
+        "glass": "#94a8bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            5.5,
+            16
+          ],
+          "offset": [
+            0,
+            2.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            4,
+            6
+          ],
+          "offset": [
+            6,
+            2,
+            5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.8,
+        "overhang": 0.9,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "features": {
+        "garage": {
+          "width": 6,
+          "depth": 7,
+          "height": 3.2,
+          "material": "accent",
+          "texture": "wood_oak"
+        }
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "wood_oak",
+        "roof": "roof_shingles_red",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "townhouse_single",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#ccc5b8",
+        "accent": "#8a7d6c",
+        "roof": "#4a4850",
+        "glass": "#8fa3b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            7,
+            8,
+            10
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "brick_red",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "townhouse_row",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          28,
+          44
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#cbc7c2",
+        "accent": "#7d6c61",
+        "roof": "#52505b",
+        "glass": "#93a8bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            8.6,
+            10.8
+          ],
+          "offset": [
+            -8,
+            4.3,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            12,
+            8.6,
+            10.8
+          ],
+          "offset": [
+            8,
+            4.3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            1.2,
+            8,
+            1
+          ],
+          "offset": [
+            0,
+            4,
+            5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.42,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "stone_fieldstone",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "duplex",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          16,
+          22
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#d5ccc0",
+        "accent": "#a89880",
+        "roof": "#5a5650",
+        "glass": "#8ea2b7"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            13,
+            6.5,
+            11
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            0.8,
+            6,
+            0.6
+          ],
+          "offset": [
+            0,
+            3,
+            5.2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.6,
+        "overhang": 0.5,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "stone_fieldstone",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "triplex",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          16,
+          24
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#cfc6b8",
+        "accent": "#9a8a75",
+        "roof": "#4f4d55",
+        "glass": "#90a4b9"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            8,
+            11
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "awning_solid",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "fourplex",
+      "districts": [
+        "residential_mid",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          28
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          3,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#d1cdc5",
+        "accent": "#8b7b6d",
+        "roof": "#5f5c64",
+        "glass": "#91a8bc"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            10.2,
+            12.8
+          ],
+          "offset": [
+            0,
+            5.1,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.8,
+            0.6,
+            1.1
+          ],
+          "offset": [
+            0,
+            4.6,
+            5.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "awning_solid",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "low_rise_apartment",
+      "districts": [
+        "residential_high"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          20,
+          30
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#c8c4bc",
+        "accent": "#7a7d85",
+        "roof": "#4a4c52",
+        "glass": "#8ca0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            14,
+            15
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            3.5,
+            7.2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            7,
+            7.2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            18.5,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            10.5,
+            7.2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "concrete_gray",
+        "roof": "roof_metal",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "mid_rise_apartment",
+      "districts": [
+        "residential_high",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          36
+        ],
+        "depth": [
+          22,
+          34
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#bfc2c8",
+        "accent": "#6a7080",
+        "roof": "#3d3f45",
+        "glass": "#889cb2"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            26,
+            17
+          ],
+          "offset": [
+            0,
+            13,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.45,
+            0.9
+          ],
+          "offset": [
+            0,
+            5,
+            8.2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.45,
+            0.9
+          ],
+          "offset": [
+            0,
+            10,
+            8.2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.45,
+            0.9
+          ],
+          "offset": [
+            0,
+            15,
+            8.2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.45,
+            0.9
+          ],
+          "offset": [
+            0,
+            20,
+            8.2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.6,
+        "inset": 0.6,
+        "material": "roof",
+        "texture": "roof_tile_slate"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_panel_blue",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "studio_apartments",
+      "districts": [
+        "residential_high"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          16,
+          24
+        ],
+        "setback": [
+          1.5,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#b8b4ac",
+        "accent": "#6e7078",
+        "roof": "#45474d",
+        "glass": "#869ab0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            15,
+            12,
+            13
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            15.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            4,
+            6.5
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            15.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            8,
+            6.5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "concrete_block",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "senior_housing",
+      "districts": [
+        "residential_high",
+        "civic"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          26,
+          38
+        ],
+        "depth": [
+          22,
+          32
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#d8d4c8",
+        "accent": "#8a9098",
+        "roof": "#525458",
+        "glass": "#90a4b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            22,
+            10,
+            16
+          ],
+          "offset": [
+            0,
+            5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            5,
+            8,
+            4
+          ],
+          "offset": [
+            0,
+            4,
+            7.5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.5,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "siding_white",
+        "accent": "concrete_block",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "assisted_living",
+      "districts": [
+        "civic"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          36,
+          52
+        ],
+        "depth": [
+          28,
+          42
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#e0dcd0",
+        "accent": "#8895a0",
+        "roof": "#585a60",
+        "glass": "#92a6ba"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            30,
+            12,
+            22
+          ],
+          "offset": [
+            0,
+            6,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            10,
+            6
+          ],
+          "offset": [
+            -10,
+            5,
+            9
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            8,
+            10,
+            6
+          ],
+          "offset": [
+            10,
+            5,
+            9
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "metal_panel_blue",
+        "roof": "roof_shingles_black",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "student_housing",
+      "districts": [
+        "residential_high",
+        "civic"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          24,
+          36
+        ],
+        "depth": [
+          20,
+          30
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#b5b8c0",
+        "accent": "#6a7585",
+        "roof": "#404550",
+        "glass": "#8599b0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            20,
+            16,
+            16
+          ],
+          "offset": [
+            0,
+            8,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            5.5,
+            8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            20.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            11,
+            8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_shingles_blue"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "metal_panel_blue",
+        "roof": "metal_corrugated",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "mobile_home",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#8a8278",
+        "roof": "#605850",
+        "glass": "#8898ac"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            7,
+            3,
+            14
+          ],
+          "offset": [
+            0,
+            1.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.25,
+        "inset": 0.2,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "metal_panel",
+        "accent": "concrete_block",
+        "roof": "roof_shingles_red",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "gated_estate",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 1,
+      "lot": {
+        "frontage": [
+          44,
+          64
+        ],
+        "depth": [
+          48,
+          72
+        ],
+        "setback": [
+          16,
+          28
+        ]
+      },
+      "palette": {
+        "body": "#f5ece0",
+        "accent": "#c8b898",
+        "roof": "#4a3c30",
+        "glass": "#96aac0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            24,
+            7,
+            20
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            5,
+            8
+          ],
+          "offset": [
+            8,
+            2.5,
+            6
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            10,
+            5,
+            8
+          ],
+          "offset": [
+            -8,
+            2.5,
+            6
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 3.5,
+        "overhang": 1,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "features": {
+        "gatehouse": {
+          "width": 4,
+          "depth": 3,
+          "height": 3,
+          "material": "accent",
+          "texture": "brick_red"
+        }
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_red",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "micro_apartments",
+      "districts": [
+        "residential_high",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          16,
+          24
+        ],
+        "depth": [
+          14,
+          22
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#b0b4bc",
+        "accent": "#657085",
+        "roof": "#383a42",
+        "glass": "#8498b0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            18,
+            12
+          ],
+          "offset": [
+            0,
+            9,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.35,
+            0.7
+          ],
+          "offset": [
+            0,
+            4.5,
+            6
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.35,
+            0.7
+          ],
+          "offset": [
+            0,
+            9,
+            6
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.35,
+            0.7
+          ],
+          "offset": [
+            0,
+            13.5,
+            6
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.48,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "metal_panel_blue"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "glass_blue",
+        "roof": "metal_corrugated",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "victorian_house",
+      "districts": [
+        "residential_low",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          6,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#e8dcc8",
+        "accent": "#a08868",
+        "roof": "#5c4838",
+        "glass": "#8ca0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            12,
+            6,
+            14
+          ],
+          "offset": [
+            0,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            4,
+            5
+          ],
+          "offset": [
+            0,
+            8,
+            2
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            1.2,
+            5.5,
+            0.8
+          ],
+          "offset": [
+            5.5,
+            2.75,
+            6.5
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.5,
+        "overhang": 0.7,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_brown",
+        "roof": "roof_tile_clay",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "craftsman_bungalow",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          20,
+          28
+        ],
+        "depth": [
+          22,
+          32
+        ],
+        "setback": [
+          8,
+          14
+        ]
+      },
+      "palette": {
+        "body": "#d4c4a8",
+        "accent": "#7a6850",
+        "roof": "#4a3c2c",
+        "glass": "#8a9eb5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            13,
+            4.5,
+            15
+          ],
+          "offset": [
+            0,
+            2.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14,
+            1,
+            1.5
+          ],
+          "offset": [
+            0,
+            3.5,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.2,
+        "overhang": 1.2,
+        "material": "roof",
+        "texture": "roof_shingles_brown"
+      },
+      "features": {
+        "porch": {
+          "width": 10,
+          "depth": 2.5,
+          "height": 0.35,
+          "material": "accent",
+          "texture": "wood_oak"
+        }
+      },
+      "textures": {
+        "body": "stucco_peach",
+        "accent": "stone_fieldstone",
+        "roof": "roof_tile_clay",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "split_level",
+      "districts": [
+        "residential_low",
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          22,
+          32
+        ],
+        "depth": [
+          24,
+          36
+        ],
+        "setback": [
+          6,
+          12
+        ]
+      },
+      "palette": {
+        "body": "#ccc0b0",
+        "accent": "#8a7a65",
+        "roof": "#555048",
+        "glass": "#899db4"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            5,
+            12
+          ],
+          "offset": [
+            -3,
+            2.5,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            10,
+            3.5,
+            10
+          ],
+          "offset": [
+            4,
+            1.75,
+            -2
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.8,
+        "overhang": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_green"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "brick_red",
+        "roof": "roof_shingles_green",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "cottage_storybook",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          14,
+          20
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          6,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#d4c4a8",
+        "accent": "#8a6848",
+        "roof": "#4a3c2c",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            9,
+            4,
+            11
+          ],
+          "offset": [
+            0,
+            2,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            4,
+            3,
+            4
+          ],
+          "offset": [
+            3,
+            1.5,
+            4
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.8,
+        "overhang": 1,
+        "material": "roof",
+        "texture": "wood_cedar"
+      },
+      "textures": {
+        "body": "stucco_peach",
+        "accent": "awning_solid",
+        "roof": "roof_tile_clay",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "cottage_english",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          16,
+          22
+        ],
+        "depth": [
+          18,
+          24
+        ],
+        "setback": [
+          5,
+          9
+        ]
+      },
+      "palette": {
+        "body": "#e0d4c0",
+        "accent": "#7a6050",
+        "roof": "#5a4a3a",
+        "glass": "#8ca2b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            10,
+            3.8,
+            12
+          ],
+          "offset": [
+            0,
+            1.9,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 2.5,
+        "overhang": 0.9,
+        "material": "roof",
+        "texture": "roof_shingles_brown"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "trim_wood",
+        "roof": "roof_tile_clay",
+        "glass": "glass_green"
+      }
+    },
+    {
+      "id": "ranch_house",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          28,
+          40
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          10,
+          18
+        ]
+      },
+      "palette": {
+        "body": "#ccc0b0",
+        "accent": "#8a7a68",
+        "roof": "#5a5048",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            22,
+            3.5,
+            14
+          ],
+          "offset": [
+            0,
+            1.75,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6,
+            3,
+            6
+          ],
+          "offset": [
+            8,
+            1.5,
+            4
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.8,
+        "overhang": 0.7,
+        "material": "roof",
+        "texture": "roof_tile_clay"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "awning_solid",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "ranch_extended",
+      "districts": [
+        "residential_low"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          32,
+          48
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          12,
+          20
+        ]
+      },
+      "palette": {
+        "body": "#d8ccc0",
+        "accent": "#7a6858",
+        "roof": "#585048",
+        "glass": "#8ca4b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            18,
+            3.2,
+            12
+          ],
+          "offset": [
+            -4,
+            1.6,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            12,
+            3.2,
+            10
+          ],
+          "offset": [
+            8,
+            1.6,
+            -1
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.6,
+        "overhang": 0.6,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "textures": {
+        "body": "stucco_white",
+        "accent": "brick_brown",
+        "roof": "roof_tile_clay",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "foursquare",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          18,
+          26
+        ],
+        "setback": [
+          4,
+          8
+        ]
+      },
+      "palette": {
+        "body": "#e0d8c8",
+        "accent": "#6a5848",
+        "roof": "#4a4850",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            8.5,
+            14
+          ],
+          "offset": [
+            0,
+            4.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.4,
+            0.6
+          ],
+          "offset": [
+            0,
+            4.2,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_cream",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_black",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "american_foursquare",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          28
+        ],
+        "depth": [
+          20,
+          28
+        ],
+        "setback": [
+          5,
+          10
+        ]
+      },
+      "palette": {
+        "body": "#d8d0c4",
+        "accent": "#7a6858",
+        "roof": "#525058",
+        "glass": "#8ca2b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            9,
+            16
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            4,
+            7,
+            3
+          ],
+          "offset": [
+            0,
+            3.5,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.55,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_cream",
+        "accent": "brick_red",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "rowhouse_classic",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          6,
+          10
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#c8c0b4",
+        "accent": "#8a7868",
+        "roof": "#5a5650",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            5,
+            7.5,
+            10
+          ],
+          "offset": [
+            0,
+            3.75,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_shingles_gray"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "awning_solid",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "rowhouse_brownstone",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          7,
+          11
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          0.5,
+          2
+        ]
+      },
+      "palette": {
+        "body": "#a08070",
+        "accent": "#706050",
+        "roof": "#4a4850",
+        "glass": "#8ca2b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            8,
+            12
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            6.2,
+            0.5,
+            1
+          ],
+          "offset": [
+            0,
+            4,
+            5.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.3,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "brick_aged",
+        "accent": "trim_wood",
+        "roof": "roof_tile_slate",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "rowhouse_victorian",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#d8c8b0",
+        "accent": "#7a5840",
+        "roof": "#5a4838",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            7,
+            10
+          ],
+          "offset": [
+            0,
+            3.5,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            3,
+            5,
+            3
+          ],
+          "offset": [
+            0,
+            5.5,
+            4
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.38,
+        "inset": 0.28,
+        "material": "roof",
+        "texture": "roof_shingles_red"
+      },
+      "textures": {
+        "body": "brick_tan",
+        "accent": "metal_panel",
+        "roof": "roof_shingles_brown",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "walkup_3story",
+      "districts": [
+        "residential_mid",
+        "mixed_main"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          18,
+          26
+        ],
+        "depth": [
+          16,
+          22
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#c8c4bc",
+        "accent": "#7a7d85",
+        "roof": "#4a4c52",
+        "glass": "#8aa0b5"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            14,
+            10.5,
+            12
+          ],
+          "offset": [
+            0,
+            5.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            3.5,
+            5.8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            14.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            7,
+            5.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.45,
+        "inset": 0.4,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "concrete_block",
+        "roof": "roof_tile_slate",
+        "glass": "glass_blue"
+      }
+    },
+    {
+      "id": "walkup_4story",
+      "districts": [
+        "residential_high",
+        "mixed_main"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          28
+        ],
+        "depth": [
+          18,
+          24
+        ],
+        "setback": [
+          2,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#bfc2c8",
+        "accent": "#6a7080",
+        "roof": "#3d3f45",
+        "glass": "#889cb2"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            16,
+            14,
+            14
+          ],
+          "offset": [
+            0,
+            7,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            3.5,
+            6.8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            7,
+            6.8
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            16.5,
+            0.4,
+            0.8
+          ],
+          "offset": [
+            0,
+            10.5,
+            6.8
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.5,
+        "inset": 0.45,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "glass_blue",
+        "roof": "roof_shingles_black",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "maisonette",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          14,
+          20
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          2,
+          5
+        ]
+      },
+      "palette": {
+        "body": "#d0c8bc",
+        "accent": "#8a7868",
+        "roof": "#5a5650",
+        "glass": "#8aa0b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            11,
+            6.5,
+            11
+          ],
+          "offset": [
+            0,
+            3.25,
+            0
+          ]
+        },
+        {
+          "material": "accent",
+          "size": [
+            0.6,
+            6,
+            0.5
+          ],
+          "offset": [
+            0,
+            3,
+            5.3
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.5,
+        "overhang": 0.5,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "stucco_gray",
+        "accent": "wood_oak",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "duplex_sidebyside",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 2,
+      "lot": {
+        "frontage": [
+          20,
+          28
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          3,
+          6
+        ]
+      },
+      "palette": {
+        "body": "#d5ccc0",
+        "accent": "#a89880",
+        "roof": "#5a5650",
+        "glass": "#8ea2b7"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            8,
+            6,
+            10
+          ],
+          "offset": [
+            -5,
+            3,
+            0
+          ]
+        },
+        {
+          "material": "body",
+          "size": [
+            8,
+            6,
+            10
+          ],
+          "offset": [
+            5,
+            3,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "gable",
+        "height": 1.5,
+        "overhang": 0.5,
+        "material": "roof",
+        "texture": "roof_metal"
+      },
+      "textures": {
+        "body": "brick_white",
+        "accent": "awning_solid",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "townhouse_modern",
+      "districts": [
+        "residential_mid",
+        "residential_high"
+      ],
+      "weight": 3,
+      "lot": {
+        "frontage": [
+          8,
+          12
+        ],
+        "depth": [
+          14,
+          20
+        ],
+        "setback": [
+          1.5,
+          4
+        ]
+      },
+      "palette": {
+        "body": "#b8b4ac",
+        "accent": "#6e7078",
+        "roof": "#45474d",
+        "glass": "#869ab0"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            6,
+            9,
+            11
+          ],
+          "offset": [
+            0,
+            4.5,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.4,
+        "inset": 0.35,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "concrete_gray",
+        "accent": "concrete_gray",
+        "roof": "roof_metal",
+        "glass": "glass_clear"
+      }
+    },
+    {
+      "id": "townhouse_narrow",
+      "districts": [
+        "residential_mid"
+      ],
+      "weight": 4,
+      "lot": {
+        "frontage": [
+          5,
+          8
+        ],
+        "depth": [
+          12,
+          18
+        ],
+        "setback": [
+          1,
+          3
+        ]
+      },
+      "palette": {
+        "body": "#ccc5b8",
+        "accent": "#8a7d6c",
+        "roof": "#4a4850",
+        "glass": "#8fa3b8"
+      },
+      "pieces": [
+        {
+          "material": "body",
+          "size": [
+            4.5,
+            8,
+            9
+          ],
+          "offset": [
+            0,
+            4,
+            0
+          ]
+        }
+      ],
+      "roof": {
+        "type": "flat",
+        "height": 0.35,
+        "inset": 0.25,
+        "material": "roof",
+        "texture": "roof_shingles_black"
+      },
+      "textures": {
+        "body": "siding_gray",
+        "accent": "brick_brown",
+        "roof": "roof_shingles_gray",
+        "glass": "glass_green"
+      }
+    }
+  ]
+}

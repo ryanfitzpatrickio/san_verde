@@ -1,0 +1,30 @@
+{
+  "name": "cruise-webgpu-car-lab",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:game": "vite build --config vite.game.config.js",
+    "preview": "vite preview",
+    "assets:vehicles:new": "node scripts/create-vehicle-manifest.mjs",
+    "assets:vehicles:build-registry": "node scripts/build-vehicle-registry.mjs",
+    "roads:toronto": "node scripts/fetch-osm-roads.mjs --preset toronto_downtown --out src/game/city-road-graph.json",
+    "postinstall": "node scripts/copy-three-assets.mjs",
+    "catalog:screenshots": "vite scripts --port 3456",
+    "catalog:manager": "vite scripts --port 3457"
+  },
+  "dependencies": {
+    "@perplexdotgg/bounce": "^1.7.0",
+    "@runware/sdk-js": "^1.2.5",
+    "solid-js": "^1.9.11",
+    "three": "0.183.2",
+    "three-bvh-csg": "^0.0.18",
+    "vite-plugin-solid": "^2.11.11"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.1",
+    "vite": "^7.1.0"
+  }
+}

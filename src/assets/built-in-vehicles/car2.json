@@ -1,0 +1,21 @@
+{
+  "id": "car2",
+  "order": 40,
+  "label": "Car 2",
+  "kind": "car",
+  "body": {
+    "url": "/models/car2.glb",
+    "sourceLabel": "public/models/car2.glb"
+  },
+  "preset": {
+    "exposure": 0.6,
+    "environmentIntensity": 2.4,
+    "tireScale": 0.85,
+    "frontAxleRatio": 0.2,
+    "rearAxleRatio": 0.23,
+    "rideHeight": -0.08,
+    "chassisHeight": 0.25,
+    "sideInset": 0.085,
+    "tireRotation": [0, 3.141592653589793, 0]
+  }
+}
