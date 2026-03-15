@@ -12,6 +12,7 @@ import {
   prepareCatalogModelInstance
 } from './catalog-lod.js';
 import { buildBloomvilleGridAgentNavigation } from './navigation-network.js';
+import { resolvePublicUrl } from '../assets/asset-base-url.js';
 
 // Bloomville is an endless procedural city driven by JSON building packs.
 // Drop new files into ./bloomville/catalogs/*.json and they will be picked up automatically.
@@ -31,7 +32,7 @@ function loadTexture(name) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
-  loadTextureImage(texture, `/full%20textures/${name}.png`, `/textures/${name}.png`);
+  loadTextureImage(texture, resolvePublicUrl(`/full%20textures/${name}.png`), resolvePublicUrl(`/textures/${name}.png`));
   TEXTURE_CACHE.set(name, texture);
   return texture;
 }

@@ -1,3 +1,5 @@
+import { resolvePublicUrl } from './assets/asset-base-url.js';
+
 const ENGINE_LIBRARY = [
   {
     id: 'mustang_390_v8_5mt',
@@ -62,12 +64,12 @@ const ENGINE_LIBRARY = [
       decelGain: 0.018,
       distortionAmount: 0.72,
       samples: {
-        idle: '/models/idle.MP3',
-        low: '/models/low.mp3',
-        mid: '/models/mid.mp3',
-        full: '/models/full.mp3',
-        intake: '/models/intake.mp3',
-        decel: '/models/decel.MP3'
+        idle: resolvePublicUrl('/models/idle.MP3'),
+        low: resolvePublicUrl('/models/low.mp3'),
+        mid: resolvePublicUrl('/models/mid.mp3'),
+        full: resolvePublicUrl('/models/full.mp3'),
+        intake: resolvePublicUrl('/models/intake.mp3'),
+        decel: resolvePublicUrl('/models/decel.MP3')
       }
     }
   }

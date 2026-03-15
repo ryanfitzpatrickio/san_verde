@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { createDefaultEngineState } from './engine-system.js';
-import { resolveModelUrl } from './assets/asset-base-url.js';
+import { resolveModelUrl, resolvePublicUrl } from './assets/asset-base-url.js';
 
 export const MODEL_CONFIG = {
   defaultCarId: 'mustang',
@@ -248,15 +248,15 @@ export const MODEL_CONFIG = {
     }
   },
   character: {
-    modelUrl: '/models/norm.fbx',
+    modelUrl: resolvePublicUrl('/models/norm.fbx'),
     animationUrls: {
-      idle: '/models/Locomotion Pack/idle.fbx',
-      walk: '/models/Locomotion Pack/walking.fbx',
-      run: '/models/Locomotion Pack/running.fbx',
-      enterCar: '/models/Locomotion Pack/Entering Car.fbx',
-      drive: '/models/Locomotion Pack/Driving.fbx',
-      exitCar: '/models/Locomotion Pack/Exiting Car.fbx',
-      honk: '/models/Locomotion Pack/Honking Horn.fbx'
+      idle: resolvePublicUrl('/models/Locomotion Pack/idle.fbx'),
+      walk: resolvePublicUrl('/models/Locomotion Pack/walking.fbx'),
+      run: resolvePublicUrl('/models/Locomotion Pack/running.fbx'),
+      enterCar: resolvePublicUrl('/models/Locomotion Pack/Entering Car.fbx'),
+      drive: resolvePublicUrl('/models/Locomotion Pack/Driving.fbx'),
+      exitCar: resolvePublicUrl('/models/Locomotion Pack/Exiting Car.fbx'),
+      honk: resolvePublicUrl('/models/Locomotion Pack/Honking Horn.fbx')
     },
     height: 1.9,
     walkSpeed: 3.4,
