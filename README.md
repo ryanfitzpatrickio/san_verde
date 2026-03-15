@@ -25,11 +25,8 @@ A WebGPU-powered open-world driving game built with Three.js. Cruise through pro
 
 | Stage | Description |
 |---|---|
-| **San Verde** | Large city built from real OpenStreetMap road data with procedural buildings |
-| **Bloomville** | Infinite procedural city driven by JSON building catalogs |
+| **San Verde** | Large city built from 2d level editor using road data with procedural buildings |
 | **Test Course** | Sandbox arena with ramps, cones, and suspension test features |
-| **Highway** | Infinite streaming highway with curved sections and terrain |
-| **City Grid** | Simple grid-based urban environment |
 
 ---
 
@@ -58,7 +55,6 @@ npm run preview                      # Preview production build
 
 npm run assets:vehicles:new          # Create a new vehicle manifest
 npm run assets:vehicles:build-registry  # Rebuild vehicle registry JSON
-npm run roads:toronto                # Fetch Toronto OSM roads into city-road-graph.json
 ```
 
 ---
