@@ -18,6 +18,7 @@ import {
   teleportGarageVehicle,
   updateGarageRuntime
 } from './game/runtime.js';
+import { setPlayerMode, setPlayerHint } from './ui/hud-store.js';
 
 const FORWARD = new THREE.Vector3(0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -667,40 +668,38 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
         : 'WASD drive, Q/E shift, N neutral, F exit car';
 
     if (!hasCharacter) {
-      ui.playerMode.textContent = state.driveMode ? 'Driving' : 'Vehicle';
-      ui.playerHint.textContent = state.driveMode
-        ? driveHint
-        : 'Character asset loading or unavailable';
+      setPlayerMode(state.driveMode ? 'Driving' : 'Vehicle');
+      setPlayerHint(state.driveMode ? driveHint : 'Character asset loading or unavailable');
       return;
     }
 
     if (state.characterVehicleState === 'entering') {
       setCharacterVisible(context.characterController, true);
-      ui.playerMode.textContent = 'Entering car';
-      ui.playerHint.textContent = 'Door opening, then getting in';
+      setPlayerMode('Entering car');
+      setPlayerHint('Door opening, then getting in');
       return;
     }
 
     if (state.characterVehicleState === 'exiting') {
       setCharacterVisible(context.characterController, true);
-      ui.playerMode.textContent = 'Exiting car';
-      ui.playerHint.textContent = 'Getting out';
+      setPlayerMode('Exiting car');
+      setPlayerHint('Getting out');
       return;
     }
 
     if (state.driveMode) {
       setCharacterVisible(context.characterController, true);
-      ui.playerMode.textContent = 'Driving';
-      ui.playerHint.textContent = driveHint;
+      setPlayerMode('Driving');
+      setPlayerHint(driveHint);
       return;
     }
 
     setCharacterVisible(context.characterController, true);
     const readyToEnter = canEnterVehicle(context);
-    ui.playerMode.textContent = 'On foot';
-    ui.playerHint.textContent = readyToEnter
+    setPlayerMode('On foot');
+    setPlayerHint(readyToEnter
       ? 'Move to the driver door and press F'
-      : 'WASD move, Shift run, Space jump, enter near the driver door';
+      : 'WASD move, Shift run, Space jump, enter near the driver door');
   }
 
   function applySnapshot(context, snapshot) {

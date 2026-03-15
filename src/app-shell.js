@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { createDefaultEngineState } from './engine-system.js';
 import { resolveModelUrl, resolvePublicUrl } from './assets/asset-base-url.js';
+import { mountHUD } from './ui/HUD.jsx';
 
 export const MODEL_CONFIG = {
   defaultCarId: 'mustang',
@@ -358,18 +359,7 @@ export const MODEL_CONFIG = {
 export function createAppShell(root) {
   root.innerHTML = `
     <div class="app-shell">
-      <div class="performance-overlay" data-role="performance-overlay">
-        <div class="performance-chip"><span class="label">FPS 1s</span><span class="value" data-role="perf-fps">0</span></div>
-        <div class="performance-chip"><span class="label">CPU Avg</span><span class="value" data-role="perf-frame">0.0 ms</span></div>
-        <div class="performance-chip"><span class="label">Draws/Frame</span><span class="value" data-role="perf-draws">0</span></div>
-        <div class="performance-chip"><span class="label">Peak/1s</span><span class="value" data-role="perf-peak-draws">0</span></div>
-        <div class="performance-chip"><span class="label">Render Total</span><span class="value" data-role="perf-render-calls">0</span></div>
-        <div class="performance-chip"><span class="label">Tris</span><span class="value" data-role="perf-triangles">0</span></div>
-        <div class="performance-chip"><span class="label">Peak/1s</span><span class="value" data-role="perf-peak-triangles">0</span></div>
-        <div class="performance-chip"><span class="label">Geo</span><span class="value" data-role="perf-geometries">0</span></div>
-        <div class="performance-chip"><span class="label">Tex</span><span class="value" data-role="perf-textures">0</span></div>
-        <div class="performance-breakdown" data-role="perf-breakdown">Top: n/a</div>
-      </div>
+      <div id="hud-root"></div>
       <div style="display:none" data-role="hud">
         <span data-role="backend"></span>
         <span data-role="pipeline"></span>
@@ -435,58 +425,8 @@ export function createAppShell(root) {
         <input type="range" data-role="bike-rear-rotate-z" value="0" /><output data-role="bike-rear-rotate-z-value"></output>
         <div class="progress-bar" data-role="progress"></div>
       </div>
-      <div class="load-screen" data-role="load-screen">
-        <div class="load-card">
-          <div class="load-title">San Verde</div>
-          <div class="load-bar-track"><div class="load-bar-fill" data-role="load-bar"></div></div>
-          <div class="load-label" data-role="load-label">Loading…</div>
-        </div>
-      </div>
       <div class="viewport" data-role="viewport"></div>
-      <div class="engine-overlay" data-role="engine-overlay">
-        <div class="engine-chip engine-chip-wide"><span class="label">Engine</span><span class="value" data-role="engine-name">Mustang 390ci V8</span></div>
-        <div class="engine-chip"><span class="label">Gear</span><span class="value" data-role="engine-gear">1</span></div>
-        <div class="engine-chip"><span class="label">RPM</span><span class="value" data-role="engine-rpm">850</span></div>
-        <div class="engine-chip"><span class="label">Speed</span><span class="value" data-role="vehicle-speed">0 mph</span></div>
-      </div>
-      <div class="minimap-overlay is-hidden" data-role="minimap-overlay">
-        <div class="minimap-frame">
-          <canvas class="minimap-canvas" width="256" height="256" data-role="minimap-canvas"></canvas>
-          <div class="minimap-cardinal">N</div>
-        </div>
-        <div class="minimap-caption">
-          <span class="label">Map</span>
-          <span class="value" data-role="minimap-label">Bloomville</span>
-        </div>
-      </div>
-      <div class="player-overlay" data-role="player-overlay">
-        <div class="player-status-row">
-          <span class="label">Target</span>
-          <span class="value" data-role="player-mode">On foot</span>
-        </div>
-        <div class="player-controls-row" data-role="controls-row">
-          <span class="player-hint" data-role="player-hint">WASD move, Shift run, F enter car</span>
-          <button class="player-overlay-hide" data-role="hide-controls">Hide</button>
-        </div>
-      </div>
-      <div class="controls-overlay is-hidden" data-role="controls-overlay">
-        <div class="controls-overlay-header">
-          <span class="label">Controls</span>
-          <button class="player-overlay-hide" data-role="hide-controls-overlay">Hide</button>
-        </div>
-        <div class="controls-grid">
-          <span class="controls-cat">On foot</span>
-          <span class="controls-desc"><kbd>WASD</kbd> move &nbsp;<kbd>Shift</kbd> run &nbsp;<kbd>Space</kbd> jump</span>
-          <span class="controls-cat"></span>
-          <span class="controls-desc"><kbd>F</kbd> enter car at driver door</span>
-          <span class="controls-cat">Driving</span>
-          <span class="controls-desc"><kbd>WASD</kbd> drive &nbsp;<kbd>F</kbd> exit car</span>
-          <span class="controls-cat"></span>
-          <span class="controls-desc"><kbd>Q</kbd><kbd>E</kbd> shift &nbsp;<kbd>N</kbd> neutral <span class="controls-note">(sim)</span></span>
-          <span class="controls-cat">Camera</span>
-          <span class="controls-desc">Mouse drag orbit &nbsp; Scroll zoom</span>
-        </div>
-      </div>
+      <div class="viewport-note is-hidden" data-role="viewport-note"></div>
       <div class="drop-overlay" data-role="drop-overlay">
         <div class="drop-card">
           <strong>Drop GLB files to replace the current assets</strong>
@@ -497,44 +437,18 @@ export function createAppShell(root) {
     </div>
   `;
 
+  mountHUD(root.querySelector('#hud-root'));
+
   return {
     viewport: root.querySelector('[data-role="viewport"]'),
-    loadScreen: root.querySelector('[data-role="load-screen"]'),
-    loadBar: root.querySelector('[data-role="load-bar"]'),
-    loadLabel: root.querySelector('[data-role="load-label"]'),
-    engineOverlay: root.querySelector('[data-role="engine-overlay"]'),
-    performanceOverlay: root.querySelector('[data-role="performance-overlay"]'),
+    viewportNote: root.querySelector('[data-role="viewport-note"]'),
     hud: root.querySelector('[data-role="hud"]'),
-    toggleUi: root.querySelector('[data-role="toggle-ui"]'),
+    toggleUi: null,
     backend: root.querySelector('[data-role="backend"]'),
     pipeline: root.querySelector('[data-role="pipeline"]'),
     status: root.querySelector('[data-role="status"]'),
     carName: root.querySelector('[data-role="car-name"]'),
     tireName: root.querySelector('[data-role="tire-name"]'),
-    engineName: root.querySelector('[data-role="engine-name"]'),
-    engineGear: root.querySelector('[data-role="engine-gear"]'),
-    engineRpm: root.querySelector('[data-role="engine-rpm"]'),
-    vehicleSpeed: root.querySelector('[data-role="vehicle-speed"]'),
-    perfFps: root.querySelector('[data-role="perf-fps"]'),
-    perfFrame: root.querySelector('[data-role="perf-frame"]'),
-    perfDraws: root.querySelector('[data-role="perf-draws"]'),
-    perfPeakDraws: root.querySelector('[data-role="perf-peak-draws"]'),
-    perfRenderCalls: root.querySelector('[data-role="perf-render-calls"]'),
-    perfTriangles: root.querySelector('[data-role="perf-triangles"]'),
-    perfPeakTriangles: root.querySelector('[data-role="perf-peak-triangles"]'),
-    perfGeometries: root.querySelector('[data-role="perf-geometries"]'),
-    perfTextures: root.querySelector('[data-role="perf-textures"]'),
-    perfBreakdown: root.querySelector('[data-role="perf-breakdown"]'),
-    minimapOverlay: root.querySelector('[data-role="minimap-overlay"]'),
-    minimapCanvas: root.querySelector('[data-role="minimap-canvas"]'),
-    minimapLabel: root.querySelector('[data-role="minimap-label"]'),
-    playerOverlay: root.querySelector('[data-role="player-overlay"]'),
-    controlsRow: root.querySelector('[data-role="controls-row"]'),
-    hideControls: root.querySelector('[data-role="hide-controls"]'),
-    controlsOverlay: root.querySelector('[data-role="controls-overlay"]'),
-    hideControlsOverlay: root.querySelector('[data-role="hide-controls-overlay"]'),
-    playerMode: root.querySelector('[data-role="player-mode"]'),
-    playerHint: root.querySelector('[data-role="player-hint"]'),
     engineType: root.querySelector('[data-role="engine-type"]'),
     driveStyle: root.querySelector('[data-role="drive-style"]'),
     stageType: root.querySelector('[data-role="stage-type"]'),

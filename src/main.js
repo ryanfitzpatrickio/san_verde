@@ -1,5 +1,13 @@
 import './style.css';
 import { resolvePublicUrl } from './assets/asset-base-url.js';
+import {
+  setEngineName, setEngineGear, setEngineRpm, setVehicleSpeed,
+  setUiOpen, setPerformanceOpen, setMinimapVisible, setMinimapLabel,
+  minimapCanvasEl,
+  setLoadPct, setLoadLabel, setLoadDone,
+  setPerfFps, setPerfFrame, setPerfDraws, setPerfPeakDraws, setPerfRenderCalls,
+  setPerfTriangles, setPerfPeakTriangles, setPerfGeometries, setPerfTextures, setPerfBreakdown,
+} from './ui/hud-store.js';
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -539,7 +547,7 @@ async function bootstrap() {
   setProgress(100);
   setLoadScreen(100, 'Ready');
   setTimeout(() => {
-    if (ui.loadScreen) ui.loadScreen.classList.add('load-screen-done');
+    setLoadDone(true);
   }, 400);
 
   if (state.driveMode) {
@@ -2306,13 +2314,12 @@ function setStatus(message) {
 }
 
 function setProgress(value) {
-  ui.progress.style.width = `${value}%`;
+  if (ui.progress) ui.progress.style.width = `${value}%`;
 }
 
 function setLoadScreen(pct, label) {
-  if (!ui.loadBar || !ui.loadLabel) return;
-  ui.loadBar.style.width = `${pct}%`;
-  ui.loadLabel.textContent = label;
+  setLoadPct(pct);
+  setLoadLabel(label);
 }
 
 function applyGarageSnapshot(snapshot) {
@@ -2375,10 +2382,10 @@ async function unlockEngineAudio(runtime) {
 }
 
 function syncEngineOutputs() {
-  ui.engineName.textContent = state.engineName;
-  ui.engineGear.textContent = state.engineGearLabel;
-  ui.engineRpm.textContent = `${Math.round(state.engineRpm).toLocaleString()} rpm`;
-  ui.vehicleSpeed.textContent = `${Math.round(Math.abs(state.driveSpeed) * 2.23694).toLocaleString()} mph`;
+  setEngineName(state.engineName);
+  setEngineGear(state.engineGearLabel);
+  setEngineRpm(`${Math.round(state.engineRpm).toLocaleString()} rpm`);
+  setVehicleSpeed(`${Math.round(Math.abs(state.driveSpeed) * 2.23694).toLocaleString()} mph`);
   ui.engineDescription.textContent = state.engineDescription;
   ui.engineType.value = state.engineTypeId;
 }
@@ -2402,16 +2409,16 @@ function updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution
     perf.peakTriangles = renderInfo.triangles;
   }
 
-  ui.perfFps.textContent = `${Math.round(perf.fps || 0)}`;
-  ui.perfFrame.textContent = `${(perf.frameMs || deltaSeconds * 1000).toFixed(1)} ms`;
-  ui.perfDraws.textContent = `${renderInfo.drawCalls.toLocaleString()}`;
-  ui.perfPeakDraws.textContent = `${perf.peakDraws.toLocaleString()}`;
-  ui.perfRenderCalls.textContent = `${renderInfo.calls.toLocaleString()}`;
-  ui.perfTriangles.textContent = `${renderInfo.triangles.toLocaleString()}`;
-  ui.perfPeakTriangles.textContent = `${perf.peakTriangles.toLocaleString()}`;
-  ui.perfGeometries.textContent = `${memoryInfo.geometries.toLocaleString()}`;
-  ui.perfTextures.textContent = `${memoryInfo.textures.toLocaleString()}`;
-  ui.perfBreakdown.textContent = perf.drawCategorySummary;
+  setPerfFps(`${Math.round(perf.fps || 0)}`);
+  setPerfFrame(`${(perf.frameMs || deltaSeconds * 1000).toFixed(1)} ms`);
+  setPerfDraws(`${renderInfo.drawCalls.toLocaleString()}`);
+  setPerfPeakDraws(`${perf.peakDraws.toLocaleString()}`);
+  setPerfRenderCalls(`${renderInfo.calls.toLocaleString()}`);
+  setPerfTriangles(`${renderInfo.triangles.toLocaleString()}`);
+  setPerfPeakTriangles(`${perf.peakTriangles.toLocaleString()}`);
+  setPerfGeometries(`${memoryInfo.geometries.toLocaleString()}`);
+  setPerfTextures(`${memoryInfo.textures.toLocaleString()}`);
+  setPerfBreakdown(perf.drawCategorySummary);
 }
 
 function shouldShowBloomvilleMinimap(stageId) {
@@ -2420,8 +2427,8 @@ function shouldShowBloomvilleMinimap(stageId) {
 }
 
 function updateBloomvilleMinimapOverlay(context) {
-  const visible = shouldShowBloomvilleMinimap(state.selectedStageId) && Boolean(ui.minimapCanvas);
-  ui.minimapOverlay.classList.toggle('is-hidden', !visible);
+  const visible = shouldShowBloomvilleMinimap(state.selectedStageId) && Boolean(minimapCanvasEl);
+  setMinimapVisible(visible);
 
   if (!visible) {
     return;
@@ -2433,8 +2440,8 @@ function updateBloomvilleMinimapOverlay(context) {
       ? context.characterController.yaw
       : state.vehicleYaw;
 
-  ui.minimapLabel.textContent = getStageLabel(state.selectedStageId);
-  renderStageMinimap(ui.minimapCanvas, {
+  setMinimapLabel(getStageLabel(state.selectedStageId));
+  renderStageMinimap(minimapCanvasEl, {
     mode: activeStage?.navigation?.mode,
     center: stagePosition,
     yaw,
@@ -2515,12 +2522,7 @@ function syncControlOutputs() {
 
 function syncOverlayVisibility() {
   ui.hud.classList.toggle('is-hidden', !state.uiOpen);
-  ui.engineOverlay.classList.toggle('is-hidden', !state.uiOpen);
-  ui.playerOverlay.classList.toggle('is-hidden', !state.uiOpen || !!localStorage.getItem('controlsHidden'));
-  ui.performanceOverlay.classList.toggle('is-hidden', !state.performanceOpen);
-  ui.minimapOverlay.classList.toggle('is-hidden', !shouldShowBloomvilleMinimap(state.selectedStageId));
-  if (ui.toggleUi) {
-    ui.toggleUi.classList.remove('is-hidden');
-    ui.toggleUi.textContent = state.uiOpen ? 'Hide UI' : 'Show UI';
-  }
+  setUiOpen(state.uiOpen);
+  setPerformanceOpen(state.performanceOpen);
+  setMinimapVisible(shouldShowBloomvilleMinimap(state.selectedStageId));
 }

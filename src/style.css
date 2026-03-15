@@ -105,27 +105,27 @@ select {
 
 .performance-overlay {
   position: absolute;
-  top: 78px;
+  top: 24px;
   left: 24px;
   z-index: 9;
   display: grid;
   grid-template-columns: repeat(2, minmax(94px, 1fr));
-  gap: 8px;
+  gap: 6px;
   width: min(248px, calc(100vw - 48px));
   padding: 10px;
-  border: 1px solid rgba(203, 220, 255, 0.14);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(8, 14, 24, 0.82), rgba(4, 8, 14, 0.68));
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(28px) saturate(1.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .performance-chip {
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid rgba(203, 220, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .performance-chip .label {
@@ -192,7 +192,7 @@ select {
   z-index: 9;
   display: grid;
   gap: 2px;
-  width: fit-content;
+  width: min(248px, calc(100vw - 48px));
   padding: 6px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;

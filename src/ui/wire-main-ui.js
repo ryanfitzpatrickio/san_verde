@@ -429,26 +429,6 @@ export function wireMainUi(options) {
     });
   }
 
-  if (ui.playerOverlay && ui.hideControls) {
-    if (localStorage.getItem('controlsHidden')) {
-      ui.playerOverlay.classList.add('is-hidden');
-    }
-    ui.hideControls.addEventListener('click', () => {
-      ui.playerOverlay.classList.add('is-hidden');
-      localStorage.setItem('controlsHidden', '1');
-    });
-  }
-
-  if (ui.controlsOverlay && ui.hideControlsOverlay) {
-    if (!localStorage.getItem('controlsOverlayHidden')) {
-      ui.controlsOverlay.classList.remove('is-hidden');
-    }
-    ui.hideControlsOverlay.addEventListener('click', () => {
-      ui.controlsOverlay.classList.add('is-hidden');
-      localStorage.setItem('controlsOverlayHidden', '1');
-    });
-  }
-
   window.addEventListener(
     'pointerdown',
     () => {
