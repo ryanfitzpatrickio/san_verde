@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   ...baseConfig,
+  base: '/san_verde/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
