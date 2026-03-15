@@ -21,14 +21,10 @@ const BLOOMVILLE_CATALOG_MODULES = import.meta.glob('./bloomville/catalogs/*.jso
   import: 'default'
 });
 
-let _imageLoader = null;
-function getImageLoader(loadingManager) {
-  if (!_imageLoader) _imageLoader = new THREE.ImageLoader(loadingManager);
-  return _imageLoader;
-}
+const IMAGE_LOADER = new THREE.ImageLoader();
 const TEXTURE_CACHE = new Map();
 
-function loadTexture(name, loadingManager) {
+function loadTexture(name) {
   if (TEXTURE_CACHE.has(name)) {
     return TEXTURE_CACHE.get(name);
   }
@@ -36,7 +32,7 @@ function loadTexture(name, loadingManager) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
-  getImageLoader(loadingManager).load(
+  IMAGE_LOADER.load(
     resolveModelUrl(`/textures/${name}.png`),
     (image) => { texture.image = image; texture.needsUpdate = true; },
     undefined,
@@ -1223,7 +1219,7 @@ function createPaletteMaterials(palette, textures = {}) {
         metalness: key === 'glass' ? 0.12 : 0.03
       });
       if (textureName) {
-        material.map = loadTexture(textureName, loadingManager);
+        material.map = loadTexture(textureName);
       }
       material.userData.shared = true;
       PALETTE_MATERIAL_CACHE.set(materialKey, material);
