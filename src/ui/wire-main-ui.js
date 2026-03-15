@@ -419,11 +419,35 @@ export function wireMainUi(options) {
     applyGarageSnapshot(setCameraOverride(context.gameRuntime, false));
   });
 
-  ui.toggleUi.addEventListener('click', () => {
-    unlockEngineAudio(context.gameRuntime);
-    state.uiOpen = !state.uiOpen;
-    syncOverlayVisibility();
-  });
+  if (ui.toggleUi) {
+    ui.toggleUi.addEventListener('click', () => {
+      unlockEngineAudio(context.gameRuntime);
+      state.uiOpen = !state.uiOpen;
+      if (!state.uiOpen) localStorage.setItem('uiDismissed', '1');
+      else localStorage.removeItem('uiDismissed');
+      syncOverlayVisibility();
+    });
+  }
+
+  if (ui.controlsRow && ui.hideControls) {
+    if (localStorage.getItem('controlsHidden')) {
+      ui.controlsRow.classList.add('is-hidden');
+    }
+    ui.hideControls.addEventListener('click', () => {
+      ui.controlsRow.classList.add('is-hidden');
+      localStorage.setItem('controlsHidden', '1');
+    });
+  }
+
+  if (ui.controlsOverlay && ui.hideControlsOverlay) {
+    if (localStorage.getItem('controlsOverlayHidden')) {
+      ui.controlsOverlay.classList.add('is-hidden');
+    }
+    ui.hideControlsOverlay.addEventListener('click', () => {
+      ui.controlsOverlay.classList.add('is-hidden');
+      localStorage.setItem('controlsOverlayHidden', '1');
+    });
+  }
 
   window.addEventListener(
     'pointerdown',

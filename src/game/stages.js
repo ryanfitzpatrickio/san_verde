@@ -61,7 +61,7 @@ function createTestCourseStage() {
   const groundTexture = getTestGroundTexture();
 
   const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(62, 144),
+    new THREE.CircleGeometry(120, 144),
     new THREE.MeshPhysicalMaterial({
       color: '#071019',
       roughness: 0.9,
@@ -74,7 +74,7 @@ function createTestCourseStage() {
   group.add(floor);
 
   const asphalt = new THREE.Mesh(
-    new THREE.PlaneGeometry(86, 86),
+    new THREE.PlaneGeometry(160, 160),
     new THREE.MeshPhysicalMaterial({
       color: '#ffffff',
       roughness: 0.94,
@@ -89,7 +89,7 @@ function createTestCourseStage() {
   group.add(asphalt);
 
   const padBorder = new THREE.Mesh(
-    new THREE.RingGeometry(44, 49, 128),
+    new THREE.RingGeometry(78, 85, 128),
     new THREE.MeshBasicMaterial({
       color: '#14304c',
       transparent: true,
@@ -102,31 +102,122 @@ function createTestCourseStage() {
   padBorder.position.y = 0.018;
   group.add(padBorder);
 
+  // Drift ring marker
+  const driftRing = new THREE.Mesh(
+    new THREE.RingGeometry(34, 35.2, 128),
+    new THREE.MeshBasicMaterial({ color: '#f4f1df', transparent: true, opacity: 0.5 })
+  );
+  driftRing.userData.noSuspension = true;
+  driftRing.userData.noCollision = true;
+  driftRing.rotation.x = -Math.PI / 2;
+  driftRing.position.y = 0.022;
+  group.add(driftRing);
+
   group.add(createSandboxStartLine(new THREE.Vector3(0, 0.03, 26)));
   group.add(createSandboxGuideMarks());
-  group.add(createSandboxCones());
+  group.add(createSandboxCones(55));
   group.add(createSuspensionTestFeatures());
+  group.add(createCourseBoundaryWalls());
+
+  // Portal
+  const PORTAL_SPECS = [
+    { position: new THREE.Vector3(0, 0, -75), label: 'San Verde', color: '#00e5ff', target: 'san_verde', rotY: Math.PI }
+  ];
+
+  const portalObjects = PORTAL_SPECS.map((spec) => {
+    const portalGroup = createPortalObject(spec.label, spec.color);
+    portalGroup.position.copy(spec.position);
+    portalGroup.rotation.y = spec.rotY;
+    group.add(portalGroup);
+    return { mesh: portalGroup, position: spec.position.clone(), target: spec.target };
+  });
 
   return {
     id: 'test_course',
     group,
     startPosition: new THREE.Vector3(0, 0, 21),
     startYaw: Math.PI,
-    driveBounds: 38,
+    driveBounds: 74,
     navigation: createWaypointLoopNavigation([
-      new THREE.Vector3(0, 0, 28),
-      new THREE.Vector3(22, 0, 20),
-      new THREE.Vector3(28, 0, 0),
-      new THREE.Vector3(20, 0, -22),
-      new THREE.Vector3(0, 0, -28),
-      new THREE.Vector3(-22, 0, -20),
-      new THREE.Vector3(-28, 0, 0),
-      new THREE.Vector3(-20, 0, 22)
+      new THREE.Vector3(0, 0, 55),
+      new THREE.Vector3(42, 0, 38),
+      new THREE.Vector3(55, 0, 0),
+      new THREE.Vector3(38, 0, -42),
+      new THREE.Vector3(0, 0, -55),
+      new THREE.Vector3(-42, 0, -38),
+      new THREE.Vector3(-55, 0, 0),
+      new THREE.Vector3(-38, 0, 42)
     ]),
     agentNavigation: null,
     agentNavigationRevision: 0,
-    update() {}
+    update(vehiclePosition) {
+      const t = performance.now() * 0.001;
+      for (const portal of portalObjects) {
+        portal.mesh.userData.ring.rotation.z = t * 0.7;
+      }
+      for (const portal of portalObjects) {
+        const dx = vehiclePosition.x - portal.position.x;
+        const dz = vehiclePosition.z - portal.position.z;
+        if (dx * dx + dz * dz < 36) {
+          return { type: 'portal', destination: portal.target };
+        }
+      }
+    }
   };
+}
+
+function createPortalObject(label, color) {
+  const group = new THREE.Group();
+  group.userData.noSuspension = true;
+  group.userData.noCollision = true;
+
+  const RADIUS = 3.4;
+  const centerY = RADIUS + 0.4;
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(RADIUS, 0.22, 16, 72),
+    new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+  );
+  ring.position.y = centerY;
+  group.userData.ring = ring;
+  group.add(ring);
+
+  const disc = new THREE.Mesh(
+    new THREE.CircleGeometry(RADIUS - 0.12, 64),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.13, side: THREE.DoubleSide })
+  );
+  disc.position.y = centerY;
+  group.add(disc);
+
+  const groundRing = new THREE.Mesh(
+    new THREE.RingGeometry(3.8, 5.2, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+  );
+  groundRing.rotation.x = -Math.PI / 2;
+  groundRing.position.y = 0.022;
+  group.add(groundRing);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 66px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 256, 64);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.8, 1.45),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(canvas),
+      transparent: true,
+      side: THREE.DoubleSide
+    })
+  );
+  labelMesh.position.y = centerY + RADIUS + 0.9;
+  group.add(labelMesh);
+
+  return group;
 }
 
 function getTestGroundTexture() {
@@ -471,6 +562,32 @@ function createHighwayChunkPosts(curve, count, offset, materials) {
   return group;
 }
 
+function createCourseBoundaryWalls() {
+  const group = new THREE.Group();
+  const material = new THREE.MeshStandardMaterial({
+    color: '#1c222c',
+    roughness: 0.88,
+    metalness: 0.06
+  });
+  const H = 0.52;
+  const T = 0.55;
+  const HALF = 76;
+  const walls = [
+    { x: 0,     z:  HALF, w: HALF * 2 + T * 2, d: T },
+    { x: 0,     z: -HALF, w: HALF * 2 + T * 2, d: T },
+    { x:  HALF, z: 0,     w: T, d: HALF * 2 },
+    { x: -HALF, z: 0,     w: T, d: HALF * 2 }
+  ];
+  for (const wall of walls) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(wall.w, H, wall.d), material);
+    mesh.position.set(wall.x, H * 0.5, wall.z);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
+  return group;
+}
+
 function createSandboxStartLine(position) {
   const group = new THREE.Group();
   group.userData.noSuspension = true;
@@ -521,7 +638,7 @@ function createSandboxGuideMarks() {
   return group;
 }
 
-function createSandboxCones() {
+function createSandboxCones(ringRadius = 30) {
   const group = new THREE.Group();
   const coneMaterial = new THREE.MeshStandardMaterial({
     color: '#ff8748',
@@ -534,7 +651,6 @@ function createSandboxCones() {
     metalness: 0.08
   });
   const positions = [];
-  const ringRadius = 30;
   const ringCount = 64;
   for (let index = 0; index < ringCount; index += 1) {
     const angle = (index / ringCount) * Math.PI * 2;

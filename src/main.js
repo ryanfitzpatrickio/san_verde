@@ -397,12 +397,23 @@ async function bootstrap() {
     characterMount
   );
 
-  loadingManager.onStart = () => setProgress(12);
+  loadingManager.onStart = () => {
+    setProgress(12);
+    setLoadScreen(12, 'Loading…');
+  };
   loadingManager.onProgress = (_url, loaded, total) => {
     const ratio = total > 0 ? loaded / total : 0.2;
-    setProgress(12 + ratio * 78);
+    const pct = Math.round(12 + ratio * 78);
+    setProgress(pct);
+    setLoadScreen(pct, `Loading… ${pct}%`);
   };
-  loadingManager.onLoad = () => setProgress(100);
+  loadingManager.onLoad = () => {
+    setProgress(100);
+    setLoadScreen(100, 'Ready');
+    setTimeout(() => {
+      if (ui.loadScreen) ui.loadScreen.classList.add('load-screen-done');
+    }, 400);
+  };
 
   vehicleManager.mountCarAsset(carMount, wheelMount, createFallbackCar(), { isFallback: true });
   applySceneMaterialState(carMount, wheelMount);
@@ -551,7 +562,7 @@ async function bootstrap() {
     applyGarageSnapshot(updateGarageRuntime(gameRuntime, deltaSeconds));
     playerSystem.updateFrame(context, deltaSeconds);
     updateDoorAnimation(deltaSeconds);
-    contextStageUpdate(activeStage, playerSystem.getActiveStagePosition(context));
+    contextStageUpdate(context, activeStage, playerSystem.getActiveStagePosition(context));
     if ((activeStage?.physicsRevision ?? 0) !== activeStagePhysicsRevision) {
       refreshActiveStagePhysics(context);
     }
@@ -592,7 +603,7 @@ async function rebuildStage(context, stageId) {
   if (context.characterController && !state.driveMode) {
     playerSystem.placeCharacterAtVehicle(context);
   }
-  contextStageUpdate(stage, playerSystem.getActiveStagePosition(context));
+  contextStageUpdate(context, stage, playerSystem.getActiveStagePosition(context));
   if ((activeStage?.physicsRevision ?? 0) !== activeStagePhysicsRevision) {
     refreshActiveStagePhysics(context);
   }
@@ -610,8 +621,18 @@ async function rebuildStage(context, stageId) {
   setStatus(`${getStageLabel(stageId)} loaded`);
 }
 
-function contextStageUpdate(stage, followPosition) {
-  stage?.update?.(followPosition);
+let portalTransitionPending = false;
+
+function contextStageUpdate(ctx, stage, followPosition) {
+  const action = stage?.update?.(followPosition);
+  if (action?.type === 'portal' && !portalTransitionPending) {
+    portalTransitionPending = true;
+    state.selectedStageId = action.destination;
+    ui.stageType.value = action.destination;
+    rebuildStage(ctx, action.destination).finally(() => {
+      portalTransitionPending = false;
+    });
+  }
 }
 
 function initializeStageSamplingAndPhysics(stage) {
@@ -2284,6 +2305,12 @@ function setProgress(value) {
   ui.progress.style.width = `${value}%`;
 }
 
+function setLoadScreen(pct, label) {
+  if (!ui.loadBar || !ui.loadLabel) return;
+  ui.loadBar.style.width = `${pct}%`;
+  ui.loadLabel.textContent = label;
+}
+
 function applyGarageSnapshot(snapshot) {
   state.driveMode = snapshot.driveMode;
   state.drivingStyle = snapshot.drivingStyle;
@@ -2391,7 +2418,6 @@ function shouldShowBloomvilleMinimap(stageId) {
 function updateBloomvilleMinimapOverlay(context) {
   const visible = shouldShowBloomvilleMinimap(state.selectedStageId) && Boolean(ui.minimapCanvas);
   ui.minimapOverlay.classList.toggle('is-hidden', !visible);
-  ui.playerOverlay.classList.toggle('with-minimap', visible);
 
   if (!visible) {
     return;
@@ -2490,7 +2516,8 @@ function syncOverlayVisibility() {
   ui.viewportNote.classList.toggle('is-hidden', !state.uiOpen);
   ui.performanceOverlay.classList.toggle('is-hidden', !state.performanceOpen);
   ui.minimapOverlay.classList.toggle('is-hidden', !shouldShowBloomvilleMinimap(state.selectedStageId));
-  ui.playerOverlay.classList.toggle('with-minimap', shouldShowBloomvilleMinimap(state.selectedStageId));
-  ui.toggleUi.classList.remove('is-hidden');
-  ui.toggleUi.textContent = state.uiOpen ? 'Hide UI' : 'Show UI';
+  if (ui.toggleUi) {
+    ui.toggleUi.classList.remove('is-hidden');
+    ui.toggleUi.textContent = state.uiOpen ? 'Hide UI' : 'Show UI';
+  }
 }

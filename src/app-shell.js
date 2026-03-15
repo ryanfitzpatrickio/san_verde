@@ -358,7 +358,6 @@ export const MODEL_CONFIG = {
 export function createAppShell(root) {
   root.innerHTML = `
     <div class="app-shell">
-      <button class="hud-toggle" type="button" data-role="toggle-ui">Show UI</button>
       <div class="performance-overlay" data-role="performance-overlay">
         <div class="performance-chip"><span class="label">FPS 1s</span><span class="value" data-role="perf-fps">0</span></div>
         <div class="performance-chip"><span class="label">CPU Avg</span><span class="value" data-role="perf-frame">0.0 ms</span></div>
@@ -371,94 +370,77 @@ export function createAppShell(root) {
         <div class="performance-chip"><span class="label">Tex</span><span class="value" data-role="perf-textures">0</span></div>
         <div class="performance-breakdown" data-role="perf-breakdown">Top: n/a</div>
       </div>
-      <div class="hud is-hidden" data-role="hud">
-        <p class="eyebrow">Cruise Vehicle Lab</p>
-        <h1>WEBGPU<br />GARAGE</h1>
-        <p class="lede">
-          High-fidelity car staging for <code>three@0.183.2</code>. Drop in a
-          chassis GLB and an optional tire GLB, then orbit, light, and scale the scene.
-        </p>
-        <div class="status-row">
-          <div class="stat-card"><span class="label">Renderer</span><span class="value" data-role="backend">Booting...</span></div>
-          <div class="stat-card"><span class="label">Pipeline</span><span class="value" data-role="pipeline">Performance Forward</span></div>
+      <div style="display:none" data-role="hud">
+        <span data-role="backend"></span>
+        <span data-role="pipeline"></span>
+        <span data-role="status"></span>
+        <span data-role="car-name"></span>
+        <span data-role="tire-name"></span>
+        <span data-role="texture-hint"></span>
+        <span data-role="engine-description"></span>
+        <span data-role="drive-style-description"></span>
+        <select data-role="built-in-car"></select>
+        <select data-role="engine-type"></select>
+        <select data-role="drive-style"></select>
+        <select data-role="stage-type"></select>
+        <select data-role="texture-slot"></select>
+        <input type="file" accept=".glb" data-role="car-input" />
+        <input type="file" accept=".glb" data-role="tire-input" />
+        <input type="file" accept="image/png,image/jpeg,image/webp" data-role="texture-input" />
+        <button data-role="toggle-lap"></button>
+        <button data-role="toggle-autopilot"></button>
+        <button data-role="toggle-cinematic"></button>
+        <button data-role="toggle-nav-debug"></button>
+        <button data-role="toggle-fog"></button>
+        <button data-role="toggle-door"></button>
+        <button data-role="toggle-rotation"></button>
+        <button data-role="reset-camera"></button>
+        <button data-role="download-texture"></button>
+        <button data-role="export-car"></button>
+        <input type="range" data-role="exposure" value="1.15" />
+        <output data-role="exposure-value"></output>
+        <input type="range" data-role="environment" value="1.2" />
+        <output data-role="environment-value"></output>
+        <input type="range" data-role="tire-scale" value="0.93" />
+        <output data-role="tire-scale-value"></output>
+        <input type="range" data-role="front-axle" value="0.18" />
+        <output data-role="front-axle-value"></output>
+        <input type="range" data-role="rear-axle" value="0.245" />
+        <output data-role="rear-axle-value"></output>
+        <input type="range" data-role="ride-height" value="0.105" />
+        <output data-role="ride-height-value"></output>
+        <input type="range" data-role="chassis-height" value="0.11" />
+        <output data-role="chassis-height-value"></output>
+        <input type="range" data-role="side-inset" value="0.07" />
+        <output data-role="side-inset-value"></output>
+        <input type="range" data-role="rotate-x" value="0" />
+        <output data-role="rotate-x-value"></output>
+        <input type="range" data-role="rotate-y" value="3.14" />
+        <output data-role="rotate-y-value"></output>
+        <input type="range" data-role="rotate-z" value="0" />
+        <output data-role="rotate-z-value"></output>
+        <select data-role="bike-front-spin-axis"><option value="z" selected>Z</option></select>
+        <select data-role="bike-rear-spin-axis"><option value="z" selected>Z</option></select>
+        <input type="range" data-role="bike-front-offset-x" value="0" /><output data-role="bike-front-offset-x-value"></output>
+        <input type="range" data-role="bike-front-offset-y" value="0" /><output data-role="bike-front-offset-y-value"></output>
+        <input type="range" data-role="bike-front-offset-z" value="0" /><output data-role="bike-front-offset-z-value"></output>
+        <input type="range" data-role="bike-front-rotate-x" value="0" /><output data-role="bike-front-rotate-x-value"></output>
+        <input type="range" data-role="bike-front-rotate-y" value="0" /><output data-role="bike-front-rotate-y-value"></output>
+        <input type="range" data-role="bike-front-rotate-z" value="0" /><output data-role="bike-front-rotate-z-value"></output>
+        <input type="range" data-role="bike-rear-offset-x" value="0" /><output data-role="bike-rear-offset-x-value"></output>
+        <input type="range" data-role="bike-rear-offset-y" value="0" /><output data-role="bike-rear-offset-y-value"></output>
+        <input type="range" data-role="bike-rear-offset-z" value="0" /><output data-role="bike-rear-offset-z-value"></output>
+        <input type="range" data-role="bike-rear-rotate-x" value="0" /><output data-role="bike-rear-rotate-x-value"></output>
+        <input type="range" data-role="bike-rear-rotate-y" value="0" /><output data-role="bike-rear-rotate-y-value"></output>
+        <input type="range" data-role="bike-rear-rotate-z" value="0" /><output data-role="bike-rear-rotate-z-value"></output>
+        <div class="progress-bar" data-role="progress"></div>
+      </div>
+      <div class="load-screen" data-role="load-screen">
+        <div class="load-card">
+          <div class="load-title">San Verde</div>
+          <div class="load-bar-track"><div class="load-bar-fill" data-role="load-bar"></div></div>
+          <div class="load-label" data-role="load-label">Loading…</div>
         </div>
-        <div class="status-row">
-          <div class="stat-card"><span class="label">Status</span><span class="value" data-role="status">Initializing scene</span></div>
-          <div class="stat-card"><span class="label">Post FX</span><span class="value">Off</span></div>
-        </div>
-        <div class="asset-row">
-          <div class="asset-card"><span class="label">Car Asset</span><span class="asset-name" data-role="car-name">Placeholder concept</span></div>
-          <div class="asset-card"><span class="label">Tire Asset</span><span class="asset-name" data-role="tire-name">Using built-in fallback</span></div>
-        </div>
-        <p class="hint engine-hint">
-          Inspired by <code>engine-sim</code>-style procedural engine sound. Audio unlocks on first click or key press.
-          Sim mode uses <code>Q</code>/<code>E</code> to shift and <code>N</code> for neutral; arcade mode shifts automatically.
-        </p>
-        <label class="control"><span class="control-row"><span>Built-in car</span></span><select data-role="built-in-car"></select></label>
-        <label class="control"><span class="control-row"><span>Engine type</span><output data-role="engine-description">390ci V8 / 5-speed manual</output></span><select data-role="engine-type"></select></label>
-        <label class="control"><span class="control-row"><span>Driving style</span><output data-role="drive-style-description">Manual transmission / steadier weight transfer</output></span><select data-role="drive-style"></select></label>
-        <label class="control"><span class="control-row"><span>Stage</span></span><select data-role="stage-type"></select></label>
-        <div class="actions">
-          <label class="file-action">Load car GLB<input type="file" accept=".glb" data-role="car-input" /></label>
-          <label class="file-action secondary">Load tire GLB<input type="file" accept=".glb" data-role="tire-input" /></label>
-          <button class="action secondary" type="button" data-role="toggle-lap">Drive mode: On</button>
-          <button class="action secondary" type="button" data-role="toggle-autopilot">Autopilot: Off</button>
-          <button class="action secondary" type="button" data-role="toggle-cinematic">Camera: Normal</button>
-          <button class="action secondary" type="button" data-role="toggle-nav-debug">Nav Debug: Off</button>
-          <button class="action secondary" type="button" data-role="toggle-fog">Fog: On</button>
-          <button class="action secondary" type="button" data-role="toggle-door">Door: Closed</button>
-          <button class="action secondary" type="button" data-role="toggle-rotation">Auto-rotate: Off</button>
-          <button class="action secondary" type="button" data-role="reset-camera">Reset camera</button>
-        </div>
-        <div class="texture-editor">
-          <span class="label">Texture Editor</span>
-          <label class="control"><span class="control-row"><span>Car texture slot</span></span><select data-role="texture-slot"></select></label>
-          <div class="actions texture-actions">
-            <button class="action secondary" type="button" data-role="download-texture">Download texture</button>
-            <label class="file-action secondary">Upload texture<input type="file" accept="image/png,image/jpeg,image/webp" data-role="texture-input" /></label>
-            <button class="action secondary" type="button" data-role="export-car">Export car GLB</button>
-          </div>
-          <p class="hint texture-hint" data-role="texture-hint">
-            Load a car GLB to inspect its editable base-color texture slots.
-          </p>
-        </div>
-        <div class="controls">
-          <label class="control"><span class="control-row"><span>Exposure</span><output data-role="exposure-value">1.15</output></span><input type="range" min="0.6" max="1.8" step="0.01" value="1.15" data-role="exposure" /></label>
-          <label class="control"><span class="control-row"><span>Environment</span><output data-role="environment-value">1.20</output></span><input type="range" min="0.4" max="2.4" step="0.01" value="1.2" data-role="environment" /></label>
-          <label class="control"><span class="control-row"><span>Tire scale</span><output data-role="tire-scale-value">0.93</output></span><input type="range" min="0.5" max="1.8" step="0.01" value="0.93" data-role="tire-scale" /></label>
-          <label class="control"><span class="control-row"><span>Front axle</span><output data-role="front-axle-value">0.180</output></span><input type="range" min="0.16" max="0.3" step="0.005" value="0.18" data-role="front-axle" /></label>
-          <label class="control"><span class="control-row"><span>Rear axle</span><output data-role="rear-axle-value">0.245</output></span><input type="range" min="0.14" max="0.28" step="0.005" value="0.245" data-role="rear-axle" /></label>
-          <label class="control"><span class="control-row"><span>Ride height</span><output data-role="ride-height-value">0.105</output></span><input type="range" min="-0.08" max="0.18" step="0.005" value="0.105" data-role="ride-height" /></label>
-          <label class="control"><span class="control-row"><span>Chassis height</span><output data-role="chassis-height-value">0.110</output></span><input type="range" min="-0.2" max="0.25" step="0.005" value="0.11" data-role="chassis-height" /></label>
-          <label class="control"><span class="control-row"><span>Side inset</span><output data-role="side-inset-value">0.070</output></span><input type="range" min="0.05" max="0.18" step="0.005" value="0.07" data-role="side-inset" /></label>
-          <label class="control"><span class="control-row"><span>Rotate X</span><output data-role="rotate-x-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="rotate-x" /></label>
-          <label class="control"><span class="control-row"><span>Rotate Y</span><output data-role="rotate-y-value">3.14</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="3.14" data-role="rotate-y" /></label>
-          <label class="control"><span class="control-row"><span>Rotate Z</span><output data-role="rotate-z-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="rotate-z" /></label>
-        </div>
-        <div class="controls bike-controls">
-          <span class="label">Bike Wheel Tuning</span>
-          <label class="control"><span class="control-row"><span>Front roll axis</span></span><select data-role="bike-front-spin-axis"><option value="x">X</option><option value="y">Y</option><option value="z" selected>Z</option></select></label>
-          <label class="control"><span class="control-row"><span>Rear roll axis</span></span><select data-role="bike-rear-spin-axis"><option value="x">X</option><option value="y">Y</option><option value="z" selected>Z</option></select></label>
-          <label class="control"><span class="control-row"><span>Front offset X</span><output data-role="bike-front-offset-x-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-front-offset-x" /></label>
-          <label class="control"><span class="control-row"><span>Front offset Y</span><output data-role="bike-front-offset-y-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-front-offset-y" /></label>
-          <label class="control"><span class="control-row"><span>Front offset Z</span><output data-role="bike-front-offset-z-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-front-offset-z" /></label>
-          <label class="control"><span class="control-row"><span>Front rotate X</span><output data-role="bike-front-rotate-x-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-front-rotate-x" /></label>
-          <label class="control"><span class="control-row"><span>Front rotate Y</span><output data-role="bike-front-rotate-y-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-front-rotate-y" /></label>
-          <label class="control"><span class="control-row"><span>Front rotate Z</span><output data-role="bike-front-rotate-z-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-front-rotate-z" /></label>
-          <label class="control"><span class="control-row"><span>Rear offset X</span><output data-role="bike-rear-offset-x-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-rear-offset-x" /></label>
-          <label class="control"><span class="control-row"><span>Rear offset Y</span><output data-role="bike-rear-offset-y-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-rear-offset-y" /></label>
-          <label class="control"><span class="control-row"><span>Rear offset Z</span><output data-role="bike-rear-offset-z-value">0.000</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0" data-role="bike-rear-offset-z" /></label>
-          <label class="control"><span class="control-row"><span>Rear rotate X</span><output data-role="bike-rear-rotate-x-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-rear-rotate-x" /></label>
-          <label class="control"><span class="control-row"><span>Rear rotate Y</span><output data-role="bike-rear-rotate-y-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-rear-rotate-y" /></label>
-          <label class="control"><span class="control-row"><span>Rear rotate Z</span><output data-role="bike-rear-rotate-z-value">0.00</output></span><input type="range" min="-3.14" max="3.14" step="0.01" value="0" data-role="bike-rear-rotate-z" /></label>
-        </div>
-        <div class="progress" aria-hidden="true"><div class="progress-bar" data-role="progress"></div></div>
-        <p class="hint">
-          Built-in garage cars live at <code>/public/models/car.glb</code> and
-          <code>/public/models/car2.glb</code>; tires still load from
-          <code>/public/models/tire.glb</code>. Drag files anywhere into the viewport
-          to hot-swap them without changing code.
-        </p>
       </div>
       <div class="viewport" data-role="viewport"></div>
       <div class="engine-overlay" data-role="engine-overlay">
@@ -478,17 +460,34 @@ export function createAppShell(root) {
         </div>
       </div>
       <div class="player-overlay" data-role="player-overlay">
-        <span class="label">Target</span>
-        <span class="value" data-role="player-mode">On foot</span>
-        <span class="player-hint" data-role="player-hint">WASD move, Shift run, F enter car</span>
+        <div class="player-status-row">
+          <span class="label">Target</span>
+          <span class="value" data-role="player-mode">On foot</span>
+        </div>
+        <div class="player-controls-row" data-role="controls-row">
+          <span class="player-hint" data-role="player-hint">WASD move, Shift run, F enter car</span>
+          <button class="player-overlay-hide" data-role="hide-controls">Hide</button>
+        </div>
       </div>
-      <div class="viewport-note is-hidden" data-role="viewport-note">
-        Orbit with left mouse, pan with right mouse, zoom with wheel. Edit
-        <code>MODEL_CONFIG</code> in <code>src/app-shell.js</code> if your tire anchors
-        need different positions or rotation. On foot use <code>WASD</code>, hold <code>Shift</code> to run,
-        and press <code>F</code> near the car to drive. In the car use <code>WASD</code> to drive,
-        with sim-mode manual shifting on <code>Q/E/N</code> and arcade-mode automatic shifting.
+      <div class="controls-overlay" data-role="controls-overlay">
+        <div class="controls-overlay-header">
+          <span class="label">Controls</span>
+          <button class="player-overlay-hide" data-role="hide-controls-overlay">Hide</button>
+        </div>
+        <div class="controls-grid">
+          <span class="controls-cat">On foot</span>
+          <span class="controls-desc"><kbd>WASD</kbd> move &nbsp;<kbd>Shift</kbd> run &nbsp;<kbd>Space</kbd> jump</span>
+          <span class="controls-cat"></span>
+          <span class="controls-desc"><kbd>F</kbd> enter car at driver door</span>
+          <span class="controls-cat">Driving</span>
+          <span class="controls-desc"><kbd>WASD</kbd> drive &nbsp;<kbd>F</kbd> exit car</span>
+          <span class="controls-cat"></span>
+          <span class="controls-desc"><kbd>Q</kbd><kbd>E</kbd> shift &nbsp;<kbd>N</kbd> neutral <span class="controls-note">(sim)</span></span>
+          <span class="controls-cat">Camera</span>
+          <span class="controls-desc">Mouse drag orbit &nbsp; Scroll zoom</span>
+        </div>
       </div>
+      <div class="viewport-note is-hidden" data-role="viewport-note"></div>
       <div class="drop-overlay" data-role="drop-overlay">
         <div class="drop-card">
           <strong>Drop GLB files to replace the current assets</strong>
@@ -501,6 +500,9 @@ export function createAppShell(root) {
 
   return {
     viewport: root.querySelector('[data-role="viewport"]'),
+    loadScreen: root.querySelector('[data-role="load-screen"]'),
+    loadBar: root.querySelector('[data-role="load-bar"]'),
+    loadLabel: root.querySelector('[data-role="load-label"]'),
     engineOverlay: root.querySelector('[data-role="engine-overlay"]'),
     performanceOverlay: root.querySelector('[data-role="performance-overlay"]'),
     hud: root.querySelector('[data-role="hud"]'),
@@ -529,6 +531,10 @@ export function createAppShell(root) {
     minimapCanvas: root.querySelector('[data-role="minimap-canvas"]'),
     minimapLabel: root.querySelector('[data-role="minimap-label"]'),
     playerOverlay: root.querySelector('[data-role="player-overlay"]'),
+    controlsRow: root.querySelector('[data-role="controls-row"]'),
+    hideControls: root.querySelector('[data-role="hide-controls"]'),
+    controlsOverlay: root.querySelector('[data-role="controls-overlay"]'),
+    hideControlsOverlay: root.querySelector('[data-role="hide-controls-overlay"]'),
     playerMode: root.querySelector('[data-role="player-mode"]'),
     playerHint: root.querySelector('[data-role="player-hint"]'),
     engineType: root.querySelector('[data-role="engine-type"]'),
@@ -675,7 +681,7 @@ export function createInitialState(ui) {
     vehiclePosition: new THREE.Vector3(),
     cameraOverride: false,
     cameraDetached: false,
-    uiOpen: false,
+    uiOpen: !localStorage.getItem('uiDismissed'),
     performanceOpen: false,
     wheelSpin: 0,
     wheelRadius: 0.42,
