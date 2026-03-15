@@ -11,7 +11,6 @@ A WebGPU-powered open-world driving game built with Three.js. Cruise through pro
 ## Features
 
 - **WebGPU rendering** via Three.js 0.183.2 with TSL node materials
-- **Multiple open worlds** — San Verde (OSM-based city), Bloomville (infinite procedural city), Test Course, Highway
 - **Realistic vehicle physics** — suspension, traction, RWD dynamics, torque curves
 - **Multi-layer engine audio** — 6 sampled layers mixed dynamically by RPM and load
 - **AI traffic** — autonomous vehicles and pedestrians with road graph pathfinding
@@ -113,18 +112,6 @@ Follow the prompts, then drop the `.glb` into `public/models/` and rebuild the r
 ```bash
 npm run assets:vehicles:build-registry
 ```
-
----
-
-## OSM Road Data
-
-To regenerate the San Verde road network from real OpenStreetMap data:
-
-```bash
-npm run roads:toronto
-```
-
-Fetches drivable highways from Overpass API and writes `src/game/city-road-graph.json`.
 
 ---
 
