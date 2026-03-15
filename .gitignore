@@ -1,5 +1,6 @@
 node_modules
 dist
+web-assets
 .tmp
 .DS_Store
 .env

@@ -13,7 +13,9 @@
     "roads:toronto": "node scripts/fetch-osm-roads.mjs --preset toronto_downtown --out src/game/city-road-graph.json",
     "postinstall": "node scripts/copy-three-assets.mjs",
     "catalog:screenshots": "vite scripts --port 3456",
-    "catalog:manager": "vite scripts --port 3457"
+    "catalog:manager": "vite scripts --port 3457",
+    "assets:optimize": "node scripts/optimize-web-assets.mjs",
+    "assets:optimize:models": "node scripts/optimize-web-assets.mjs --models-only"
   },
   "dependencies": {
     "@perplexdotgg/bounce": "^1.7.0",
@@ -24,7 +26,12 @@
     "vite-plugin-solid": "^2.11.11"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
     "canvas": "^3.2.1",
+    "draco3dgltf": "^1.5.7",
+    "sharp": "^0.34.1",
     "vite": "^7.1.0"
   }
 }
