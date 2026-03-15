@@ -182,20 +182,6 @@ function createPortalObject(label, color) {
   group.userData.ring = ring;
   group.add(ring);
 
-  const disc = new THREE.Mesh(
-    new THREE.CircleGeometry(RADIUS - 0.12, 64),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.13, side: THREE.DoubleSide })
-  );
-  disc.position.y = centerY;
-  group.add(disc);
-
-  const groundRing = new THREE.Mesh(
-    new THREE.RingGeometry(3.8, 5.2, 48),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
-  );
-  groundRing.rotation.x = -Math.PI / 2;
-  groundRing.position.y = 0.022;
-  group.add(groundRing);
 
   const canvas = document.createElement('canvas');
   canvas.width = 512;

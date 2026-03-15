@@ -21,7 +21,11 @@ const SAN_VERDE_CATALOG_MODULES = import.meta.glob('./bloomville/catalogs/*.json
   import: 'default'
 });
 
-const IMAGE_LOADER = new THREE.ImageLoader();
+let _imageLoader = null;
+function getImageLoader(loadingManager) {
+  if (!_imageLoader) _imageLoader = new THREE.ImageLoader(loadingManager);
+  return _imageLoader;
+}
 const TEXTURE_CACHE = new Map();
 const TEXTURE_REPEAT = {
   grass_green: [24, 24],
@@ -30,7 +34,7 @@ const TEXTURE_REPEAT = {
   sand: [20, 20]
 };
 
-function loadTexture(name) {
+function loadTexture(name, loadingManager) {
   if (TEXTURE_CACHE.has(name)) {
     return TEXTURE_CACHE.get(name);
   }
@@ -42,7 +46,7 @@ function loadTexture(name) {
   if (repeat) {
     texture.repeat.set(repeat[0], repeat[1]);
   }
-  IMAGE_LOADER.load(
+  getImageLoader(loadingManager).load(
     resolveModelUrl(`/textures/${name}.png`),
     (image) => { texture.image = image; texture.needsUpdate = true; },
     undefined,
@@ -327,7 +331,7 @@ function normalizeCatalogEntry(entry) {
   };
 }
 
-export async function createSanVerdeStage({ gltfLoader, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = {}) {
+export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = {}) {
   const data = await loadMapData();
   const catalogs = loadCatalogEntries();
   const activeCatalogs = buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY
@@ -2034,7 +2038,7 @@ function createPaletteMaterials(palette, textures = {}) {
         metalness: key === 'glass' ? 0.12 : 0.03
       });
       if (textureName) {
-        material.map = loadTexture(textureName);
+        material.map = loadTexture(textureName, loadingManager);
       }
       material.userData.shared = true;
       PALETTE_MATERIAL_CACHE.set(materialKey, material);

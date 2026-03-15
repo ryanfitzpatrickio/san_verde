@@ -21,10 +21,14 @@ const BLOOMVILLE_CATALOG_MODULES = import.meta.glob('./bloomville/catalogs/*.jso
   import: 'default'
 });
 
-const IMAGE_LOADER = new THREE.ImageLoader();
+let _imageLoader = null;
+function getImageLoader(loadingManager) {
+  if (!_imageLoader) _imageLoader = new THREE.ImageLoader(loadingManager);
+  return _imageLoader;
+}
 const TEXTURE_CACHE = new Map();
 
-function loadTexture(name) {
+function loadTexture(name, loadingManager) {
   if (TEXTURE_CACHE.has(name)) {
     return TEXTURE_CACHE.get(name);
   }
@@ -32,7 +36,7 @@ function loadTexture(name) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
-  IMAGE_LOADER.load(
+  getImageLoader(loadingManager).load(
     resolveModelUrl(`/textures/${name}.png`),
     (image) => { texture.image = image; texture.needsUpdate = true; },
     undefined,
@@ -178,7 +182,7 @@ const TREE_GEOMETRIES = {
   crown: markSharedGeometry(new THREE.SphereGeometry(1, 10, 8))
 };
 
-export async function createBloomvilleStage({ gltfLoader, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = {}) {
+export async function createBloomvilleStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = {}) {
   const catalogs = loadCatalogEntries();
   const activeCatalogs = buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY
     ? await filterCatalogEntriesForGlb(catalogs)
@@ -1219,7 +1223,7 @@ function createPaletteMaterials(palette, textures = {}) {
         metalness: key === 'glass' ? 0.12 : 0.03
       });
       if (textureName) {
-        material.map = loadTexture(textureName);
+        material.map = loadTexture(textureName, loadingManager);
       }
       material.userData.shared = true;
       PALETTE_MATERIAL_CACHE.set(materialKey, material);

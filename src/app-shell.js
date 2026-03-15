@@ -469,7 +469,7 @@ export function createAppShell(root) {
           <button class="player-overlay-hide" data-role="hide-controls">Hide</button>
         </div>
       </div>
-      <div class="controls-overlay" data-role="controls-overlay">
+      <div class="controls-overlay is-hidden" data-role="controls-overlay">
         <div class="controls-overlay-header">
           <span class="label">Controls</span>
           <button class="player-overlay-hide" data-role="hide-controls-overlay">Hide</button>
@@ -487,7 +487,6 @@ export function createAppShell(root) {
           <span class="controls-desc">Mouse drag orbit &nbsp; Scroll zoom</span>
         </div>
       </div>
-      <div class="viewport-note is-hidden" data-role="viewport-note"></div>
       <div class="drop-overlay" data-role="drop-overlay">
         <div class="drop-card">
           <strong>Drop GLB files to replace the current assets</strong>
@@ -507,7 +506,6 @@ export function createAppShell(root) {
     performanceOverlay: root.querySelector('[data-role="performance-overlay"]'),
     hud: root.querySelector('[data-role="hud"]'),
     toggleUi: root.querySelector('[data-role="toggle-ui"]'),
-    viewportNote: root.querySelector('[data-role="viewport-note"]'),
     backend: root.querySelector('[data-role="backend"]'),
     pipeline: root.querySelector('[data-role="pipeline"]'),
     status: root.querySelector('[data-role="status"]'),

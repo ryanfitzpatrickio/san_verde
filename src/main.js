@@ -364,7 +364,7 @@ async function bootstrap() {
   const contactShadow = createVehicleContactShadow();
   const agentMount = agentSystem.agentRoot;
   const navigationDebugMount = agentSystem.debugRoot;
-  const stage = await createStage(state.selectedStageId, { disposeObjectTree, gltfLoader });
+  const stage = await createStage(state.selectedStageId, { disposeObjectTree, gltfLoader, loadingManager });
   initializeStageSamplingAndPhysics(stage);
   applyStageShadowPolicy(stage);
   activeStage = stage;
@@ -408,11 +408,8 @@ async function bootstrap() {
     setLoadScreen(pct, `Loading… ${pct}%`);
   };
   loadingManager.onLoad = () => {
-    setProgress(100);
-    setLoadScreen(100, 'Ready');
-    setTimeout(() => {
-      if (ui.loadScreen) ui.loadScreen.classList.add('load-screen-done');
-    }, 400);
+    setProgress(90);
+    setLoadScreen(90, 'Finalizing…');
   };
 
   vehicleManager.mountCarAsset(carMount, wheelMount, createFallbackCar(), { isFallback: true });
@@ -453,6 +450,7 @@ async function bootstrap() {
     pmrem,
     skyRig,
     gltfLoader,
+    loadingManager,
     fbxLoader,
     carMount,
     wheelMount,
@@ -538,6 +536,12 @@ async function bootstrap() {
   await playerSystem.loadCharacterAssets(context);
   agentSystem.syncStage(stage, playerSystem.getActiveStagePosition(context));
 
+  setProgress(100);
+  setLoadScreen(100, 'Ready');
+  setTimeout(() => {
+    if (ui.loadScreen) ui.loadScreen.classList.add('load-screen-done');
+  }, 400);
+
   if (state.driveMode) {
     applyGarageSnapshot(snapGarageCamera(gameRuntime));
     applyGarageSnapshot(updateGarageRuntime(gameRuntime, 0));
@@ -583,7 +587,7 @@ async function bootstrap() {
 
 async function rebuildStage(context, stageId) {
   destroyStageResources(activeStage);
-  const stage = await createStage(stageId, { disposeObjectTree, gltfLoader: context.gltfLoader });
+  const stage = await createStage(stageId, { disposeObjectTree, gltfLoader: context.gltfLoader, loadingManager: context.loadingManager });
   initializeStageSamplingAndPhysics(stage);
   applyStageShadowPolicy(stage);
   activeStage = stage;
@@ -1429,9 +1433,9 @@ function applyWindowMaterialState(material, mesh) {
     material.envMapIntensity = effectiveEnvironmentIntensity <= 0.001
       ? 0
       : Math.max(
-          effectiveEnvironmentIntensity * tint.envBoost,
-          tint.envFloor * getStageRenderTuning().windowFloorScale
-        );
+        effectiveEnvironmentIntensity * tint.envBoost,
+        tint.envFloor * getStageRenderTuning().windowFloorScale
+      );
   }
 
   if ('metalness' in material) {
@@ -1931,19 +1935,19 @@ function createStageSkyBackground(stageId) {
   const grad = ctx.createLinearGradient(0, 0, 0, 256);
 
   if (stageId === 'san_verde') {
-    grad.addColorStop(0,    '#1a2a5a');
+    grad.addColorStop(0, '#1a2a5a');
     grad.addColorStop(0.38, '#4a3888');
     grad.addColorStop(0.68, '#c06040');
     grad.addColorStop(0.85, '#e8904a');
-    grad.addColorStop(1,    '#f5c06a');
+    grad.addColorStop(1, '#f5c06a');
   } else if (stageId === 'bloomville') {
-    grad.addColorStop(0,    '#5a89c6');
+    grad.addColorStop(0, '#5a89c6');
     grad.addColorStop(0.55, '#9ec3ea');
-    grad.addColorStop(1,    '#dbe8f7');
+    grad.addColorStop(1, '#dbe8f7');
   } else {
-    grad.addColorStop(0,    '#4a78c0');
-    grad.addColorStop(0.6,  '#8ab8e0');
-    grad.addColorStop(1,    '#d8eaf8');
+    grad.addColorStop(0, '#4a78c0');
+    grad.addColorStop(0.6, '#8ab8e0');
+    grad.addColorStop(1, '#d8eaf8');
   }
 
   ctx.fillStyle = grad;
@@ -2512,8 +2516,7 @@ function syncControlOutputs() {
 function syncOverlayVisibility() {
   ui.hud.classList.toggle('is-hidden', !state.uiOpen);
   ui.engineOverlay.classList.toggle('is-hidden', !state.uiOpen);
-  ui.playerOverlay.classList.toggle('is-hidden', !state.uiOpen);
-  ui.viewportNote.classList.toggle('is-hidden', !state.uiOpen);
+  ui.playerOverlay.classList.toggle('is-hidden', !state.uiOpen || !!localStorage.getItem('controlsHidden'));
   ui.performanceOverlay.classList.toggle('is-hidden', !state.performanceOpen);
   ui.minimapOverlay.classList.toggle('is-hidden', !shouldShowBloomvilleMinimap(state.selectedStageId));
   if (ui.toggleUi) {
