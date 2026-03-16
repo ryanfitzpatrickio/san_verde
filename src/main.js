@@ -630,6 +630,7 @@ async function rebuildStage(context, stageId) {
   updateBloomvilleMinimapOverlay(context);
   agentSystem.syncStage(stage, playerSystem.getActiveStagePosition(context));
 
+  await context.renderer.compileAsync(context.scene, context.camera);
   setLoadScreen(100, 'Ready');
   setTimeout(() => setLoadDone(true), 400);
 
