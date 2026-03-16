@@ -44,6 +44,7 @@ import {
   setEngineType,
   setGarageStage,
   setGarageVehicleKind,
+  setSuspensionOverrides,
   setWheelRadius,
   shiftEngineDown,
   shiftEngineNeutral,
@@ -244,6 +245,8 @@ const vehicleManager = createVehicleManager({
     syncGarageScene: (runtime) => syncGarageScene(runtime),
     teleportGarageVehicle: (runtime, position, yaw) => teleportGarageVehicle(runtime, position, yaw),
     setGarageVehicleKind: (runtime, vehicleKind) => setGarageVehicleKind(runtime, vehicleKind),
+    setChassisHeight: (runtime, chassisHeight) => setChassisHeight(runtime, chassisHeight),
+    setSuspensionOverrides: (runtime, overrides) => setSuspensionOverrides(runtime, overrides),
     setStatus: (message) => setStatus(message),
     getGameRuntime: () => gameRuntime,
     getPlayerSystem: () => playerSystem
@@ -266,6 +269,7 @@ const garageAssetLoader = createGarageAssetLoader({
   applyBuiltInCarPreset,
   getSelectedBuiltInCar,
   applySceneMaterialState,
+  setSuspensionOverrides,
   setStatus,
   setProgress
 });
@@ -748,6 +752,10 @@ function getSelectedBuiltInCar() {
   return getBuiltInVehicleById(state.selectedBuiltInCarId);
 }
 
+function cloneSuspensionOverrides(overrides) {
+  return overrides ? { ...overrides } : null;
+}
+
 function applyBuiltInCarPreset(preset, context) {
   if (!preset) {
     return;
@@ -762,6 +770,8 @@ function applyBuiltInCarPreset(preset, context) {
   state.chassisHeight = preset.chassisHeight;
   state.sideInset = preset.sideInset;
   state.tireRotation = [...preset.tireRotation];
+  state.baseCarSuspensionOverrides = cloneSuspensionOverrides(preset.suspension);
+  state.suspensionOverrides = cloneSuspensionOverrides(preset.suspension);
 
   ui.exposure.value = String(state.exposure);
   ui.environment.value = String(state.environmentIntensity);
@@ -778,6 +788,7 @@ function applyBuiltInCarPreset(preset, context) {
   context.renderer.toneMappingExposure = getEffectiveExposure();
   if (context.gameRuntime) {
     applyGarageSnapshot(setChassisHeight(context.gameRuntime, state.chassisHeight));
+    applyGarageSnapshot(setSuspensionOverrides(context.gameRuntime, state.suspensionOverrides));
   }
   syncControlOutputs();
   updateWheelFit(context);

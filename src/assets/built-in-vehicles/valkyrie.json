@@ -4,8 +4,8 @@
   "label": "Valkyrie",
   "kind": "car",
   "body": {
-    "url": "/models/valkyrie.glb",
-    "sourceLabel": "public/models/valkyrie.glb"
+    "url": "/models/valkyrie-lowered.glb",
+    "sourceLabel": "public/models/valkyrie-lowered.glb"
   },
   "tires": {
     "front": {
@@ -23,9 +23,36 @@
     "tireScale": 0.93,
     "frontAxleRatio": 0.18,
     "rearAxleRatio": 0.245,
-    "rideHeight": 0.0105,
-    "chassisHeight": 0.011,
+    "rideHeight": 0.05,
+    "chassisHeight": 0.02,
+    "activeRootOffsetY": -0.15,
     "sideInset": 0.07,
+    "suspension": {
+      "supportMinNormalY": 0.45,
+      "supportDeadzone": 0.04,
+      "supportContactBuffer": 0.012,
+      "heaveSpring": 14.5,
+      "heaveDamping": 3.9,
+      "heaveWheelVelocityFactor": 0.09,
+      "wheelSpring": 138,
+      "wheelDamping": 8.1,
+      "neutralWheelSpring": 128,
+      "neutralWheelDamping": 7.2,
+      "bumpTravel": 0.12,
+      "droopTravel": 0.075,
+      "rideCompression": 0.03,
+      "pitchSpring": 10,
+      "pitchDamping": 6.5,
+      "rollSpring": 11,
+      "rollDamping": 7,
+      "pitchAccelFactor": 0.012,
+      "rollAccelFactor": 0.01,
+      "contactPitchFactor": 0.24,
+      "contactRollFactor": 0.2,
+      "maxPitch": 0.18,
+      "maxRoll": 0.14,
+      "airborneGravity": 7.5
+    },
     "tireRotation": [
       0,
       3.141592653589793,

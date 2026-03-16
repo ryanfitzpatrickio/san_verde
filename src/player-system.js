@@ -688,7 +688,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     }
 
     if (state.driveMode) {
-      setCharacterVisible(context.characterController, true);
+      setCharacterVisible(context.characterController, state.activeVehicleKind !== 'valkyrie');
       setPlayerMode('Driving');
       setPlayerHint(driveHint);
       return;
@@ -897,6 +897,9 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       });
     }
     advanceCharacterAnimation(context.characterController, 0, { consumeRootMotion: false });
+    if (state.activeVehicleKind === 'valkyrie') {
+      setCharacterVisible(context.characterController, false);
+    }
     applySnapshot(context, setDriveMode(context.gameRuntime, true));
     applyDriveCamera(context);
     syncOverlay(context);

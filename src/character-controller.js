@@ -235,7 +235,7 @@ export function snapCharacterCamera(camera, controls, controller, config, stageI
   const target = DESIRED_TARGET.copy(position).addScaledVector(forward, config.cameraLookAhead);
   target.y += config.targetHeight;
 
-  camera.far = stageId === 'city' ? 2500 : 300;
+  camera.far = stageId === 'city' ? 2500 : 12000;
   camera.updateProjectionMatrix();
   controls.minDistance = 2.6;
   controls.maxDistance = 18;
@@ -250,7 +250,7 @@ export function updateCharacterCamera(camera, controls, controller, config, delt
   const forward = FOLLOW_FORWARD.set(Math.sin(controller.yaw), 0, Math.cos(controller.yaw));
   const side = FOLLOW_SIDE.set(-forward.z, 0, forward.x);
 
-  camera.far = stageId === 'city' ? 2500 : 300;
+  camera.far = stageId === 'city' ? 2500 : 12000;
   camera.updateProjectionMatrix();
   controls.minDistance = 2.6;
   controls.maxDistance = 18;

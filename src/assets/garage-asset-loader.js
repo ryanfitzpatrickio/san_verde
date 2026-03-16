@@ -1,3 +1,5 @@
+import { getBuiltInVehicleById } from './vehicle-registry.js';
+
 export function createGarageAssetLoader(options) {
   const {
     state,
@@ -12,6 +14,7 @@ export function createGarageAssetLoader(options) {
     applyBuiltInCarPreset,
     getSelectedBuiltInCar,
     applySceneMaterialState,
+    setSuspensionOverrides,
     setStatus,
     setProgress
   } = options;
@@ -26,6 +29,8 @@ export function createGarageAssetLoader(options) {
     if (await assetExists(config.bikeBodyUrl) && await assetExists(config.bikeWheelUrl)) {
       await loadBikeAssets(context);
     }
+
+    await loadValkyrieAssets(context);
 
     const selectedBuiltInCar = getSelectedBuiltInCar();
     const carExists = await assetExists(selectedBuiltInCar?.body?.url || config.defaultCarUrl);
@@ -61,6 +66,37 @@ export function createGarageAssetLoader(options) {
     }
   }
 
+  async function loadValkyrieAssets(context) {
+    try {
+      const valkyrie = getBuiltInVehicleById('valkyrie');
+      const bodyUrl = valkyrie?.body?.url || '';
+      const frontTireUrl = valkyrie?.tires?.front?.url || '';
+      const rearTireUrl = valkyrie?.tires?.rear?.url || frontTireUrl;
+      if (!bodyUrl || !await assetExists(bodyUrl)) {
+        return;
+      }
+      setStatus('Loading Valkyrie assets');
+      const [bodyGltf, frontTireGltf, rearTireGltf] = await Promise.all([
+        context.gltfLoader.loadAsync(bodyUrl),
+        frontTireUrl && assetExists(frontTireUrl).then((ok) => ok ? context.gltfLoader.loadAsync(frontTireUrl) : null),
+        rearTireUrl && rearTireUrl !== frontTireUrl
+          ? assetExists(rearTireUrl).then((ok) => ok ? context.gltfLoader.loadAsync(rearTireUrl) : null)
+          : null
+      ]);
+      state.valkyrieAsset = bodyGltf.scene || bodyGltf.scenes[0];
+      const frontTireScene = frontTireGltf ? (frontTireGltf.scene || frontTireGltf.scenes[0]) : null;
+      const rearTireScene = rearTireGltf
+        ? (rearTireGltf.scene || rearTireGltf.scenes[0])
+        : frontTireScene;
+      state.valkyrieTireAsset = frontTireScene || rearTireScene;
+      vehicleManager.syncParkedVehicleProxies(context);
+    } catch (error) {
+      console.error(error);
+      state.valkyrieAsset = null;
+      state.valkyrieTireAsset = null;
+    }
+  }
+
   async function loadBikeAssets(context) {
     try {
       setStatus('Loading motorcycle assets');
@@ -90,6 +126,11 @@ export function createGarageAssetLoader(options) {
     if (kind === 'car') {
       state.selectedBuiltInCarId = '';
       ui.builtInCar.value = '';
+      state.baseCarSuspensionOverrides = null;
+      state.suspensionOverrides = null;
+      if (context.gameRuntime) {
+        context.applyGarageSnapshot(setSuspensionOverrides(context.gameRuntime, null));
+      }
     }
 
     const url = URL.createObjectURL(file);

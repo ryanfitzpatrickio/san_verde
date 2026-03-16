@@ -603,7 +603,7 @@ export function resetBounceVehicle(bundle, position, yaw) {
   }
 }
 
-export function settleBounceVehicle(bundle, steps = 20) {
+export function settleBounceVehicle(bundle, steps = 60) {
   if (!bundle?.world || !bundle?.chassisBody) {
     return;
   }
@@ -619,14 +619,25 @@ export function settleBounceVehicle(bundle, steps = 20) {
   bundle.chassisBody.clearForces();
   bundle.chassisBody.commitChanges();
 
-  for (let step = 0; step < steps; step += 1) {
+  // Free-fall phase: let gravity accumulate so the body can drop onto the terrain.
+  const freeSteps = Math.max(steps - 10, 0);
+  for (let step = 0; step < freeSteps; step += 1) {
     bundle.world.takeOneStep(1 / 60);
+  }
+
+  // Damping phase: zero velocity each step to stop oscillation.
+  for (let step = 0; step < 10; step += 1) {
     bundle.chassisBody.linearVelocity.zero();
     bundle.chassisBody.angularVelocity.zero();
     bundle.chassisBody.clearForces();
     bundle.chassisBody.commitChanges();
+    bundle.world.takeOneStep(1 / 60);
   }
 
+  bundle.chassisBody.linearVelocity.zero();
+  bundle.chassisBody.angularVelocity.zero();
+  bundle.chassisBody.clearForces();
+  bundle.chassisBody.commitChanges();
   syncDynamicBodies(bundle);
 }
 

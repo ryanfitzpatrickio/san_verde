@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getBuiltInVehicleById } from '../assets/vehicle-registry.js';
 
 export function createVehicleManager({
   config,
@@ -28,9 +29,72 @@ export function createVehicleManager({
     syncGarageScene,
     teleportGarageVehicle,
     setGarageVehicleKind,
+    setChassisHeight,
+    setSuspensionOverrides,
     setStatus,
     getPlayerSystem
   } = callbacks;
+  const valkyrieManifest = getBuiltInVehicleById('valkyrie');
+  const valkyriePreset = valkyrieManifest?.preset || null;
+  const valkyrieSuspensionOverrides = valkyriePreset?.suspension || null;
+
+  function cloneSuspensionOverrides(overrides) {
+    return overrides ? { ...overrides } : null;
+  }
+
+  function clonePresetState() {
+    return {
+      tireScale: state.tireScale,
+      frontAxleRatio: state.frontAxleRatio,
+      rearAxleRatio: state.rearAxleRatio,
+      rideHeight: state.rideHeight,
+      wheelDropRatio: state.wheelDropRatio,
+      chassisHeight: state.chassisHeight,
+      sideInset: state.sideInset,
+      tireRotation: [...state.tireRotation]
+    };
+  }
+
+  function applyPresetState(preset) {
+    if (!preset) {
+      return;
+    }
+    state.tireScale = preset.tireScale;
+    state.frontAxleRatio = preset.frontAxleRatio;
+    state.rearAxleRatio = preset.rearAxleRatio;
+    state.rideHeight = preset.rideHeight;
+    state.wheelDropRatio = Number.isFinite(preset.wheelDropRatio) ? preset.wheelDropRatio : 0;
+    state.chassisHeight = preset.chassisHeight;
+    state.sideInset = preset.sideInset;
+    state.tireRotation = [...preset.tireRotation];
+  }
+
+  function withTemporaryPreset(preset, task) {
+    if (!preset) {
+      return task();
+    }
+    const previous = clonePresetState();
+    applyPresetState(preset);
+    try {
+      return task();
+    } finally {
+      applyPresetState(previous);
+    }
+  }
+
+  function getProxyChassisHeight(kind) {
+    if (kind === 'valkyrie' && Number.isFinite(valkyriePreset?.chassisHeight)) {
+      return valkyriePreset.chassisHeight;
+    }
+    return state.chassisHeight;
+  }
+
+  function applyEffectiveSuspensionOverrides(runtime, overrides) {
+    state.suspensionOverrides = cloneSuspensionOverrides(overrides);
+    if (runtime) {
+      applyGarageSnapshot(setSuspensionOverrides(runtime, state.suspensionOverrides));
+    }
+  }
 
   function mountCarAsset(carMount, wheelMount, rawAsset, options) {
     clearGroup(carMount);
@@ -38,6 +102,8 @@ export function createVehicleManager({
     wheelMount.position.set(0, 0, 0);
     wheelMount.userData.physicsBaseLocalPosition = new THREE.Vector3(0, 0, 0);
     carMount.userData.vehicleKind = 'car';
+    carMount.userData.chassisHeightMode = options.chassisHeightMode || 'body';
+    carMount.userData.rootVisualOffsetY = Number(options.rootVisualOffsetY || 0);
     carMount.userData.wheelSpinDirection = 1;
     carMount.userData.steerDirection = -1;
     carMount.userData.bikeSteeringRig = null;
@@ -74,6 +140,7 @@ export function createVehicleManager({
     state.activeVehicleKind = 'car';
     if (callbacks.getGameRuntime()) {
       applyGarageSnapshot(setGarageVehicleKind(callbacks.getGameRuntime(), 'car'));
+      applyGarageSnapshot(setChassisHeight(callbacks.getGameRuntime(), state.chassisHeight));
     }
     remountTires(wheelMount);
     applySteeringWheelState();
@@ -131,13 +198,13 @@ export function createVehicleManager({
     return display;
   }
 
-  function createVehicleProxy(kind, bodyGroup, wheelGroup, drivePosition, yaw) {
+  function createVehicleProxy(kind, bodyGroup, wheelGroup, drivePosition, yaw, chassisHeight = state.chassisHeight) {
     const group = new THREE.Group();
     group.name = `${kind}-proxy`;
     const body = bodyGroup.clone(true);
     const wheels = wheelGroup.clone(true);
     group.add(body, wheels);
-    group.position.copy(drivePosition).setY(drivePosition.y + state.chassisHeight);
+    group.position.copy(drivePosition).setY(drivePosition.y + chassisHeight);
     group.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
     group.traverse((child) => {
       if (!child.isMesh) {
@@ -166,16 +233,17 @@ export function createVehicleManager({
       context.carMount,
       context.wheelMount,
       state.vehiclePosition.clone(),
-      state.vehicleYaw
+      state.vehicleYaw,
+      getProxyChassisHeight(kind)
     );
   }
 
   function syncParkedVehicleProxies(context) {
     clearGroup(context.auxVehicleMount);
     const existingCarProxy = state.parkedVehicleProxies.car;
-    const existingBikeProxy = state.parkedVehicleProxies.bike;
     state.parkedVehicleProxies.car = existingCarProxy;
     state.parkedVehicleProxies.bike = null;
+    state.parkedVehicleProxies.valkyrie = null;
 
     if (state.selectedStageId !== 'test_course' || !state.bikeAsset || !state.bikeWheelAsset) {
       return;
@@ -196,6 +264,33 @@ export function createVehicleManager({
     state.parkedVehicleProxies.bike = bikeProxy;
     if (state.activeVehicleKind !== 'bike') {
       context.auxVehicleMount.add(bikeProxy.group);
+    }
+
+    if (state.valkyrieAsset) {
+      const valkyrieProxy = withTemporaryPreset(valkyriePreset, () => {
+        const valkyrieDisplay = carVehicle.mountAsset({ rawAsset: state.valkyrieAsset });
+        const tempWheelMount = new THREE.Group();
+        carVehicle.remountWheels({
+          wheelMount: tempWheelMount,
+          activeTireAssets: state.valkyrieTireAsset
+            ? { front: state.valkyrieTireAsset, rear: state.valkyrieTireAsset }
+            : state.tireAssetsByAxle,
+          carMetrics: valkyrieDisplay.metrics,
+          carWheelAnchors: valkyrieDisplay.anchors
+        });
+        return createVehicleProxy(
+          'valkyrie',
+          valkyrieDisplay.body,
+          tempWheelMount,
+          config.valkyrieSpawnPosition.clone(),
+          config.valkyrieSpawnYaw,
+          getProxyChassisHeight('valkyrie')
+        );
+      });
+      state.parkedVehicleProxies.valkyrie = valkyrieProxy;
+      if (state.activeVehicleKind !== 'valkyrie') {
+        context.auxVehicleMount.add(valkyrieProxy.group);
+      }
     }
   }
 
@@ -225,6 +320,7 @@ export function createVehicleManager({
         return false;
       }
       mountBikeAsset(context.carMount, context.wheelMount, state.bikeAsset, state.bikeWheelAsset);
+      applyEffectiveSuspensionOverrides(callbacks.getGameRuntime(), null);
       return true;
     }
 
@@ -234,6 +330,34 @@ export function createVehicleManager({
       } else {
         mountCarAsset(context.carMount, context.wheelMount, createFallbackCar(), { isFallback: true });
       }
+      applyEffectiveSuspensionOverrides(callbacks.getGameRuntime(), state.baseCarSuspensionOverrides);
+      return true;
+    }
+
+    if (kind === 'valkyrie') {
+      if (!state.valkyrieAsset) {
+        return false;
+      }
+
+      const savedCarAsset = state.carAsset;
+      const savedTireAssets = { ...state.tireAssetsByAxle };
+      if (state.valkyrieTireAsset) {
+        state.tireAssetsByAxle = { front: state.valkyrieTireAsset, rear: state.valkyrieTireAsset };
+      }
+      withTemporaryPreset(valkyriePreset, () => {
+        mountCarAsset(context.carMount, context.wheelMount, state.valkyrieAsset, {
+          isFallback: false,
+          chassisHeightMode: 'root',
+          rootVisualOffsetY: Number(valkyriePreset?.activeRootOffsetY || 0)
+        });
+      });
+      state.tireAssetsByAxle = savedTireAssets;
+      state.carAsset = savedCarAsset;
+      state.activeVehicleKind = 'valkyrie';
+      if (callbacks.getGameRuntime()) {
+        applyGarageSnapshot(setGarageVehicleKind(callbacks.getGameRuntime(), 'car'));
+      }
+      applyEffectiveSuspensionOverrides(callbacks.getGameRuntime(), valkyrieSuspensionOverrides);
       return true;
     }
 
@@ -322,6 +446,9 @@ export function createVehicleManager({
     if (proxy.kind === 'bike') {
       playerSystem.directMountVehicle(context);
       setStatus('Mounted motorcycle');
+    } else if (proxy.kind === 'valkyrie') {
+      playerSystem.directMountVehicle(context);
+      setStatus('In Valkyrie');
     } else if (!playerSystem.tryEnterVehicle(context)) {
       setStatus('Move closer to the driver door to enter the car');
     }

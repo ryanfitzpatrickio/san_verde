@@ -54,12 +54,21 @@ const SKID_LAST = new THREE.Vector3();
 function getSuspensionConfig(runtime, vehicleKind) {
   const baseConfig = runtime.config.suspension;
   const vehicleConfig = baseConfig.vehicleKinds?.[vehicleKind];
+  const suspension = getVehicleComponent(runtime, COMPONENTS.suspension);
+  const overrides =
+    vehicleKind === 'car' && suspension?.overrides
+      ? suspension.overrides
+      : null;
 
-  if (!vehicleConfig) {
+  if (!vehicleConfig && !overrides) {
     return baseConfig;
   }
 
-  return { ...baseConfig, ...vehicleConfig };
+  return {
+    ...baseConfig,
+    ...(vehicleConfig || {}),
+    ...(overrides || {})
+  };
 }
 
 function getVehicleFeedbackConfig(runtime, vehicleKind) {
@@ -282,7 +291,10 @@ export function createGarageRuntime(options) {
     pitchVelocity: 0,
     roll: 0,
     rollVelocity: 0,
-    grounded: true
+    grounded: true,
+    overrides: options.initialState.suspensionOverrides
+      ? { ...options.initialState.suspensionOverrides }
+      : null
   });
 
   addComponent(world, vehicle, COMPONENTS.engine, {
@@ -427,10 +439,11 @@ export function setCinematicCameraEnabled(runtime, enabled) {
   const cameraRig = getVehicleComponent(runtime, COMPONENTS.cameraRig);
   const controller = getVehicleComponent(runtime, COMPONENTS.vehicleController);
   const transform = getVehicleComponent(runtime, COMPONENTS.transform);
+  const renderRig = getVehicleComponent(runtime, COMPONENTS.renderRig);
   cameraRig.cinematicEnabled = enabled;
   cameraRig.cinematicTime = 0;
   if (controller.driveMode && !cameraRig.override && !cameraRig.detached) {
-    snapCameraToVehicle(runtime.config, transform, controller, cameraRig);
+    snapCameraToVehicle(runtime.config, transform, renderRig, controller, cameraRig);
   }
   return getGarageSnapshot(runtime);
 }
@@ -450,6 +463,15 @@ export function setChassisHeight(runtime, chassisHeight) {
   const transform = getVehicleComponent(runtime, COMPONENTS.transform);
   transform.chassisHeight = chassisHeight;
   applyVehicleTransformSystem(runtime);
+  return getGarageSnapshot(runtime);
+}
+
+export function setSuspensionOverrides(runtime, overrides) {
+  const suspension = getVehicleComponent(runtime, COMPONENTS.suspension);
+  suspension.overrides = overrides ? { ...overrides } : null;
+  updateSuspensionSystem(runtime, 0);
+  applyVehicleTransformSystem(runtime);
+  updateWheelAnimationSystem(runtime);
   return getGarageSnapshot(runtime);
 }
 
@@ -643,9 +665,10 @@ export function snapGarageCamera(runtime) {
   const transform = getVehicleComponent(runtime, COMPONENTS.transform);
   const controller = getVehicleComponent(runtime, COMPONENTS.vehicleController);
   const cameraRig = getVehicleComponent(runtime, COMPONENTS.cameraRig);
+  const renderRig = getVehicleComponent(runtime, COMPONENTS.renderRig);
   cameraRig.override = false;
   cameraRig.detached = false;
-  snapCameraToVehicle(runtime.config, transform, controller, cameraRig);
+  snapCameraToVehicle(runtime.config, transform, renderRig, controller, cameraRig);
   return getGarageSnapshot(runtime);
 }
 
@@ -981,7 +1004,7 @@ function updateDriveSystem(runtime, deltaSeconds) {
     const movementStart = Math.abs(previousSpeed) < 0.15 && Math.abs(controller.speed) >= 0.15;
     if (movementStart && cameraRig.detached && !cameraRig.override) {
       cameraRig.detached = false;
-      snapCameraToVehicle(runtime.config, transform, controller, cameraRig);
+      snapCameraToVehicle(runtime.config, transform, renderRig, controller, cameraRig);
     }
   }
 }
@@ -1554,8 +1577,13 @@ function applyVehicleTransformSystem(runtime) {
     const renderRig = getComponent(runtime.world, entity, COMPONENTS.renderRig);
     const suspension = getComponent(runtime.world, entity, COMPONENTS.suspension);
     const controller = getComponent(runtime.world, entity, COMPONENTS.vehicleController);
+    const chassisHeightMode = renderRig.carMount.userData.chassisHeightMode || 'body';
+    const rootVisualOffsetY = Number(renderRig.carMount.userData.rootVisualOffsetY || 0);
+    const rootChassisHeight = chassisHeightMode === 'root' ? transform.chassisHeight + rootVisualOffsetY : rootVisualOffsetY;
+    const bodyChassisHeight = chassisHeightMode === 'body' ? transform.chassisHeight : 0;
 
     renderRig.vehicleRoot.position.copy(transform.position);
+    renderRig.vehicleRoot.position.y += rootChassisHeight;
     if (transform.useBodyQuaternion) {
       renderRig.vehicleRoot.quaternion.copy(transform.bodyQuaternion);
     } else {
@@ -1594,7 +1622,7 @@ function applyVehicleTransformSystem(runtime) {
 
     renderRig.carMount.position.set(
       carMountBasePosition.x,
-      carMountBasePosition.y + transform.chassisHeight,
+      carMountBasePosition.y + bodyChassisHeight,
       carMountBasePosition.z
     );
     renderRig.carMount.quaternion.copy(carMountBaseQuaternion);
@@ -1767,18 +1795,20 @@ function updateChaseCameraSystem(runtime, deltaSeconds) {
   for (const entity of queryEntities(runtime.world, [
     COMPONENTS.transform,
     COMPONENTS.vehicleController,
-    COMPONENTS.cameraRig
+    COMPONENTS.cameraRig,
+    COMPONENTS.renderRig
   ])) {
     const transform = getComponent(runtime.world, entity, COMPONENTS.transform);
     const controller = getComponent(runtime.world, entity, COMPONENTS.vehicleController);
     const cameraRig = getComponent(runtime.world, entity, COMPONENTS.cameraRig);
+    const renderRig = getComponent(runtime.world, entity, COMPONENTS.renderRig);
 
     if (!controller.driveMode) {
       cameraRig.controls.update();
       continue;
     }
 
-    const vehiclePosition = getVehicleRootPosition(transform, ROOT_POSITION);
+    const vehiclePosition = getVehicleRootPosition(transform, renderRig, ROOT_POSITION);
 
     if (cameraRig.override || cameraRig.detached) {
       const followTarget = FOLLOW_TARGET.copy(vehiclePosition);
@@ -1829,10 +1859,10 @@ function updateChaseCameraSystem(runtime, deltaSeconds) {
   }
 }
 
-function snapCameraToVehicle(config, transform, controller, cameraRig) {
+function snapCameraToVehicle(config, transform, renderRig, controller, cameraRig) {
   const forward = CHASE_FORWARD.set(Math.sin(transform.yaw), 0, Math.cos(transform.yaw));
   const side = CHASE_SIDE.set(-forward.z, 0, forward.x);
-  const vehiclePosition = getVehicleRootPosition(transform, ROOT_POSITION);
+  const vehiclePosition = getVehicleRootPosition(transform, renderRig, ROOT_POSITION);
   const followTarget = FOLLOW_TARGET.copy(vehiclePosition).addScaledVector(
     forward,
     (cameraRig.cinematicEnabled ? config.cinematicChaseCameraLookAhead : config.chaseCameraLookAhead) * 0.45
@@ -1855,8 +1885,11 @@ function snapCameraToVehicle(config, transform, controller, cameraRig) {
   cameraRig.controls.update();
 }
 
-function getVehicleRootPosition(transform, target = new THREE.Vector3()) {
-  return target.copy(transform.position).setY(transform.position.y + transform.chassisHeight);
+function getVehicleRootPosition(transform, renderRig, target = new THREE.Vector3()) {
+  const chassisHeightMode = renderRig?.carMount?.userData?.chassisHeightMode || 'body';
+  const rootVisualOffsetY = Number(renderRig?.carMount?.userData?.rootVisualOffsetY || 0);
+  const rootChassisHeight = chassisHeightMode === 'root' ? transform.chassisHeight + rootVisualOffsetY : rootVisualOffsetY;
+  return target.copy(transform.position).setY(transform.position.y + rootChassisHeight);
 }
 
 function getVehicleComponent(runtime, componentType) {

@@ -64,12 +64,84 @@ const ENGINE_LIBRARY = [
       decelGain: 0.018,
       distortionAmount: 0.72,
       samples: {
-        idle: resolvePublicUrl('/models/idle.MP3'),
-        low: resolvePublicUrl('/models/low.mp3'),
-        mid: resolvePublicUrl('/models/mid.mp3'),
-        full: resolvePublicUrl('/models/full.mp3'),
-        intake: resolvePublicUrl('/models/intake.mp3'),
-        decel: resolvePublicUrl('/models/decel.MP3')
+        idle: resolvePublicUrl('/sounds/idle_h.mp3'),
+        low: resolvePublicUrl('/sounds/low.mp3'),
+        mid: resolvePublicUrl('/sounds/mid.mp3'),
+        full: resolvePublicUrl('/sounds/full.mp3'),
+        intake: resolvePublicUrl('/sounds/intake.mp3'),
+        decel: resolvePublicUrl('/sounds/decel_h.mp3')
+      }
+    }
+  },
+  {
+    id: 'cosworth_ra_v12',
+    label: 'Cosworth RA V12',
+    description: '6.5L NA V12 / 7-speed paddle shift',
+    cylinders: 12,
+    displacementCi: 396,
+    idleRpm: 1050,
+    redlineRpm: 10500,
+    limiterRpm: 11000,
+    rpmRiseRate: 8200,
+    rpmFallRate: 5800,
+    freeRevRange: 7200,
+    loadedRevGain: 2800,
+    transmission: {
+      reverseRatio: 3.4,
+      gearRatios: [3.08, 2.12, 1.62, 1.28, 1.02, 0.85, 0.72],
+      finalDrive: 3.15
+    },
+    physics: {
+      massKg: 1050,
+      wheelbaseM: 2.67,
+      dragCoefficient: 0.33,
+      frontalAreaM2: 1.82,
+      rollingResistanceCoeff: 0.013,
+      drivelineEfficiency: 0.94,
+      brakeForceN: 14800,
+      tractionCoefficient: 1.32,
+      steeringResponse: 8.2,
+      steeringReturnRate: 9.0,
+      highSpeedSteerFactor: 0.28,
+      rwdYawGain: 0.36,
+      rwdGripLoss: 0.20,
+      corneringDragStrength: 0.07,
+      launchSlipSpeedMps: 7.0,
+      engineBrakingNm: 290,
+      maxVehicleSpeedMps: 110,
+      reverseSpeedLimitMps: 12,
+      torqueCurveNm: [
+        [1000, 360],
+        [2500, 490],
+        [4000, 590],
+        [5500, 648],
+        [7000, 700],
+        [8000, 718],
+        [9000, 698],
+        [10000, 638],
+        [10500, 540],
+        [11000, 390]
+      ]
+    },
+    audio: {
+      masterGain: 0.14,
+      lopeFrequency: 6.8,
+      lopeDepth: 0.007,
+      subGain: 0.018,
+      pulseGain: 0.016,
+      bodyGain: 0.022,
+      exhaustGain: 0.042,
+      raspGain: 0.024,
+      intakeGain: 0.036,
+      decelGain: 0.030,
+      distortionAmount: 0.52,
+      samples: {
+        idle: resolvePublicUrl('/sounds/idle_h.mp3'),
+        low: resolvePublicUrl('/sounds/low.h.mp3'),
+        mid: resolvePublicUrl('/sounds/mid_h.mp3'),
+        full: resolvePublicUrl('/sounds/high_h.mp3'),
+        intake: resolvePublicUrl('/sounds/intake_h.mp3'),
+        decel: resolvePublicUrl('/sounds/decel_h.mp3')
       }
     }
   }
@@ -142,6 +214,7 @@ export class EngineAudioSystem {
   }
 
   setEngine(engineId) {
+    const prevSamples = this.definition?.audio?.samples;
     this.definition = getEngineDefinition(engineId);
     this.currentGearIndex = 2;
     this.lastAutomaticDirection = 1;
@@ -155,9 +228,33 @@ export class EngineAudioSystem {
     this.shiftTransient = 0;
     this.shiftDirection = 0;
     if (this.nodes && this.audioContext) {
-      this.updateAudio();
+      const newSamples = this.definition.audio?.samples;
+      const samplesChanged = JSON.stringify(prevSamples) !== JSON.stringify(newSamples);
+      if (samplesChanged) {
+        this._reloadSamples();
+      } else {
+        this.updateAudio();
+      }
     }
     return this.getSnapshot();
+  }
+
+  _reloadSamples() {
+    const sampleKeys = ['sampleIdleSource', 'sampleLowSource', 'sampleMidSource', 'sampleFullSource', 'sampleIntakeSource', 'sampleDecelSource'];
+    for (const key of sampleKeys) {
+      const src = this.nodes[key];
+      if (src) {
+        try { src.stop(); } catch {}
+        src.disconnect();
+        this.nodes[key] = null;
+      }
+    }
+    this.nodes.samplePlayers = false;
+    this.nodes.sampleLayerCount = 0;
+    loadSampleLayers(this.audioContext, this.nodes, this.definition).then(() => {
+      this.samplesReady = Boolean(this.nodes.samplePlayers);
+      this.updateAudio();
+    });
   }
 
   reset() {

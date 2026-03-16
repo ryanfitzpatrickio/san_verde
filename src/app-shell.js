@@ -27,6 +27,8 @@ export const MODEL_CONFIG = {
   bikeRearSpinAxis: 'z',
   bikeSpawnPosition: new THREE.Vector3(12, 0, 18),
   bikeSpawnYaw: -Math.PI * 0.5,
+  valkyrieSpawnPosition: new THREE.Vector3(-12, 0, 18),
+  valkyrieSpawnYaw: Math.PI * 0.5,
   referenceWheelDiameter: 0.84,
   driveAcceleration: 12,
   reverseAcceleration: 8,
@@ -534,6 +536,8 @@ export function createInitialState(ui) {
     steeringWheelAsset: null,
     bikeAsset: null,
     bikeWheelAsset: null,
+    valkyrieAsset: null,
+    valkyrieTireAsset: null,
     carMetrics: null,
     carWheelAnchors: null,
     carTextureSlots: [],
@@ -550,6 +554,7 @@ export function createInitialState(ui) {
     frontAxleRatio: Number(ui.frontAxle.value),
     rearAxleRatio: Number(ui.rearAxle.value),
     rideHeight: Number(ui.rideHeight.value),
+    wheelDropRatio: 0,
     chassisHeight: Number(ui.chassisHeight.value),
     sideInset: Number(ui.sideInset.value),
     tireRotation: [
@@ -563,6 +568,8 @@ export function createInitialState(ui) {
     bikeFrontSpinAxis: MODEL_CONFIG.bikeFrontSpinAxis,
     bikeRearWheelRotation: [...MODEL_CONFIG.bikeRearWheelRotation],
     bikeRearSpinAxis: MODEL_CONFIG.bikeRearSpinAxis,
+    baseCarSuspensionOverrides: null,
+    suspensionOverrides: null,
     driveMode: false,
     autopilotEnabled: false,
     cinematicCameraEnabled: false,
@@ -605,7 +612,8 @@ export function createInitialState(ui) {
     activeVehicleKind: 'car',
     parkedVehicleProxies: {
       car: null,
-      bike: null
+      bike: null,
+      valkyrie: null
     },
     objectUrls: {
       car: null,

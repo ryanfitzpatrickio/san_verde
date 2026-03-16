@@ -493,7 +493,11 @@ function drawCoastline(coastline, selected, isPreview) {
   const beachWidth = Math.max(10, Number(coastline.beachWidth) || 60);
   const outerColor = isPreview ? '#c8a45a' : selected ? '#ffe08a' : '#c8a060';
   const innerColor = isPreview ? '#4a90d0' : selected ? '#6bb8ff' : '#3a80c0';
-  const beachPolygon = buildPathRibbonPolygon(coastline.points, beachWidth * 2);
+  const beachPolygon = buildPathRibbonPolygon(
+    coastline.points,
+    beachWidth,
+    getCoastlineLandSign(coastline.points) * beachWidth * 0.5
+  );
   const waterPolygon = buildPathRibbonPolygon(coastline.points, beachWidth * 0.5);
 
   if (beachPolygon.length >= 3) {
@@ -522,7 +526,7 @@ function drawCoastline(coastline, selected, isPreview) {
   }
 }
 
-function buildPathRibbonPolygon(points, width) {
+function buildPathRibbonPolygon(points, width, offset = 0) {
   const sampled = sampleRiverRenderPoints(points);
   if (sampled.length < 2) {
     return [];
@@ -544,11 +548,50 @@ function buildPathRibbonPolygon(points, width) {
 
     const normalX = -dz / length;
     const normalZ = dx / length;
-    left.push({ x: sampled[i].x + normalX * halfWidth, z: sampled[i].z + normalZ * halfWidth });
-    right.push({ x: sampled[i].x - normalX * halfWidth, z: sampled[i].z - normalZ * halfWidth });
+    const centerX = sampled[i].x + normalX * offset;
+    const centerZ = sampled[i].z + normalZ * offset;
+    left.push({ x: centerX + normalX * halfWidth, z: centerZ + normalZ * halfWidth });
+    right.push({ x: centerX - normalX * halfWidth, z: centerZ - normalZ * halfWidth });
   }
 
   return [...left, ...right.reverse()];
+}
+
+function getCoastlineLandSign(points) {
+  const sampled = sampleRiverRenderPoints(points);
+  if (sampled.length < 2) {
+    return 1;
+  }
+
+  const signedDistance = signedDistanceToPathSegments(
+    state.spawnPoint.x,
+    state.spawnPoint.z,
+    sampled
+  );
+  return signedDistance >= 0 ? 1 : -1;
+}
+
+function signedDistanceToPathSegments(px, pz, points) {
+  let minDist = Infinity;
+  let sign = 1;
+
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const start = points[i];
+    const end = points[i + 1];
+    const dx = end.x - start.x;
+    const dz = end.z - start.z;
+    const len2 = dx * dx + dz * dz;
+    const t = len2 > 1e-6 ? Math.max(0, Math.min(1, ((px - start.x) * dx + (pz - start.z) * dz) / len2)) : 0;
+    const cx = start.x + t * dx;
+    const cz = start.z + t * dz;
+    const dist = Math.hypot(px - cx, pz - cz);
+    if (dist < minDist) {
+      minDist = dist;
+      sign = dx * (pz - start.z) - dz * (px - start.x) > 0 ? 1 : -1;
+    }
+  }
+
+  return minDist * sign;
 }
 
 function sampleRiverRenderPoints(points) {
