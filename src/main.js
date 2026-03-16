@@ -617,10 +617,11 @@ async function rebuildStage(context, stageId) {
     shouldUseStageOverview
   };
   syncStageRenderingMode(context);
+  applyGarageSnapshot(setDriveMode(context.gameRuntime, false));
   applyGarageSnapshot(setGarageStage(context.gameRuntime, stage));
   vehicleManager.syncParkedVehicleProxies(context);
   if (context.characterController && !state.driveMode) {
-    playerSystem.placeCharacterAtVehicle(context);
+    playerSystem.directExitVehicle(context);
   }
   contextStageUpdate(context, stage, playerSystem.getActiveStagePosition(context));
   if ((activeStage?.physicsRevision ?? 0) !== activeStagePhysicsRevision) {
@@ -1715,19 +1716,34 @@ function getEffectiveEnvironmentIntensity(stageId = state.selectedStageId) {
   return state.environmentIntensity * tuning.environmentScale;
 }
 
+function getSanVerdeSkyPresetFromTime() {
+  const now = new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+
+  // t: 0 at 6 am, 1 at 6 pm
+  const t = (hour - 6) / 12;
+  const elevation = Math.sin(Math.PI * t) * 66 - 3; // peaks ~63° at noon, -3° at 6 am/pm
+  const azimuth = 90 + t * 180;                      // east→south→west across the day
+
+  // 0 at dawn/dusk/night, 1 at midday
+  const dayFactor = Math.max(0, Math.sin(Math.PI * t));
+
+  return {
+    key: `sv_h${Math.floor(hour)}`,
+    turbidity:        THREE.MathUtils.lerp(11, 5,     dayFactor),
+    rayleigh:         THREE.MathUtils.lerp(1.1, 2.0,  dayFactor),
+    mieCoefficient:   THREE.MathUtils.lerp(0.008, 0.003, dayFactor),
+    mieDirectionalG:  0.82,
+    elevation,
+    azimuth,
+    environmentScale: elevation > 0 ? THREE.MathUtils.lerp(0.2, 0.5, dayFactor) : 0.02,
+  };
+}
+
 function getStageSkyPreset(stageId = state.selectedStageId) {
   stageId = getStageBehaviorId(stageId);
   if (stageId === 'san_verde') {
-    return {
-      key: 'san_verde_late_afternoon',
-      turbidity: 8,
-      rayleigh: 1.8,
-      mieCoefficient: 0.005,
-      mieDirectionalG: 0.82,
-      elevation: 38,
-      azimuth: 200,
-      environmentScale: 0.5
-    };
+    return getSanVerdeSkyPresetFromTime();
   }
 
   if (stageId === 'bloomville') {

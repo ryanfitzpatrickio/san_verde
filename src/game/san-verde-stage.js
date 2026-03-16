@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { attribute, mix, texture, uniform, uv, vec4 } from 'three/tsl';
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
 import { createRoadGraphNavigation } from './autopilot.js';
 import {
@@ -69,8 +71,8 @@ const ROAD_KIND_STYLE = {
 const RIVER_RUNTIME_WIDTH_SCALE = 1.72;
 const TERRAIN_PADDING = 100;
 const TERRAIN_TOP_Y = -0.24;
-// Match river water level formula (24m ref width: eff=41.28, depth=3.3, waterY = base - (depth*0.84 - 0.08)*0.5)
-const OCEAN_Y = TERRAIN_TOP_Y - 1.347;
+const OCEAN_Y = TERRAIN_TOP_Y - 7;
+const SHORE_Y = OCEAN_Y + 0.08; // terrain level at the shoreline
 const GROUND_FIELD_CELL_SIZE = 8;
 const ROAD_SURFACE_Y = 0;
 const CSG_EVALUATOR = new Evaluator();
@@ -96,7 +98,6 @@ const MATERIALS = {
   riverBank: new THREE.MeshStandardMaterial({ color: '#625a4c', roughness: 0.98, metalness: 0.01 }),
   water: new THREE.MeshStandardMaterial({ color: '#58a7c8', roughness: 0.12, metalness: 0.02, emissive: '#0d3342', emissiveIntensity: 0.18 }),
   ocean: new THREE.MeshStandardMaterial({ color: '#3a88b8', roughness: 0.08, metalness: 0.04, emissive: '#0a2a42', emissiveIntensity: 0.22 }),
-  beach: new THREE.MeshStandardMaterial({ color: '#c8b878', roughness: 0.96, metalness: 0.0, map: loadTexture('sand') }),
   sidewalk: new THREE.MeshStandardMaterial({ color: '#8a8e91', roughness: 0.95, metalness: 0.02, map: loadTexture('concrete_gray') }),
   median: new THREE.MeshStandardMaterial({ color: '#587548', roughness: 0.99, metalness: 0.01, map: loadTexture('grass_green') }),
   plaza: new THREE.MeshStandardMaterial({ color: '#a19788', roughness: 0.92, metalness: 0.02, map: loadTexture('concrete_gray') }),
@@ -288,7 +289,7 @@ async function loadMapData() {
     if (response.ok) {
       return await response.json();
     }
-  } catch {}
+  } catch { }
 
   return SAN_VERDE_MAP_DATA || {
     name: 'San Verde',
@@ -364,15 +365,16 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     (t) => report(7 + t * 10, 'Building terrain…')
   );
 
+  const groundSampler = createGroundFieldSampler(groundField);
+
   report(18, 'Creating roads & zones…');
   await yieldToMain();
-  group.add(createTerrain(groundField));
+  group.add(createTerrain(groundField, coastlineFields));
   group.add(createAllZones(data.zones, data.rivers));
   group.add(createAllRivers(data.rivers, riverFields));
   group.add(createAllRoads(data.roads));
   if (coastlineFields.length > 0) {
     group.add(createOcean());
-    group.add(createAllCoastlines(data.coastlines, coastlineFields));
   }
 
   const chunkGrid = new ChunkGrid(800);
@@ -400,7 +402,8 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
   report(89, 'Finalizing…');
 
   const spawn = data.spawn || { x: 0, z: 0, yaw: 0 };
-  const spawnPosition = new THREE.Vector3(spawn.x, 0, spawn.z);
+  const spawnGroundY = groundSampler(spawn.x, spawn.z)?.height ?? spawn.y ?? 0;
+  const spawnPosition = new THREE.Vector3(spawn.x, spawnGroundY, spawn.z);
 
   const stage = {
     id: 'san_verde',
@@ -409,12 +412,12 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     collisionGroup,
     startPosition: spawnPosition,
     startYaw: spawn.yaw || 0,
-    driveBounds: Math.max(Math.abs(data.bounds.maxX), Math.abs(data.bounds.maxZ)) - 20,
+    driveBounds: Math.max(Math.abs(data.bounds.minX), Math.abs(data.bounds.maxX), Math.abs(data.bounds.minZ), Math.abs(data.bounds.maxZ)) - 20,
     navigation: graph.roads.length > 0 ? createRoadGraphNavigation(graph) : null,
     agentNavigation: graph.roads.length > 0 ? buildRoadGraphAgentNavigation(graph) : null,
     agentNavigationRevision: 0,
     overviewBounds: data.bounds,
-    sampleGround: createGroundFieldSampler(groundField),
+    sampleGround: groundSampler,
     update(playerPos) {
       if (playerPos) chunkGrid.update(playerPos);
     }
@@ -439,7 +442,7 @@ function buildRoadGraph(data) {
       curve: createRoadPath(points)
     };
   }).filter(Boolean);
-  
+
   return {
     roads,
     nodes: data.nodes || [],
@@ -448,12 +451,41 @@ function buildRoadGraph(data) {
   };
 }
 
-function createTerrain(groundField) {
+function createTerrain(groundField, coastlineFields = []) {
   const geometry = createGroundFieldGeometry(groundField);
-  const mesh = new THREE.Mesh(geometry, MATERIALS.ground.clone());
-  mesh.material.shadowSide = THREE.DoubleSide;
+  applyTerrainCoastlineBlend(geometry, coastlineFields);
+  const mesh = new THREE.Mesh(geometry, createTerrainMaterial());
   mesh.receiveShadow = true;
   return mesh;
+}
+
+function createTerrainMaterial() {
+  const grassMap = loadTexture('grass_green');
+  const sandMap = loadTexture('sand');
+
+  const grassUV = uv().mul(grassMap.repeat.x);
+  const sandUV = uv().mul(sandMap.repeat.x);
+
+  const shoreBlendNode = attribute('shoreBlend', 'float');
+  const seabedBlendNode = attribute('seabedBlend', 'float');
+
+  // Grass gets the material's green tint; sand and seabed use their own colours
+  const matColor = uniform(new THREE.Color('#667f56'));
+  const grassTinted = vec4(texture(grassMap, grassUV).rgb.mul(matColor), 1.0);
+  const sandNode = texture(sandMap, sandUV);
+  const seabedColor = uniform(new THREE.Color('#1a2830'));
+
+  // grass → sand (sharp line at beach edge)
+  const grassSandBlend = mix(grassTinted, sandNode, shoreBlendNode);
+  // sand → dark seabed (smooth with depth)
+  const colorNode = mix(grassSandBlend, vec4(seabedColor, 1.0), seabedBlendNode);
+
+  const material = new MeshStandardNodeMaterial();
+  material.colorNode = colorNode;
+  material.roughness = 0.99;
+  material.metalness = 0.01;
+  material.shadowSide = THREE.DoubleSide;
+  return material;
 }
 
 function createCollisionTerrain(groundField) {
@@ -484,13 +516,13 @@ function createRoad(road) {
   const group = new THREE.Group();
   const points = (road.points || []).map(normalizePoint).filter(Boolean);
   if (points.length < 2) return group;
-  
+
   const style = ROAD_KIND_STYLE[road.type] || ROAD_KIND_STYLE.street;
   const vectors = points.map((point) => new THREE.Vector3(point.x, 0, point.z));
   const curve = createRoadPath(vectors);
   const length = curve.getLength();
   const samples = Math.max(4, Math.round(length / 4));
-  
+
   const shoulder = createTrackRibbon(curve, {
     width: style.roadWidth + style.sidewalkWidth * 2,
     samples,
@@ -519,7 +551,7 @@ function createRoad(road) {
   roadMesh.material.polygonOffsetUnits = -4;
   roadMesh.receiveShadow = true;
   group.add(roadMesh);
-  
+
   return group;
 }
 
@@ -567,7 +599,7 @@ function createAllZones(zones, rivers = []) {
 function createZone(zone, rivers = []) {
   const points = (zone.points || []).map(normalizePoint).filter(Boolean);
   if (points.length < 3) return new THREE.Group();
-  
+
   const style = DISTRICT_STYLE[zone.type] || DISTRICT_STYLE.residential_mid;
   const shape = new THREE.Shape();
   shape.moveTo(points[0].x, points[0].z);
@@ -575,7 +607,7 @@ function createZone(zone, rivers = []) {
     shape.lineTo(points[i].x, points[i].z);
   }
   shape.closePath();
-  
+
   const topY = -0.016;
   const slabDepth = 2.2;
   const geometry = new THREE.ExtrudeGeometry(shape, {
@@ -793,29 +825,29 @@ function createTreeInstances(placements) {
   const group = new THREE.Group();
   group.userData.noCollision = true;
   if (!placements.length) return group;
-  
+
   const trunks = new THREE.InstancedMesh(TREE_GEOMETRIES.trunk, MATERIALS.trunk, placements.length);
   const crowns = new THREE.InstancedMesh(TREE_GEOMETRIES.crown, MATERIALS.leaf, placements.length);
   trunks.instanceMatrix.setUsage(THREE.StaticDrawUsage);
   crowns.instanceMatrix.setUsage(THREE.StaticDrawUsage);
   trunks.castShadow = true;
   crowns.castShadow = true;
-  
+
   for (let i = 0; i < placements.length; i++) {
     const p = placements[i];
     const crownRadius = p.height * 0.42;
-    
+
     INSTANCE_POSITION.set(p.x, p.height * 0.5, p.z);
     INSTANCE_SCALE.set(0.28, p.height, 0.28);
     INSTANCE_MATRIX.compose(INSTANCE_POSITION, IDENTITY_QUATERNION, INSTANCE_SCALE);
     trunks.setMatrixAt(i, INSTANCE_MATRIX);
-    
+
     INSTANCE_POSITION.set(p.x, p.height * 0.95, p.z);
     INSTANCE_SCALE.set(crownRadius, crownRadius, crownRadius);
     INSTANCE_MATRIX.compose(INSTANCE_POSITION, IDENTITY_QUATERNION, INSTANCE_SCALE);
     crowns.setMatrixAt(i, INSTANCE_MATRIX);
   }
-  
+
   trunks.instanceMatrix.needsUpdate = true;
   crowns.instanceMatrix.needsUpdate = true;
   group.add(trunks, crowns);
@@ -886,6 +918,26 @@ function createGroundFieldGeometry(groundField) {
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+function applyTerrainCoastlineBlend(geometry, coastlineFields) {
+  const positions = geometry.attributes.position;
+  const shoreBlend = new Float32Array(positions.count);
+  const seabedBlend = new Float32Array(positions.count);
+
+  for (let i = 0; i < positions.count; i += 1) {
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
+    const y = positions.getY(i);
+    shoreBlend[i] = sampleCoastlineTerrainBlend(x, z, y, coastlineFields);
+    // Seabed: blend from sand at SHORE_Y down to dark at SHORE_Y - 6
+    if (y < SHORE_Y) {
+      seabedBlend[i] = clamp((SHORE_Y - y) / 6, 0, 1);
+    }
+  }
+
+  geometry.setAttribute('shoreBlend', new THREE.Float32BufferAttribute(shoreBlend, 1));
+  geometry.setAttribute('seabedBlend', new THREE.Float32BufferAttribute(seabedBlend, 1));
 }
 
 function createGroundFieldSampler(groundField) {
@@ -1101,15 +1153,16 @@ function signedDistanceToCoastlineSegments(x, z, segments) {
   return minDist * sign;
 }
 
-function sampleCoastlineBeachHeight(x, z, baseY, coastlineFields) {
-  if (!coastlineFields || coastlineFields.length === 0) return baseY;
+function getNearestCoastlineSample(x, z, coastlineFields) {
+  if (!coastlineFields || coastlineFields.length === 0) {
+    return null;
+  }
 
   let bestAbsDist = Infinity;
   let bestLandDist = null;
   let activeBeachWidth = 0;
 
   for (const coastline of coastlineFields) {
-    // Expand bounds to cover full ocean side (world-scale padding)
     const expanded = {
       minX: coastline.bounds.minX - 10000,
       maxX: coastline.bounds.maxX + 10000,
@@ -1129,20 +1182,52 @@ function sampleCoastlineBeachHeight(x, z, baseY, coastlineFields) {
     }
   }
 
-  if (bestLandDist === null) return baseY;
+  if (bestLandDist === null) {
+    return null;
+  }
+
+  return {
+    beachWidth: activeBeachWidth,
+    landDist: bestLandDist
+  };
+}
+
+function sampleCoastlineBeachHeight(x, z, baseY, coastlineFields) {
+  const sample = getNearestCoastlineSample(x, z, coastlineFields);
+  if (!sample) return baseY;
+  const { landDist: bestLandDist, beachWidth: activeBeachWidth } = sample;
 
   if (bestLandDist <= 0) {
-    // Ocean side — flatten terrain below OCEAN_Y so ocean plane is always visible
-    return Math.min(baseY, OCEAN_Y - 0.1);
+    // Ocean side — slope the seabed downward from the shoreline
+    const oceanDist = -bestLandDist;
+    const seabedY = SHORE_Y - Math.min(oceanDist * 0.05, 20);
+    return Math.min(baseY, seabedY);
   }
 
   if (bestLandDist >= activeBeachWidth) return baseY;
 
-  // Land side — beach slope from OCEAN_Y at shoreline up to baseY at beachWidth
+  // Land side — beach slope from SHORE_Y at shoreline up to baseY at beachWidth
   const normalized = clamp(bestLandDist / Math.max(1e-6, activeBeachWidth), 0, 1);
   const smooth = normalized * normalized * (3 - 2 * normalized);
-  const beachY = THREE.MathUtils.lerp(OCEAN_Y, baseY, smooth);
+  const beachY = THREE.MathUtils.lerp(SHORE_Y, baseY, smooth);
   return Math.min(baseY, beachY);
+}
+
+function sampleCoastlineTerrainBlend(x, z, height, coastlineFields) {
+  const sample = getNearestCoastlineSample(x, z, coastlineFields);
+  if (!sample) return 0;
+
+  const { landDist, beachWidth } = sample;
+
+  // Ocean side: always sand (seabedBlend handles depth→dark)
+  if (landDist <= 0) return 1;
+
+  // Sand zone = the slope itself + a small flat buffer past the slope
+  const sandZone = beachWidth + 20;
+  if (landDist > sandZone) return 0;
+
+  // Sharp fade over the last 8m to grass (almost a line)
+  return 1 - smoothstep(sandZone - 8, sandZone, landDist);
 }
 
 function buildCoastlineFields(coastlines, spawn) {
@@ -1205,46 +1290,9 @@ function createOcean() {
   mat.polygonOffsetFactor = 2;
   mat.polygonOffsetUnits = 2;
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = OCEAN_Y;
+  mesh.position.y = SHORE_Y;
   mesh.receiveShadow = true;
   return mesh;
-}
-
-function createAllCoastlines(coastlines, coastlineFields) {
-  const group = new THREE.Group();
-  for (let i = 0; i < (coastlines || []).length; i += 1) {
-    group.add(createCoastline(coastlines[i], coastlineFields[i]));
-  }
-  return group;
-}
-
-function createCoastline(coastline, coastlineField = null) {
-  const group = new THREE.Group();
-  const points = (coastline.points || []).map(normalizePoint).filter(Boolean);
-  if (points.length < 2) return group;
-
-  const field = coastlineField || buildCoastlineField(coastline);
-  if (!field) return group;
-
-  const vectors = points.map((point) => new THREE.Vector3(point.x, 0, point.z));
-  const curve = createRiverPath(vectors);
-  const length = curve.getLength();
-  const samples = Math.max(10, Math.round(length / 8));
-
-  // Wide ribbon covers the full ocean side — land side gets buried under rising terrain,
-  // ocean side floats just above the ocean plane showing sand texture
-  const beach = createTrackRibbon(curve, {
-    width: field.beachWidth * 8,
-    samples,
-    y: OCEAN_Y + 0.04,
-    uvScale: 0.018
-  });
-  beach.material = MATERIALS.beach.clone();
-  beach.material.shadowSide = THREE.DoubleSide;
-  beach.receiveShadow = true;
-  group.add(beach);
-
-  return group;
 }
 
 function boundsContainsPoint(bounds, x, z) {
@@ -1298,13 +1346,13 @@ function appendTrackRibbonSurface(curve, options, target) {
   const indices = [];
   let distance = 0;
   let prevPoint = curve.getPointAt(0);
-  
+
   for (let i = 0; i <= samples; i++) {
     const t = i / samples;
     const point = curve.getPointAt(t);
     const tangent = curve.getTangentAt(t).setY(0).normalize();
     const side = new THREE.Vector3(-tangent.z, 0, tangent.x);
-    
+
     if (i > 0) distance += point.distanceTo(prevPoint);
     prevPoint = point;
 
@@ -1313,17 +1361,17 @@ function appendTrackRibbonSurface(curve, options, target) {
     } else if (i === samples && endExtension > 0) {
       point.addScaledVector(tangent, endExtension);
     }
-    
+
     const center = point.clone().addScaledVector(side, offset);
     const left = center.clone().addScaledVector(side, width * 0.5);
     const right = center.clone().addScaledVector(side, -width * 0.5);
     left.y = y;
     right.y = y;
-    
+
     positions.push(left.x, left.y, left.z, right.x, right.y, right.z);
     normals.push(0, 1, 0, 0, 1, 0);
     uvs.push(0, distance * uvScale, 1, distance * uvScale);
-    
+
     if (i < samples) {
       const base = i * 2;
       indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
@@ -1861,6 +1909,11 @@ function normalizeRange(value, fallback) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function smoothstep(edge0, edge1, value) {
+  const t = clamp((value - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
 }
 
 const CLOUD_PUFF_GEO = new THREE.IcosahedronGeometry(1, 2);
