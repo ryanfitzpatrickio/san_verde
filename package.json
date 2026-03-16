@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@perplexdotgg/bounce": "^1.7.0",
+    "@recast-navigation/core": "^0.43.0",
+    "@recast-navigation/generators": "^0.43.0",
+    "@recast-navigation/three": "^0.43.0",
     "@runware/sdk-js": "^1.2.5",
     "solid-js": "^1.9.11",
     "three": "0.183.2",

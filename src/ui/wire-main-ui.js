@@ -372,9 +372,8 @@ export function wireMainUi(options) {
     }
 
     if (!event.repeat && event.code === 'KeyI') {
-      state.cinematicCameraEnabled = !state.cinematicCameraEnabled;
-      applyGarageSnapshot(setCinematicCameraEnabled(context.gameRuntime, state.cinematicCameraEnabled));
-      setStatus(state.cinematicCameraEnabled ? 'Cinematic camera enabled' : 'Cinematic camera disabled');
+      state.navDebugVisible = !state.navDebugVisible;
+      setStatus(state.navDebugVisible ? 'Navmesh debug on' : 'Navmesh debug off');
       event.preventDefault();
       return;
     }

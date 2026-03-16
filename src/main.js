@@ -24,7 +24,7 @@ import { mrt, normalView, output, pass, renderOutput } from 'three/tsl';
 import { createGarageAssetLoader } from './assets/garage-asset-loader.js';
 import { BUILT_IN_VEHICLES, getBuiltInVehicleById } from './assets/vehicle-registry.js';
 import { EngineAudioSystem, ENGINE_LIBRARY } from './engine-system.js';
-import { createAgentSystem } from './game/agent-system.js';
+import { createNpcCrowdSystem } from './game/npc-crowd-system.js';
 import { STAGE_OPTIONS, createStage, getStageLabel } from './game/stages.js';
 import { createBounceStagePhysics, destroyBounceStagePhysics } from './game/bounce-physics.js';
 import { disposeStageFeedback, initializeStageFeedback } from './game/stage-feedback.js';
@@ -275,7 +275,7 @@ const garageAssetLoader = createGarageAssetLoader({
 });
 
 const engineAudio = new EngineAudioSystem(state.engineTypeId);
-const agentSystem = createAgentSystem({
+const agentSystem = createNpcCrowdSystem({
   config: MODEL_CONFIG,
   state
 });

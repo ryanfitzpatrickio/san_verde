@@ -14,7 +14,7 @@ import {
   normalizeCatalogLod,
   prepareCatalogModelInstance
 } from './catalog-lod.js';
-import { buildRoadGraphAgentNavigation } from './navigation-network.js';
+import { buildSanVerdeNpcNavmesh } from './san-verde-navmesh.js';
 import SAN_VERDE_MAP_DATA from './san-verde-map.json';
 import { resolveModelUrl } from '../assets/asset-base-url.js';
 import { ChunkGrid } from './chunk-grid.js';
@@ -399,7 +399,10 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
 
   collisionGroup.add(createCollisionTerrain(groundField));
 
-  report(89, 'Finalizing…');
+  report(89, 'Building NPC navmesh…');
+  await yieldToMain();
+  const agentNavigation = graph.roads.length > 0 ? await buildSanVerdeNpcNavmesh(graph) : null;
+  report(93, 'Finalizing…');
 
   const spawn = data.spawn || { x: 0, z: 0, yaw: 0 };
   const spawnGroundY = groundSampler(spawn.x, spawn.z)?.height ?? spawn.y ?? 0;
@@ -414,7 +417,7 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     startYaw: spawn.yaw || 0,
     driveBounds: Math.max(Math.abs(data.bounds.minX), Math.abs(data.bounds.maxX), Math.abs(data.bounds.minZ), Math.abs(data.bounds.maxZ)) - 20,
     navigation: graph.roads.length > 0 ? createRoadGraphNavigation(graph) : null,
-    agentNavigation: graph.roads.length > 0 ? buildRoadGraphAgentNavigation(graph) : null,
+    agentNavigation,
     agentNavigationRevision: 0,
     overviewBounds: data.bounds,
     sampleGround: groundSampler,
@@ -438,6 +441,7 @@ function buildRoadGraph(data) {
       name: road.id,
       classification: road.type === 'boulevard' ? 'primary' : road.type === 'avenue' ? 'secondary' : 'local',
       width: ROAD_KIND_STYLE[road.type]?.roadWidth || 18,
+      sidewalkWidth: ROAD_KIND_STYLE[road.type]?.sidewalkWidth || 5.2,
       points,
       curve: createRoadPath(points)
     };
