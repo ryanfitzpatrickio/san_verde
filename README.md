@@ -117,10 +117,12 @@ npm run assets:vehicles:build-registry
 
 ## Quick Deploy
 Git Push
+```
 npm run assets:optimize
 gsutil -m cp -r web-assets/models gs://sanverde_assets/public/
 gsutil -m cp -r web-assets/textures gs://sanverde_assets/public/
 gsutil -m cp -r "web-assets/full textures" gs://sanverde_assets/public/
+```
 
 ---
 
