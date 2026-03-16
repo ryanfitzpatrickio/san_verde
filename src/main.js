@@ -2031,7 +2031,21 @@ function applyStageAtmosphere(scene, stageId) {
   }
 
   if (stageId === 'san_verde') {
-    scene.fog = new THREE.FogExp2('#c08050', 0.00020);
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
+    const t = (hour - 6) / 12; // 0 = 6am, 1 = 6pm
+    const dayFactor = Math.max(0, Math.sin(Math.PI * t));
+    const isNight = hour < 5 || hour >= 21;
+    let fogColor;
+    if (isNight) {
+      fogColor = '#0d1828'; // dark blue night
+    } else {
+      // dawn/dusk → warm orange, midday → pale sky blue
+      fogColor = new THREE.Color()
+        .lerpColors(new THREE.Color('#c08050'), new THREE.Color('#a0c0d8'), dayFactor)
+        .getStyle();
+    }
+    scene.fog = new THREE.FogExp2(fogColor, 0.00020);
     return;
   }
 

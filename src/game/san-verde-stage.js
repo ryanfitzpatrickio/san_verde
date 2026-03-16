@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
-import { attribute, mix, texture, uniform, uv, vec4 } from 'three/tsl';
+import { attribute, float, mix, normalView, normalWorld, texture, uniform, uv, vec3, vec4 } from 'three/tsl';
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
 import { createRoadGraphNavigation } from './autopilot.js';
 import {
@@ -1920,13 +1920,18 @@ function smoothstep(edge0, edge1, value) {
   return t * t * (3 - 2 * t);
 }
 
-const CLOUD_PUFF_GEO = new THREE.IcosahedronGeometry(1, 2);
-const CLOUD_MAT = new THREE.MeshLambertMaterial({
-  color: '#f0eee8',
-  transparent: true,
-  opacity: 0.82,
-  depthWrite: false
-});
+const CLOUD_PUFF_GEO = new THREE.IcosahedronGeometry(1, 3);
+// TSL cloud material:
+//  - top-to-bottom gradient: warm white crown → cool grey-blue underside
+//  - silhouette edge fade: puff edges go transparent for a fluffy soft look
+const CLOUD_MAT = (() => {
+  const mat = new MeshStandardNodeMaterial({ transparent: true, depthWrite: false, roughness: 1, metalness: 0 });
+  const upFactor = normalWorld.y.add(0.35).clamp(0, 1);
+  const facingFactor = normalView.z.abs().pow(0.55);
+  mat.colorNode = mix(vec3(0.75, 0.79, 0.86), vec3(0.97, 0.96, 0.94), upFactor);
+  mat.opacityNode = facingFactor.mul(mix(float(0.40), float(0.88), upFactor));
+  return mat;
+})();
 
 function createClouds(bounds) {
   const group = new THREE.Group();
@@ -1936,31 +1941,37 @@ function createClouds(bounds) {
   const cx = (bounds.maxX + bounds.minX) * 0.5;
   const cz = (bounds.maxZ + bounds.minZ) * 0.5;
 
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 54; i++) {
     const cloud = new THREE.Group();
-    const puffs = 4 + Math.floor(rng() * 5);
-    const spread = 28 + rng() * 55;
-    const tall = 10 + rng() * 18;
+    const puffs = 8 + Math.floor(rng() * 8);   // 8–15 puffs per cloud
+    const spread = 32 + rng() * 72;             // horizontal footprint
+    const tall = 16 + rng() * 28;              // vertical build-up
 
     for (let p = 0; p < puffs; p++) {
       const mesh = new THREE.Mesh(CLOUD_PUFF_GEO, CLOUD_MAT);
+      // Central dominant puffs are larger; peripheral ones taper off
+      const isCentral = p < 3;
+      const sizeScale = isCentral ? 0.55 + rng() * 0.45 : 0.22 + rng() * 0.45;
       mesh.scale.set(
-        spread * (0.35 + rng() * 0.65),
-        tall * (0.5 + rng() * 0.5),
-        spread * (0.3 + rng() * 0.5)
+        spread * sizeScale * (0.6 + rng() * 0.4),
+        tall   * sizeScale * (0.28 + rng() * 0.28), // flattened — clouds are wide, not tall
+        spread * sizeScale * (0.55 + rng() * 0.35)
       );
+      // Flat-bottom: Y offsets are all ≥ 0, so the cluster sits on a level base
+      const angle = rng() * Math.PI * 2;
+      const radDist = isCentral ? rng() * 0.35 : 0.2 + rng() * 0.75;
       mesh.position.set(
-        (rng() - 0.5) * spread * 1.4,
-        (rng() - 0.5) * tall * 0.5,
-        (rng() - 0.5) * spread * 0.7
+        Math.cos(angle) * spread * radDist * 0.8,
+        rng() * tall * 0.65,         // no negative Y — flat bottom
+        Math.sin(angle) * spread * radDist * 0.55
       );
       cloud.add(mesh);
     }
 
     cloud.position.set(
-      cx + (rng() - 0.5) * mapW * 1.6,
-      130 + rng() * 120,
-      cz + (rng() - 0.5) * mapD * 1.6
+      cx + (rng() - 0.5) * mapW * 1.8,
+      105 + rng() * 110,
+      cz + (rng() - 0.5) * mapD * 1.8
     );
     group.add(cloud);
   }

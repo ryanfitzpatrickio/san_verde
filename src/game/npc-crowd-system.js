@@ -54,6 +54,11 @@ export function createNpcCrowdSystem({ config, state }) {
   let vehicleAgents = [];
   let pedestrianAgents = [];
 
+  // Smoothed player velocity for forward-biased spawning
+  const prevFocusPos = new THREE.Vector3();
+  const playerVelocity = new THREE.Vector3();
+  let velocityInitialized = false;
+
   function teardown() {
     vehicleCrowd?.destroy();
     pedestrianCrowd?.destroy();
@@ -148,19 +153,28 @@ export function createNpcCrowdSystem({ config, state }) {
 
       const dt = Math.min(deltaSeconds, 0.1);
       const focusPos = followPosition || new THREE.Vector3();
-      const despawnDistSq = config.agentTraffic.despawnDistance ** 2;
+      const despawnDist = config.agentTraffic.despawnDistance;
+
+      // Track smoothed player velocity for forward-biased spawning
+      if (!velocityInitialized) {
+        prevFocusPos.copy(focusPos);
+        velocityInitialized = true;
+      }
+      const rawVel = new THREE.Vector3().subVectors(focusPos, prevFocusPos).divideScalar(Math.max(dt, 0.001));
+      playerVelocity.lerp(rawVel, 0.12); // smooth out jitter
+      prevFocusPos.copy(focusPos);
 
       if (vehicleCrowd) {
         vehicleCrowd.update(dt);
         for (const a of vehicleAgents) {
-          tickAgent(a, vehicleQuery, focusPos, despawnDistSq);
+          tickAgent(a, vehicleQuery, focusPos, playerVelocity, despawnDist);
         }
       }
 
       if (pedestrianCrowd) {
         pedestrianCrowd.update(dt);
         for (const a of pedestrianAgents) {
-          tickAgent(a, pedestrianQuery, focusPos, despawnDistSq);
+          tickAgent(a, pedestrianQuery, focusPos, playerVelocity, despawnDist);
         }
       }
     },
@@ -196,7 +210,7 @@ function spawnAgents(kind, count, crowd, query, focusPosition, config) {
   return agents;
 }
 
-function tickAgent(agent, query, focusPos, despawnDistSq) {
+function tickAgent(agent, query, focusPos, playerVelocity, despawnDist) {
   if (!agent.crowdAgent) return;
 
   const pos = agent.crowdAgent.position();
@@ -215,10 +229,23 @@ function tickAgent(agent, query, focusPos, despawnDistSq) {
     agent.mesh.position.y += Math.sin(Date.now() * 0.01) * 0.03;
   }
 
-  // Despawn if too far from player
-  const agentPos3 = new THREE.Vector3(pos.x, pos.y, pos.z);
-  if (agentPos3.distanceToSquared(focusPos) > despawnDistSq) {
-    const newPt = findSpawnPoint(query, focusPos, 180);
+  // Directional despawn: agents behind the player vanish sooner so they can
+  // reappear ahead — agents in front get the full despawn radius.
+  const dx = pos.x - focusPos.x;
+  const dz = pos.z - focusPos.z;
+  const distSq = dx * dx + dz * dz;
+  const speed2D = Math.hypot(playerVelocity.x, playerVelocity.z);
+  let effectiveDespawn = despawnDist;
+  if (speed2D > 0.5) {
+    const fwdX = playerVelocity.x / speed2D;
+    const fwdZ = playerVelocity.z / speed2D;
+    const dot = (dx / Math.sqrt(distSq + 0.001)) * fwdX + (dz / Math.sqrt(distSq + 0.001)) * fwdZ;
+    // Behind player → shrink despawn to 55 %, ahead → full distance
+    effectiveDespawn = despawnDist * (dot < 0 ? 0.55 : 1.0);
+  }
+
+  if (distSq > effectiveDespawn * effectiveDespawn) {
+    const newPt = findForwardSpawnPoint(query, focusPos, playerVelocity, despawnDist * 0.8);
     if (newPt) {
       agent.crowdAgent.teleport(newPt);
       const target = getRandomPoint(query);
@@ -248,6 +275,42 @@ function findSpawnPoint(query, focusPos, radius) {
     if (success) return randomPoint;
   }
   return getRandomPoint(query);
+}
+
+/**
+ * Sample several candidate points and return the one most ahead of the player.
+ * Falls back to a regular random point if there's no meaningful velocity.
+ */
+function findForwardSpawnPoint(query, focusPos, playerVelocity, radius) {
+  const speed2D = Math.hypot(playerVelocity.x, playerVelocity.z);
+  if (speed2D < 0.5 || !focusPos?.isVector3) {
+    return findSpawnPoint(query, focusPos, radius);
+  }
+
+  const fwdX = playerVelocity.x / speed2D;
+  const fwdZ = playerVelocity.z / speed2D;
+
+  let bestPt = null;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < 8; i++) {
+    const { success, randomPoint: pt } = query.findRandomPointAroundCircle(focusPos, radius);
+    if (!success) continue;
+    const dx = pt.x - focusPos.x;
+    const dz = pt.z - focusPos.z;
+    const len = Math.hypot(dx, dz) + 0.001;
+    // Score by forward alignment; prefer points at least 40 units away to avoid
+    // teleporting right next to the player
+    const forwardDot = (dx / len) * fwdX + (dz / len) * fwdZ;
+    const distBonus = len > 40 ? 0.3 : 0;
+    const score = forwardDot + distBonus;
+    if (score > bestScore) {
+      bestScore = score;
+      bestPt = pt;
+    }
+  }
+
+  return bestPt || findSpawnPoint(query, focusPos, radius);
 }
 
 function getRandomPoint(query) {
