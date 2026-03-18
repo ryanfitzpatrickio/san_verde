@@ -119,6 +119,25 @@
       <div class="stat"><div class="stat-label">Area</div><div class="stat-value" id="totalArea">0 m²</div></div>
       <div class="stat"><div class="stat-label">Plots</div><div class="stat-value" id="plotCount">0</div></div>
     </div>
+
+    <h2>Bake</h2>
+    <div class="stack">
+      <div class="inline-row">
+        <div>
+          <div class="micro-label">Chunk Size</div>
+          <input type="number" id="bakeChunkSize" min="100" max="4000" step="50" value="800">
+        </div>
+        <div>
+          <div class="micro-label">Detail Radius</div>
+          <input type="number" id="bakeDetailRadius" min="50" max="10000" step="50" value="900">
+        </div>
+        <div>
+          <div class="micro-label">Mass Radius</div>
+          <input type="number" id="bakeMassRadius" min="100" max="20000" step="50" value="2200">
+        </div>
+      </div>
+      <div class="tiny">These values define the runtime chunk grid and are the inputs future San Verde bake scripts will target.</div>
+    </div>
     
     <h2>Import / Export</h2>
     <div class="btn-row">
@@ -225,6 +244,17 @@ const ZONE_PLOT_STYLE = {
   park: { spacing: 40, footprintMin: 8, footprintMax: 12, depthMin: 8, depthMax: 12, setback: 15, fillChance: 0.1 }
 };
 
+const DEFAULT_BAKE_CONFIG = Object.freeze({
+  version: 1,
+  chunkSize: 800,
+  detailRadius: 900,
+  massRadius: 2200,
+  defaultStageMode: 'procedural_only',
+  detailAssetMode: 'chunk_baked',
+  midAssetMode: 'chunk_baked',
+  farAssetMode: 'skyline_merged'
+});
+
 const zoneTypeSelect = document.getElementById('zoneType');
 for (const district of CATALOG_DISTRICT_ORDER) {
   const option = document.createElement('option');
@@ -267,6 +297,7 @@ let state = {
   gridEnabled: true,
   snapEnabled: false,
   gridSize: 20,
+  bake: { ...DEFAULT_BAKE_CONFIG },
   history: [],
   historyIndex: -1
 };
@@ -806,8 +837,10 @@ function saveHistory() {
   state.history.push({
     roads: JSON.parse(JSON.stringify(state.roads)),
     rivers: JSON.parse(JSON.stringify(state.rivers)),
+    coastlines: JSON.parse(JSON.stringify(state.coastlines)),
     zones: JSON.parse(JSON.stringify(state.zones)),
-    spawnPoint: { ...state.spawnPoint }
+    spawnPoint: { ...state.spawnPoint },
+    bake: { ...normalizeBakeConfig(state.bake) }
   });
   state.historyIndex = state.history.length - 1;
   if (state.history.length > 50) {
@@ -822,8 +855,11 @@ function undo() {
     const h = state.history[state.historyIndex];
     state.roads = JSON.parse(JSON.stringify(h.roads));
     state.rivers = JSON.parse(JSON.stringify(h.rivers || []));
+    state.coastlines = JSON.parse(JSON.stringify(h.coastlines || []));
     state.zones = JSON.parse(JSON.stringify(h.zones));
     state.spawnPoint = { ...h.spawnPoint };
+    state.bake = normalizeBakeConfig(h.bake);
+    syncBakeInputs();
     computeNodes();
     render();
   }
@@ -835,8 +871,11 @@ function redo() {
     const h = state.history[state.historyIndex];
     state.roads = JSON.parse(JSON.stringify(h.roads));
     state.rivers = JSON.parse(JSON.stringify(h.rivers || []));
+    state.coastlines = JSON.parse(JSON.stringify(h.coastlines || []));
     state.zones = JSON.parse(JSON.stringify(h.zones));
     state.spawnPoint = { ...h.spawnPoint };
+    state.bake = normalizeBakeConfig(h.bake);
+    syncBakeInputs();
     computeNodes();
     render();
   }
@@ -1504,11 +1543,22 @@ function normalizePoint(point) {
   return { x: 0, z: 0 };
 }
 
+function normalizeBakeConfig(config) {
+  return {
+    ...DEFAULT_BAKE_CONFIG,
+    ...(config && typeof config === 'object' ? config : {}),
+    chunkSize: clampValue(Number(config?.chunkSize) || DEFAULT_BAKE_CONFIG.chunkSize, 100, 4000),
+    detailRadius: clampValue(Number(config?.detailRadius) || DEFAULT_BAKE_CONFIG.detailRadius, 50, 10000),
+    massRadius: clampValue(Number(config?.massRadius) || DEFAULT_BAKE_CONFIG.massRadius, 100, 20000)
+  };
+}
+
 function buildExportData() {
   return {
     name: 'San Verde',
     version: 1,
     bounds: computeBounds(),
+    bake: normalizeBakeConfig(state.bake),
     spawn: state.spawnPoint,
     reference: state.reference.image && state.reference.sourceDataUrl ? {
       name: state.reference.name,
@@ -1574,6 +1624,7 @@ async function applyMapData(data) {
     plots: (z.plots || []).map(normalizePlot).filter(Boolean)
   }));
   regenerateAllZonePlots(false);
+  state.bake = normalizeBakeConfig(data.bake);
   state.spawnPoint = data.spawn || { x: 0, z: 0, yaw: 0 };
 
   if (data.reference?.imageDataUrl) {
@@ -1592,6 +1643,8 @@ async function applyMapData(data) {
   } else {
     clearReferenceImage();
   }
+
+  syncBakeInputs();
 
   state.selectedId = null;
   state.selectedType = null;
@@ -1680,6 +1733,14 @@ function syncReferenceInputs() {
     : 'No ground image loaded.';
 }
 
+function syncBakeInputs() {
+  const bake = normalizeBakeConfig(state.bake);
+  state.bake = bake;
+  document.getElementById('bakeChunkSize').value = Math.round(bake.chunkSize);
+  document.getElementById('bakeDetailRadius').value = Math.round(bake.detailRadius);
+  document.getElementById('bakeMassRadius').value = Math.round(bake.massRadius);
+}
+
 document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
   btn.addEventListener('click', () => {
     setActiveTool(btn.dataset.tool);
@@ -1735,6 +1796,36 @@ document.getElementById('snapGrid').addEventListener('click', e => {
 document.getElementById('gridSize').addEventListener('change', e => {
   state.gridSize = parseInt(e.target.value) || 20;
   render();
+});
+
+document.getElementById('bakeChunkSize').addEventListener('change', (event) => {
+  state.bake = normalizeBakeConfig({
+    ...state.bake,
+    chunkSize: Number(event.target.value)
+  });
+  syncBakeInputs();
+  saveHistory();
+  setStatus('Updated bake chunk size');
+});
+
+document.getElementById('bakeDetailRadius').addEventListener('change', (event) => {
+  state.bake = normalizeBakeConfig({
+    ...state.bake,
+    detailRadius: Number(event.target.value)
+  });
+  syncBakeInputs();
+  saveHistory();
+  setStatus('Updated bake detail radius');
+});
+
+document.getElementById('bakeMassRadius').addEventListener('change', (event) => {
+  state.bake = normalizeBakeConfig({
+    ...state.bake,
+    massRadius: Number(event.target.value)
+  });
+  syncBakeInputs();
+  saveHistory();
+  setStatus('Updated bake mass radius');
 });
 
 document.getElementById('undoBtn').addEventListener('click', undo);
@@ -2298,6 +2389,7 @@ function syncSelectionControls() {
 }
 
 saveHistory();
+syncBakeInputs();
 syncReferenceInputs();
 render();
 setStatus('Ready - Select a tool and start drawing');

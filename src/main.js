@@ -173,6 +173,25 @@ function createPerformanceAttributionTracker() {
       return `Top: ${entries
         .map(([category, draws]) => `${category} ${draws.toLocaleString()}`)
         .join(' | ')}`;
+    },
+    formatPrefixSummary(prefix, limit = 3) {
+      const entries = Object.entries(drawCategories)
+        .filter(([category]) => category.startsWith(prefix))
+        .sort((left, right) => {
+          if (right[1] !== left[1]) {
+            return right[1] - left[1];
+          }
+          return left[0].localeCompare(right[0]);
+        })
+        .slice(0, limit);
+
+      if (entries.length === 0) {
+        return '';
+      }
+
+      return entries
+        .map(([category, draws]) => `${category} ${draws.toLocaleString()}`)
+        .join(' | ');
     }
   };
 }
@@ -2450,7 +2469,13 @@ function updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution
   const memoryInfo = renderer.info.memory;
   perf.peakDraws = Math.max(perf.peakDraws, renderInfo.drawCalls);
   perf.peakTriangles = Math.max(perf.peakTriangles, renderInfo.triangles);
-  perf.drawCategorySummary = performanceAttribution.formatTopSummary(3);
+  const topSummary = performanceAttribution.formatTopSummary(3);
+  const sanVerdeChunkSummary = getStageBehaviorId(activeStage?.id) === 'san_verde'
+    ? performanceAttribution.formatPrefixSummary('sv:', 3)
+    : '';
+  perf.drawCategorySummary = sanVerdeChunkSummary
+    ? `${topSummary} || SV: ${sanVerdeChunkSummary}`
+    : topSummary;
 
   if (perf.frameAccumulator >= 1.0) {
     perf.fps = perf.frameCount / Math.max(perf.frameAccumulator, 1e-6);

@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { createDefaultQueryFilter, createFindNearestPolyResult, findNearestPoly } from 'navcat';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { attribute, float, mix, normalView, normalWorld, texture, uniform, uv, vec3, vec4 } from 'three/tsl';
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
 import { createRoadGraphNavigation } from './autopilot.js';
 import {
   BUILDING_ASSET_MODE_FALLBACK,
   BUILDING_ASSET_MODE_GLB_ONLY,
-  BUILDING_LOD_DISTANCES,
+  BUILDING_ASSET_MODE_PROCEDURAL_ONLY,
   catalogEntryHasGlb,
   filterCatalogEntriesForGlb,
   fitCatalogModelToFootprint,
@@ -80,6 +81,30 @@ const CSG_EVALUATOR = new Evaluator();
 const TREE_NAV_CLEARANCE = 2.75;
 const TREE_ZONE_EDGE_CLEARANCE = 2.5;
 const TREE_MIN_SEPARATION = 4.5;
+const CHUNK_BAKED_DETAIL_MATERIAL_CONFIG = Object.freeze({
+  body: { color: '#b8aea1', roughness: 0.94, metalness: 0.02 },
+  accent: { color: '#766d64', roughness: 0.93, metalness: 0.02 },
+  roof: { color: '#4f4640', roughness: 0.96, metalness: 0.01 },
+  glass: { color: '#8ea2b4', roughness: 0.2, metalness: 0.12 }
+});
+const DEFAULT_SAN_VERDE_BAKE_CONFIG = Object.freeze({
+  version: 1,
+  chunkSize: 800,
+  detailRadius: 900,
+  massRadius: 2200,
+  defaultStageMode: 'procedural_only',
+  detailAssetMode: 'chunk_baked',
+  midAssetMode: 'chunk_baked',
+  farAssetMode: 'skyline_merged'
+});
+const SAN_VERDE_BUILDING_LOD_DISTANCES = Object.freeze({
+  glb: 0,
+  procedural: 24
+});
+const CHUNK_BAKED_DETAIL_MATERIALS = new Map();
+const CLOUD_INSTANCE_MATRIX = new THREE.Matrix4();
+const CLOUD_INSTANCE_POSITION = new THREE.Vector3();
+const CLOUD_INSTANCE_SCALE = new THREE.Vector3();
 
 const DISTRICT_STYLE = {
   downtown: { ground: '#5a5a5a', treeDensity: 0.02 },
@@ -298,12 +323,23 @@ async function loadMapData() {
   return SAN_VERDE_MAP_DATA || {
     name: 'San Verde',
     version: 1,
+    bake: DEFAULT_SAN_VERDE_BAKE_CONFIG,
     bounds: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
     spawn: { x: 0, z: 0, yaw: 0 },
     roads: [],
     rivers: [],
     zones: [],
     nodes: []
+  };
+}
+
+function normalizeBakeConfig(bakeConfig) {
+  return {
+    ...DEFAULT_SAN_VERDE_BAKE_CONFIG,
+    ...(bakeConfig && typeof bakeConfig === 'object' ? bakeConfig : {}),
+    chunkSize: clamp(Number(bakeConfig?.chunkSize) || DEFAULT_SAN_VERDE_BAKE_CONFIG.chunkSize, 100, 4000),
+    detailRadius: clamp(Number(bakeConfig?.detailRadius) || DEFAULT_SAN_VERDE_BAKE_CONFIG.detailRadius, 50, 10000),
+    massRadius: clamp(Number(bakeConfig?.massRadius) || DEFAULT_SAN_VERDE_BAKE_CONFIG.massRadius, 100, 20000)
   };
 }
 
@@ -340,11 +376,12 @@ function normalizeCatalogEntry(entry) {
   };
 }
 
-export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK, onProgress } = {}) {
+export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_PROCEDURAL_ONLY, onProgress } = {}) {
   const report = (pct, label) => onProgress?.(Math.round(pct), label);
 
   report(3, 'Loading map data…');
   const data = await loadMapData();
+  const bakeConfig = normalizeBakeConfig(data.bake);
 
   const catalogs = loadCatalogEntries();
   const activeCatalogs = buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY
@@ -381,16 +418,30 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     group.add(createOcean());
   }
 
-  const chunkGrid = new ChunkGrid(800);
+  const chunkGrid = new ChunkGrid(bakeConfig.chunkSize, {
+    perfLabelPrefix: 'sv',
+    detailRadius: bakeConfig.detailRadius,
+    massRadius: bakeConfig.massRadius
+  });
   await createZoneBuildings(
     data.zones, data.roads, activeCatalogs, chunkGrid,
     (t) => report(20 + t * 55, 'Placing buildings…'),
     { gltfLoader, buildingAssetMode }
   );
 
-  report(76, 'Generating city LODs…');
+  const useChunkBakedDetail = bakeConfig.detailAssetMode === 'chunk_baked'
+    && buildingAssetMode === BUILDING_ASSET_MODE_PROCEDURAL_ONLY;
+  if (useChunkBakedDetail) {
+    report(76, 'Baking detail chunks…');
+    await chunkGrid.bakeDetailGeometry(
+      (t) => report(76 + t * 5, 'Baking detail chunks…'),
+      { resolveBakeMaterial: resolveSanVerdeChunkBakeMaterial }
+    );
+  }
+
+  report(81, 'Generating city LODs…');
   await chunkGrid.buildMassGeometry(
-    (t) => report(76 + t * 9, 'Generating city LODs…')
+    (t) => report(81 + t * 4, 'Generating city LODs…')
   );
 
   report(86, 'Adding trees & clouds…');
@@ -411,6 +462,7 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
   const spawn = data.spawn || { x: 0, z: 0, yaw: 0 };
   const spawnGroundY = groundSampler(spawn.x, spawn.z)?.height ?? spawn.y ?? 0;
   const spawnPosition = new THREE.Vector3(spawn.x, spawnGroundY, spawn.z);
+  chunkGrid.update(spawnPosition);
 
   const stage = {
     id: 'san_verde',
@@ -424,6 +476,8 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     agentNavigation,
     agentNavigationRevision: 0,
     overviewBounds: data.bounds,
+    bakeConfig,
+    chunkGrid,
     sampleGround: groundSampler,
     update(playerPos) {
       if (playerPos) chunkGrid.update(playerPos);
@@ -1999,42 +2053,68 @@ function createClouds(bounds) {
   const mapD = (bounds.maxZ - bounds.minZ) || 400;
   const cx = (bounds.maxX + bounds.minX) * 0.5;
   const cz = (bounds.maxZ + bounds.minZ) * 0.5;
+  const cloudSpecs = [];
+  let puffCount = 0;
 
   for (let i = 0; i < 54; i++) {
-    const cloud = new THREE.Group();
     const puffs = 8 + Math.floor(rng() * 8);   // 8–15 puffs per cloud
     const spread = 32 + rng() * 72;             // horizontal footprint
     const tall = 16 + rng() * 28;              // vertical build-up
+    const center = {
+      x: cx + (rng() - 0.5) * mapW * 1.8,
+      y: 105 + rng() * 110,
+      z: cz + (rng() - 0.5) * mapD * 1.8
+    };
+    const cloud = [];
 
     for (let p = 0; p < puffs; p++) {
-      const mesh = new THREE.Mesh(CLOUD_PUFF_GEO, CLOUD_MAT);
       // Central dominant puffs are larger; peripheral ones taper off
       const isCentral = p < 3;
       const sizeScale = isCentral ? 0.55 + rng() * 0.45 : 0.22 + rng() * 0.45;
-      mesh.scale.set(
-        spread * sizeScale * (0.6 + rng() * 0.4),
-        tall   * sizeScale * (0.28 + rng() * 0.28), // flattened — clouds are wide, not tall
-        spread * sizeScale * (0.55 + rng() * 0.35)
-      );
+      const scale = {
+        x: spread * sizeScale * (0.6 + rng() * 0.4),
+        y: tall * sizeScale * (0.28 + rng() * 0.28),
+        z: spread * sizeScale * (0.55 + rng() * 0.35)
+      };
       // Flat-bottom: Y offsets are all ≥ 0, so the cluster sits on a level base
       const angle = rng() * Math.PI * 2;
       const radDist = isCentral ? rng() * 0.35 : 0.2 + rng() * 0.75;
-      mesh.position.set(
-        Math.cos(angle) * spread * radDist * 0.8,
-        rng() * tall * 0.65,         // no negative Y — flat bottom
-        Math.sin(angle) * spread * radDist * 0.55
-      );
-      cloud.add(mesh);
+      const offset = {
+        x: Math.cos(angle) * spread * radDist * 0.8,
+        y: rng() * tall * 0.65,
+        z: Math.sin(angle) * spread * radDist * 0.55
+      };
+      cloud.push({ offset, scale });
+      puffCount += 1;
     }
 
-    cloud.position.set(
-      cx + (rng() - 0.5) * mapW * 1.8,
-      105 + rng() * 110,
-      cz + (rng() - 0.5) * mapD * 1.8
-    );
-    group.add(cloud);
+    cloudSpecs.push({ center, puffs: cloud });
   }
 
+  if (puffCount <= 0) {
+    return group;
+  }
+
+  const clouds = new THREE.InstancedMesh(CLOUD_PUFF_GEO, CLOUD_MAT, puffCount);
+  clouds.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+
+  let instanceIndex = 0;
+  for (const cloud of cloudSpecs) {
+    for (const puff of cloud.puffs) {
+      CLOUD_INSTANCE_POSITION.set(
+        cloud.center.x + puff.offset.x,
+        cloud.center.y + puff.offset.y,
+        cloud.center.z + puff.offset.z
+      );
+      CLOUD_INSTANCE_SCALE.set(puff.scale.x, puff.scale.y, puff.scale.z);
+      CLOUD_INSTANCE_MATRIX.compose(CLOUD_INSTANCE_POSITION, IDENTITY_QUATERNION, CLOUD_INSTANCE_SCALE);
+      clouds.setMatrixAt(instanceIndex, CLOUD_INSTANCE_MATRIX);
+      instanceIndex += 1;
+    }
+  }
+
+  clouds.instanceMatrix.needsUpdate = true;
+  group.add(clouds);
   return group;
 }
 
@@ -2097,6 +2177,7 @@ function createProceduralBuildingFromEntry(entry, frontage, depth, rng, options 
   const scaleY = THREE.MathUtils.lerp(0.95, 1.12, rng());
   group.scale.set(scaleX, scaleY, scaleZ);
   group.position.sub(new THREE.Vector3(center.x * scaleX, bounds.min.y * scaleY, center.z * scaleZ));
+  optimizeProceduralBuilding(group);
   return group;
 }
 
@@ -2104,14 +2185,14 @@ function createBuildingFromEntry(entry, frontage, depth, rng, options = {}, depe
   const { gltfLoader, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = dependencies;
   const procedural = createProceduralBuildingFromEntry(entry, frontage, depth, rng, options);
 
-  if (!gltfLoader) {
+  if (!gltfLoader || buildingAssetMode === BUILDING_ASSET_MODE_PROCEDURAL_ONLY) {
     return buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY ? new THREE.Group() : procedural;
   }
 
   const lod = new THREE.LOD();
   lod.userData.stageShadowCaster = true;
   if (buildingAssetMode !== BUILDING_ASSET_MODE_GLB_ONLY) {
-    lod.addLevel(procedural, BUILDING_LOD_DISTANCES.lod0);
+    lod.addLevel(procedural, SAN_VERDE_BUILDING_LOD_DISTANCES.procedural);
   }
 
   void attachCatalogLod1(entry, lod, frontage, depth, rng, options, gltfLoader);
@@ -2130,7 +2211,7 @@ async function attachCatalogLod1(entry, lod, frontage, depth, rng, options, gltf
 
   prepareCatalogModelInstance(glbRoot, { stageShadowCaster: true });
   fitCatalogModelToFootprint(glbRoot, frontage, depth, rng, options);
-  lod.addLevel(glbRoot, BUILDING_LOD_DISTANCES.lod1);
+  lod.addLevel(glbRoot, SAN_VERDE_BUILDING_LOD_DISTANCES.glb);
 }
 
 function addBuildingFeatures(group, entry, materials) {
@@ -2213,11 +2294,95 @@ function createPaletteMaterials(palette, textures = {}) {
         material.map = loadTexture(textureName);
       }
       material.userData.shared = true;
+      material.userData.chunkBakeRole = key;
       PALETTE_MATERIAL_CACHE.set(materialKey, material);
     }
     result[key] = PALETTE_MATERIAL_CACHE.get(materialKey);
   }
   return result;
+}
+
+function getChunkBakedDetailMaterial(role) {
+  const normalizedRole = CHUNK_BAKED_DETAIL_MATERIAL_CONFIG[role] ? role : 'body';
+  if (!CHUNK_BAKED_DETAIL_MATERIALS.has(normalizedRole)) {
+    const config = CHUNK_BAKED_DETAIL_MATERIAL_CONFIG[normalizedRole];
+    const material = new THREE.MeshStandardMaterial({
+      color: config.color,
+      roughness: config.roughness,
+      metalness: config.metalness
+    });
+    material.userData.shared = true;
+    CHUNK_BAKED_DETAIL_MATERIALS.set(normalizedRole, material);
+  }
+  return CHUNK_BAKED_DETAIL_MATERIALS.get(normalizedRole);
+}
+
+function resolveSanVerdeChunkBakeMaterial(mesh, material) {
+  const role = mesh.userData?.chunkBakeRole || material?.userData?.chunkBakeRole;
+  if (!role) {
+    return {
+      key: material,
+      material
+    };
+  }
+
+  return {
+    key: `sv:chunk-bake:${role}`,
+    material: getChunkBakedDetailMaterial(role)
+  };
+}
+
+function optimizeProceduralBuilding(group) {
+  if (!group?.children?.length) {
+    return group;
+  }
+
+  const buckets = new Map();
+  for (const child of group.children) {
+    if (!child.isMesh || !child.geometry || Array.isArray(child.material)) {
+      continue;
+    }
+
+    child.updateMatrix();
+    const material = child.material;
+    let entry = buckets.get(material);
+    if (!entry) {
+      entry = [];
+      buckets.set(material, entry);
+    }
+
+    const geometry = child.geometry.clone();
+    geometry.applyMatrix4(child.matrix.clone());
+    entry.push(geometry);
+  }
+
+  if (!buckets.size) {
+    return group;
+  }
+
+  while (group.children.length) {
+    const child = group.children[group.children.length - 1];
+    group.remove(child);
+  }
+
+  for (const [material, geometries] of buckets.entries()) {
+    const merged = mergeGeometries(geometries, false);
+    for (const geometry of geometries) {
+      geometry.dispose();
+    }
+    if (!merged) {
+      continue;
+    }
+
+    const mesh = new THREE.Mesh(merged, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.stageShadowCaster = true;
+    mesh.userData.chunkBakeRole = material.userData?.chunkBakeRole || null;
+    group.add(mesh);
+  }
+
+  return group;
 }
 
 function getBoxGeometry(size) {

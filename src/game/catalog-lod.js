@@ -3,6 +3,7 @@ import { assetExists } from '../scene-helpers.js';
 
 export const BUILDING_ASSET_MODE_FALLBACK = 'fallback';
 export const BUILDING_ASSET_MODE_GLB_ONLY = 'glb_only';
+export const BUILDING_ASSET_MODE_PROCEDURAL_ONLY = 'procedural_only';
 export const BUILDING_LOD_DISTANCES = Object.freeze({
   lod1: 0,
   lod0: 50

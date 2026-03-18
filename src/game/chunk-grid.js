@@ -3,8 +3,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 const HALF_DIAGONAL = Math.SQRT2 * 0.5;
 
-const DETAIL_RADIUS = 900;
-const MASS_RADIUS = 2200;
+const DEFAULT_DETAIL_RADIUS = 900;
+const DEFAULT_MASS_RADIUS = 2200;
 
 const _mat4  = new THREE.Matrix4();
 const _quat  = new THREE.Quaternion();
@@ -26,9 +26,51 @@ function yieldToMain() {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+function collectChunkMergeBuckets(root, resolveBakeMaterial) {
+  const buckets = new Map();
+  root.updateMatrixWorld(true);
+
+  root.traverse((child) => {
+    if (!child.isMesh || child.isInstancedMesh || !child.geometry || Array.isArray(child.material)) {
+      return;
+    }
+
+    const resolved = resolveBakeMaterial?.(child, child.material) || {
+      key: child.material,
+      material: child.material
+    };
+    const bucketKey = resolved.key ?? child.material;
+    let bucket = buckets.get(bucketKey);
+    if (!bucket) {
+      bucket = {
+        material: resolved.material ?? child.material,
+        geometries: []
+      };
+      buckets.set(bucketKey, bucket);
+    }
+
+    const geometry = child.geometry.clone();
+    geometry.applyMatrix4(child.matrixWorld);
+    bucket.geometries.push(geometry);
+  });
+
+  return buckets;
+}
+
+function disposeChunkDetailChildren(root) {
+  root.traverse((child) => {
+    if (child.isMesh && child.userData?.chunkBakedDetail && child.geometry) {
+      child.geometry.dispose();
+    }
+  });
+}
+
 export class ChunkGrid {
-  constructor(cellSize = 800) {
+  constructor(cellSize = 800, options = {}) {
     this.cellSize = cellSize;
+    this.perfLabelPrefix = options.perfLabelPrefix || '';
+    this.detailRadius = Number.isFinite(options.detailRadius) ? options.detailRadius : DEFAULT_DETAIL_RADIUS;
+    this.massRadius = Number.isFinite(options.massRadius) ? options.massRadius : DEFAULT_MASS_RADIUS;
     this.chunks = new Map();
     this.root = new THREE.Group();
   }
@@ -38,8 +80,12 @@ export class ChunkGrid {
     if (!this.chunks.has(key)) {
       const detail = new THREE.Group();
       const mass   = new THREE.Group();
+      detail.visible = false;
       mass.visible = false;
-      this.root.add(detail, mass);
+      if (this.perfLabelPrefix) {
+        detail.userData.perfCategory = `${this.perfLabelPrefix}:detail ${cx},${cz}`;
+        mass.userData.perfCategory = `${this.perfLabelPrefix}:mass ${cx},${cz}`;
+      }
       this.chunks.set(key, {
         detail,
         mass,
@@ -47,6 +93,7 @@ export class ChunkGrid {
         centerX: (cx + 0.5) * this.cellSize,
         centerZ: (cz + 0.5) * this.cellSize,
         footprints: [],
+        mountedMode: 'none'
       });
     }
     return this.chunks.get(key);
@@ -93,10 +140,51 @@ export class ChunkGrid {
     }
   }
 
+  async bakeDetailGeometry(onProgress, options = {}) {
+    const chunks = [...this.chunks.values()].filter((chunk) => chunk.detail.children.length > 0);
+    const totalChunks = Math.max(chunks.length, 1);
+
+    for (let index = 0; index < chunks.length; index += 1) {
+      const chunk = chunks[index];
+      const buckets = collectChunkMergeBuckets(chunk.detail, options.resolveBakeMaterial);
+      if (!buckets.size) {
+        onProgress?.((index + 1) / totalChunks);
+        continue;
+      }
+
+      disposeChunkDetailChildren(chunk.detail);
+      chunk.detail.clear();
+
+      for (const bucket of buckets.values()) {
+        const merged = mergeGeometries(bucket.geometries, false);
+        for (const geometry of bucket.geometries) {
+          geometry.dispose();
+        }
+        if (!merged) {
+          continue;
+        }
+
+        const mesh = new THREE.Mesh(merged, bucket.material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.userData.noCollision = true;
+        mesh.userData.noSuspension = true;
+        mesh.userData.stageShadowCaster = true;
+        mesh.userData.chunkBakedDetail = true;
+        chunk.detail.add(mesh);
+      }
+
+      onProgress?.((index + 1) / totalChunks);
+      if (index % 4 === 0) {
+        await yieldToMain();
+      }
+    }
+  }
+
   update(playerPos) {
     const margin         = this.cellSize * HALF_DIAGONAL;
-    const detailCutoffSq = (DETAIL_RADIUS + margin) ** 2;
-    const massCutoffSq   = (MASS_RADIUS   + margin) ** 2;
+    const detailCutoffSq = (this.detailRadius + margin) ** 2;
+    const massCutoffSq   = (this.massRadius + margin) ** 2;
 
     for (const chunk of this.chunks.values()) {
       const dx     = chunk.centerX - playerPos.x;
@@ -104,9 +192,44 @@ export class ChunkGrid {
       const distSq = dx * dx + dz * dz;
 
       const showDetail = distSq <= detailCutoffSq;
-      chunk.detail.visible = showDetail;
-      chunk.mass.visible   = !showDetail && distSq <= massCutoffSq;
+      const showMass = !showDetail && distSq <= massCutoffSq;
+
+      if (showDetail) {
+        this._setChunkMode(chunk, 'detail');
+      } else if (showMass) {
+        this._setChunkMode(chunk, 'mass');
+      } else {
+        this._setChunkMode(chunk, 'none');
+      }
     }
+  }
+
+  _setChunkMode(chunk, mode) {
+    if (chunk.mountedMode === mode) {
+      chunk.detail.visible = mode === 'detail';
+      chunk.mass.visible = mode === 'mass';
+      return;
+    }
+
+    if (chunk.detail.parent === this.root) {
+      this.root.remove(chunk.detail);
+    }
+    if (chunk.mass.parent === this.root) {
+      this.root.remove(chunk.mass);
+    }
+
+    chunk.detail.visible = false;
+    chunk.mass.visible = false;
+
+    if (mode === 'detail') {
+      this.root.add(chunk.detail);
+      chunk.detail.visible = true;
+    } else if (mode === 'mass') {
+      this.root.add(chunk.mass);
+      chunk.mass.visible = true;
+    }
+
+    chunk.mountedMode = mode;
   }
 
   /**
@@ -142,14 +265,17 @@ export class ChunkGrid {
     const mesh = new THREE.Mesh(merged, material);
     mesh.userData.noCollision = true;
     mesh.userData.noSuspension = true;
+    if (this.perfLabelPrefix) {
+      mesh.userData.perfCategory = `${this.perfLabelPrefix}:skyline`;
+    }
     return mesh;
   }
 
   stats() {
     let detail = 0, mass = 0;
     for (const chunk of this.chunks.values()) {
-      if (chunk.detail.visible) detail++;
-      if (chunk.mass.visible)   mass++;
+      if (chunk.mountedMode === 'detail') detail++;
+      if (chunk.mountedMode === 'mass')   mass++;
     }
     return { total: this.chunks.size, detail, mass };
   }
