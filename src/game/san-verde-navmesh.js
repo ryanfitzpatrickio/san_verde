@@ -1,23 +1,11 @@
-import { init } from '@recast-navigation/core';
-import { generateSoloNavMesh } from '@recast-navigation/generators';
-
-let recastInitialized = false;
-
-async function ensureRecastInit() {
-  if (!recastInitialized) {
-    await init();
-    recastInitialized = true;
-  }
-}
+import { generateSoloNavMesh } from 'navcat/blocks';
 
 /**
- * Builds recast navmeshes from the san verde road graph.
+ * Builds navcat navmeshes from the San Verde road graph.
  * Each graph road has: { id, width, sidewalkWidth, points: THREE.Vector3[], ... }
  * Returns { vehicleNavMesh, pedestrianNavMesh }.
  */
 export async function buildSanVerdeNpcNavmesh(roadGraph) {
-  await ensureRecastInit();
-
   const roads = roadGraph.roads;
   if (!roads?.length) {
     console.warn('[san-verde-navmesh] no roads in graph');
@@ -26,62 +14,102 @@ export async function buildSanVerdeNpcNavmesh(roadGraph) {
 
   console.log(`[san-verde-navmesh] building from ${roads.length} roads`);
 
-  // --- Vehicle navmesh ---
-  const vehicleGeom = buildVehicleGeometry(roads);
-  console.log(`[san-verde-navmesh] vehicle geometry: ${vehicleGeom.positions.length / 3} verts, ${vehicleGeom.indices.length / 3} tris`);
+  const vehicleNavMesh = buildNavMesh(
+    'vehicle',
+    buildVehicleGeometry(roads),
+    createSoloOptions({
+      cellSize: 4.0,
+      cellHeight: 0.2,
+      walkableHeightWorld: 2.0,
+      walkableClimbWorld: 2.0,
+      walkableRadiusWorld: 0.0,
+      maxEdgeLength: 40,
+      maxSimplificationError: 2.0,
+      minRegionArea: 8,
+      mergeRegionArea: 40,
+      maxVerticesPerPoly: 6,
+      detailSampleDistance: 6,
+      detailSampleMaxError: 1
+    })
+  );
 
-  const vehicleResult = generateSoloNavMesh(vehicleGeom.positions, vehicleGeom.indices, {
-    cs: 4.0,
-    ch: 0.2,
-    walkableHeight: 2,
-    walkableClimb: 2,
-    walkableRadius: 0,
-    maxEdgeLen: 40,
-    maxSimplificationError: 2.0,
-    minRegionArea: 8,
-    mergeRegionArea: 40,
-    maxVertsPerPoly: 6,
-    detailSampleDist: 6,
-    detailSampleMaxError: 1
-  });
-
-  if (vehicleResult.success) {
-    console.log('[san-verde-navmesh] vehicle navmesh ok');
-  } else {
-    console.warn('[san-verde-navmesh] vehicle navmesh failed:', vehicleResult.error);
-  }
-
-  // --- Pedestrian navmesh ---
-  // Sidewalk ribbons are trimmed so they stop before any intersecting road.
-  // This prevents recast from flood-filling the enclosed city blocks formed when
-  // perpendicular sidewalk strips touch at corners.
-  const pedGeom = buildPedestrianGeometry(roads);
-  console.log(`[san-verde-navmesh] ped geometry: ${pedGeom.positions.length / 3} verts, ${pedGeom.indices.length / 3} tris`);
-
-  const pedResult = generateSoloNavMesh(pedGeom.positions, pedGeom.indices, {
-    cs: 2.5,
-    ch: 0.2,
-    walkableHeight: 2,
-    walkableClimb: 2,
-    walkableRadius: 0,
-    maxEdgeLen: 20,
-    maxSimplificationError: 1.0,
-    minRegionArea: 4,
-    mergeRegionArea: 20,
-    maxVertsPerPoly: 6,
-    detailSampleDist: 4,
-    detailSampleMaxError: 1
-  });
-
-  if (pedResult.success) {
-    console.log('[san-verde-navmesh] pedestrian navmesh ok');
-  } else {
-    console.warn('[san-verde-navmesh] pedestrian navmesh failed:', pedResult.error);
-  }
+  const pedestrianNavMesh = buildNavMesh(
+    'pedestrian',
+    buildPedestrianGeometry(roads),
+    createSoloOptions({
+      cellSize: 2.5,
+      cellHeight: 0.2,
+      walkableHeightWorld: 2.0,
+      walkableClimbWorld: 2.0,
+      walkableRadiusWorld: 0.0,
+      maxEdgeLength: 20,
+      maxSimplificationError: 1.0,
+      minRegionArea: 4,
+      mergeRegionArea: 20,
+      maxVerticesPerPoly: 6,
+      detailSampleDistance: 4,
+      detailSampleMaxError: 1
+    })
+  );
 
   return {
-    vehicleNavMesh: vehicleResult.success ? vehicleResult.navMesh : null,
-    pedestrianNavMesh: pedResult.success ? pedResult.navMesh : null
+    vehicleNavMesh,
+    pedestrianNavMesh
+  };
+}
+
+function buildNavMesh(label, geometry, options) {
+  console.log(
+    `[san-verde-navmesh] ${label} geometry: ${geometry.positions.length / 3} verts, ${geometry.indices.length / 3} tris`
+  );
+
+  if (geometry.positions.length === 0 || geometry.indices.length === 0) {
+    console.warn(`[san-verde-navmesh] ${label} navmesh skipped: empty geometry`);
+    return null;
+  }
+
+  try {
+    const result = generateSoloNavMesh(geometry, options);
+    console.log(`[san-verde-navmesh] ${label} navmesh ok`);
+    return result.navMesh;
+  } catch (error) {
+    console.warn(`[san-verde-navmesh] ${label} navmesh failed:`, error);
+    return null;
+  }
+}
+
+function createSoloOptions({
+  cellSize,
+  cellHeight,
+  walkableHeightWorld,
+  walkableClimbWorld,
+  walkableRadiusWorld,
+  maxEdgeLength,
+  maxSimplificationError,
+  minRegionArea,
+  mergeRegionArea,
+  maxVerticesPerPoly,
+  detailSampleDistance,
+  detailSampleMaxError
+}) {
+  return {
+    cellSize,
+    cellHeight,
+    walkableRadiusWorld,
+    walkableRadiusVoxels: Math.ceil(walkableRadiusWorld / cellSize),
+    walkableClimbWorld,
+    walkableClimbVoxels: Math.ceil(walkableClimbWorld / cellHeight),
+    walkableHeightWorld,
+    walkableHeightVoxels: Math.ceil(walkableHeightWorld / cellHeight),
+    walkableSlopeAngleDegrees: 45,
+    borderSize: 0,
+    minRegionArea,
+    mergeRegionArea,
+    maxSimplificationError,
+    maxEdgeLength,
+    maxVerticesPerPoly,
+    detailSampleDistance,
+    detailSampleMaxError
   };
 }
 
@@ -117,38 +145,30 @@ function buildPedestrianGeometry(roads) {
 
   for (const road of roads) {
     const roadWidth = road.width || 18;
-    // Min 7.5 so cs=2.5 gives at least 3 cells
-    const swWidth = Math.max(7.5, road.sidewalkWidth || 5.2);
-    const sideCenter = roadWidth * 0.5 + swWidth * 0.5;
-    const sideHalf = swWidth * 0.5;
+    const sidewalkWidth = Math.max(7.5, road.sidewalkWidth || 5.2);
+    const sideCenter = roadWidth * 0.5 + sidewalkWidth * 0.5;
+    const sideHalf = sidewalkWidth * 0.5;
+    const points = resamplePolyline(road.points, 6);
 
-    // Resample at 6-unit intervals so roads with sparse control points (even just
-    // 2 endpoints) have enough intermediate points to survive intersection trimming
-    const pts = resamplePolyline(road.points, 6);
-
-    // Mark each resampled point as safe (not inside another road's lane area).
-    // Unsafe points are in an intersection zone — excluding them prevents the
-    // sidewalk strips from forming closed loops that recast would flood-fill.
-    const safe = pts.map(pt =>
-      !roads.some(other => {
+    const safe = points.map((point) =>
+      !roads.some((other) => {
         if (other === road) return false;
         const threshold = (other.width || 18) * 0.5;
-        return distToPolyline(pt, other.points) < threshold;
+        return distToPolyline(point, other.points) < threshold;
       })
     );
 
-    // Emit a separate ribbon for each contiguous run of safe points
     for (const sign of [-1, 1]) {
-      let segStart = -1;
-      for (let i = 0; i <= pts.length; i++) {
-        const inSeg = i < pts.length && safe[i];
-        if (inSeg) {
-          if (segStart === -1) segStart = i;
+      let segmentStart = -1;
+      for (let i = 0; i <= points.length; i++) {
+        const inSegment = i < points.length && safe[i];
+        if (inSegment) {
+          if (segmentStart === -1) segmentStart = i;
         } else {
-          if (segStart !== -1 && i - segStart >= 2) {
-            addRibbon(buildRibbon(pts.slice(segStart, i), sideHalf, 0.01, sign * sideCenter));
+          if (segmentStart !== -1 && i - segmentStart >= 2) {
+            addRibbon(buildRibbon(points.slice(segmentStart, i), sideHalf, 0.01, sign * sideCenter));
           }
-          segStart = -1;
+          segmentStart = -1;
         }
       }
     }
@@ -160,57 +180,57 @@ function buildPedestrianGeometry(roads) {
   };
 }
 
-/** Resample a polyline at uniform arc-length intervals. */
 function resamplePolyline(points, step) {
   if (points.length < 2) return points.slice();
   const result = [{ x: points[0].x, y: 0, z: points[0].z }];
   let carry = 0;
+
   for (let i = 1; i < points.length; i++) {
     const dx = points[i].x - points[i - 1].x;
     const dz = points[i].z - points[i - 1].z;
     const segLen = Math.hypot(dx, dz);
     if (segLen < 1e-6) continue;
+
     let t = (step - carry) / segLen;
     while (t <= 1) {
       result.push({ x: points[i - 1].x + dx * t, y: 0, z: points[i - 1].z + dz * t });
       t += step / segLen;
     }
+
     carry = (1 - (t - step / segLen)) * segLen;
   }
+
   result.push({ x: points[points.length - 1].x, y: 0, z: points[points.length - 1].z });
   return result;
 }
 
-/** Minimum distance from point p to any segment of a polyline. */
-function distToPolyline(p, points) {
+function distToPolyline(point, points) {
   let minDist = Infinity;
   for (let i = 0; i < points.length - 1; i++) {
-    const d = distPointToSegment(p, points[i], points[i + 1]);
-    if (d < minDist) minDist = d;
+    const dist = distPointToSegment(point, points[i], points[i + 1]);
+    if (dist < minDist) minDist = dist;
   }
   return minDist;
 }
 
-function distPointToSegment(p, a, b) {
-  const dx = b.x - a.x, dz = b.z - a.z;
+function distPointToSegment(point, a, b) {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
   const lenSq = dx * dx + dz * dz;
-  if (lenSq === 0) return Math.hypot(p.x - a.x, p.z - a.z);
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / lenSq));
-  return Math.hypot(p.x - (a.x + t * dx), p.z - (a.z + t * dz));
+  if (lenSq === 0) return Math.hypot(point.x - a.x, point.z - a.z);
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.z - a.z) * dz) / lenSq));
+  return Math.hypot(point.x - (a.x + t * dx), point.z - (a.z + t * dz));
 }
 
-/**
- * Build a flat ribbon mesh from road centerline points (THREE.Vector3[]).
- */
 function buildRibbon(points, halfWidth, y, lateralOffset = 0) {
   const vertices = [];
   const indices = [];
-  const n = points.length;
+  const count = points.length;
 
-  for (let i = 0; i < n; i++) {
-    const t = getPointTangent(points, i);
-    const nx = -t.z;
-    const nz = t.x;
+  for (let i = 0; i < count; i++) {
+    const tangent = getPointTangent(points, i);
+    const nx = -tangent.z;
+    const nz = tangent.x;
 
     const cx = points[i].x + nx * lateralOffset;
     const cz = points[i].z + nz * lateralOffset;
@@ -219,25 +239,25 @@ function buildRibbon(points, halfWidth, y, lateralOffset = 0) {
     vertices.push([cx + nx * halfWidth, y, cz + nz * halfWidth]);
   }
 
-  for (let i = 0; i < n - 1; i++) {
-    const b = i * 2;
-    indices.push(b, b + 1, b + 2);
-    indices.push(b + 1, b + 3, b + 2);
+  for (let i = 0; i < count - 1; i++) {
+    const base = i * 2;
+    indices.push(base, base + 1, base + 2);
+    indices.push(base + 1, base + 3, base + 2);
   }
 
   return { vertices, indices };
 }
 
-function getPointTangent(points, i) {
+function getPointTangent(points, index) {
   let dx = 0;
   let dz = 0;
-  if (i > 0) {
-    dx += points[i].x - points[i - 1].x;
-    dz += points[i].z - points[i - 1].z;
+  if (index > 0) {
+    dx += points[index].x - points[index - 1].x;
+    dz += points[index].z - points[index - 1].z;
   }
-  if (i < points.length - 1) {
-    dx += points[i + 1].x - points[i].x;
-    dz += points[i + 1].z - points[i].z;
+  if (index < points.length - 1) {
+    dx += points[index + 1].x - points[index].x;
+    dz += points[index + 1].z - points[index].z;
   }
   const len = Math.hypot(dx, dz);
   return len > 1e-6 ? { x: dx / len, z: dz / len } : { x: 1, z: 0 };

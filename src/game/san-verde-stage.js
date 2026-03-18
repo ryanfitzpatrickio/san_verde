@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createDefaultQueryFilter, createFindNearestPolyResult, findNearestPoly } from 'navcat';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { attribute, float, mix, normalView, normalWorld, texture, uniform, uv, vec3, vec4 } from 'three/tsl';
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
@@ -76,6 +77,9 @@ const SHORE_Y = OCEAN_Y + 0.08; // terrain level at the shoreline
 const GROUND_FIELD_CELL_SIZE = 8;
 const ROAD_SURFACE_Y = 0;
 const CSG_EVALUATOR = new Evaluator();
+const TREE_NAV_CLEARANCE = 2.75;
+const TREE_ZONE_EDGE_CLEARANCE = 2.5;
+const TREE_MIN_SEPARATION = 4.5;
 
 const DISTRICT_STYLE = {
   downtown: { ground: '#5a5a5a', treeDensity: 0.02 },
@@ -394,14 +398,14 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
   group.add(chunkGrid.root);
   const skylineMesh = chunkGrid.buildSkylineMesh();
   if (skylineMesh) group.add(skylineMesh);
-  group.add(createTrees(data.zones));
-  group.add(createClouds(data.bounds));
 
   collisionGroup.add(createCollisionTerrain(groundField));
 
-  report(89, 'Building NPC navmesh…');
+  report(89, 'Building NPC navmesh...');
   await yieldToMain();
   const agentNavigation = graph.roads.length > 0 ? await buildSanVerdeNpcNavmesh(graph) : null;
+  group.add(createTrees(data.zones, createTreePlacementBlocker(agentNavigation)));
+  group.add(createClouds(data.bounds));
   report(93, 'Finalizing…');
 
   const spawn = data.spawn || { x: 0, z: 0, yaw: 0 };
@@ -634,24 +638,70 @@ function createZone(zone, rivers = []) {
   });
 }
 
-function createTrees(zones) {
+function createTrees(zones, isBlocked = () => false) {
   const placements = [];
   for (const zone of zones || []) {
     const points = (zone.points || []).map(normalizePoint).filter(Boolean);
     if (points.length < 3) continue;
     const style = DISTRICT_STYLE[zone.type] || DISTRICT_STYLE.residential_mid;
-    const center = getPolygonCenter(points);
     const area = Math.abs(polygonArea(points));
+    const bounds = getPolygonBounds(points);
     const count = Math.floor(area / 400 * style.treeDensity);
-    for (let i = 0; i < count; i++) {
+    const maxAttempts = Math.max(count * 24, 48);
+    let attempts = 0;
+    let placed = 0;
+
+    while (placed < count && attempts < maxAttempts) {
+      attempts += 1;
+      const x = randomRange(bounds.minX, bounds.maxX);
+      const z = randomRange(bounds.minZ, bounds.maxZ);
+      if (!pointInPolygon(x, z, points)) continue;
+      if (distanceToPolygonEdges(x, z, points) < TREE_ZONE_EDGE_CLEARANCE) continue;
+      if (isBlocked(x, z)) continue;
+      if (treePlacementCollides(placements, x, z, TREE_MIN_SEPARATION)) continue;
+
       placements.push({
-        x: center.x + (Math.random() - 0.5) * Math.sqrt(area) * 0.8,
-        z: center.z + (Math.random() - 0.5) * Math.sqrt(area) * 0.8,
+        x,
+        z,
         height: 3.8 + Math.random() * 3
       });
+      placed += 1;
     }
   }
   return createTreeInstances(placements);
+}
+
+function createTreePlacementBlocker(agentNavigation) {
+  const blockers = [];
+  if (agentNavigation?.vehicleNavMesh) {
+    blockers.push(createNavMeshTreeBlocker(agentNavigation.vehicleNavMesh, TREE_NAV_CLEARANCE));
+  }
+  if (agentNavigation?.pedestrianNavMesh) {
+    blockers.push(createNavMeshTreeBlocker(agentNavigation.pedestrianNavMesh, TREE_NAV_CLEARANCE));
+  }
+
+  if (!blockers.length) {
+    return () => false;
+  }
+
+  return (x, z) => blockers.some((blocker) => blocker(x, z));
+}
+
+function createNavMeshTreeBlocker(navMesh, clearance) {
+  const queryFilter = createDefaultQueryFilter();
+  const nearestResult = createFindNearestPolyResult();
+  const halfExtents = [Math.max(4, clearance + 1), 4, Math.max(4, clearance + 1)];
+  const clearanceSq = clearance * clearance;
+
+  return (x, z) => {
+    const nearest = findNearestPoly(nearestResult, navMesh, [x, 0, z], halfExtents, queryFilter);
+    if (!nearest.success) {
+      return false;
+    }
+    const dx = nearest.position[0] - x;
+    const dz = nearest.position[2] - z;
+    return dx * dx + dz * dz <= clearanceSq;
+  };
 }
 
 async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress, dependencies = {}) {
@@ -1724,6 +1774,15 @@ function placementCollides(placements, x, z, width, depth, padding = 0) {
   for (const placement of placements) {
     const otherRadius = Math.max(placement.width, placement.depth) * 0.5 + padding;
     if (Math.hypot(x - placement.x, z - placement.z) < radius + otherRadius) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function treePlacementCollides(placements, x, z, minSeparation) {
+  for (const placement of placements) {
+    if (Math.hypot(x - placement.x, z - placement.z) < minSeparation) {
       return true;
     }
   }

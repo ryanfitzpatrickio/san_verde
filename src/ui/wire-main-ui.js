@@ -228,10 +228,14 @@ export function wireMainUi(options) {
     setStatus(state.cinematicCameraEnabled ? 'Cinematic camera enabled' : 'Cinematic camera disabled');
   });
 
-  ui.toggleNavDebug.addEventListener('click', () => {
+  const toggleNavDebugVisibility = () => {
     state.navDebugVisible = !state.navDebugVisible;
     ui.toggleNavDebug.textContent = `Nav Debug: ${state.navDebugVisible ? 'On' : 'Off'}`;
     setStatus(state.navDebugVisible ? 'Navigation debug enabled' : 'Navigation debug disabled');
+  };
+
+  ui.toggleNavDebug.addEventListener('click', () => {
+    toggleNavDebugVisibility();
   });
 
   ui.toggleFog.addEventListener('click', () => {
@@ -359,6 +363,12 @@ export function wireMainUi(options) {
       return;
     }
 
+    if (!event.repeat && event.code === 'KeyI') {
+      toggleNavDebugVisibility();
+      event.preventDefault();
+      return;
+    }
+
     if (!state.driveMode) {
       return;
     }
@@ -367,13 +377,6 @@ export function wireMainUi(options) {
       state.autopilotEnabled = !state.autopilotEnabled;
       applyGarageSnapshot(setAutopilotEnabled(context.gameRuntime, state.autopilotEnabled));
       setStatus(state.autopilotEnabled ? 'Autopilot enabled' : 'Autopilot disabled');
-      event.preventDefault();
-      return;
-    }
-
-    if (!event.repeat && event.code === 'KeyI') {
-      state.navDebugVisible = !state.navDebugVisible;
-      setStatus(state.navDebugVisible ? 'Navmesh debug on' : 'Navmesh debug off');
       event.preventDefault();
       return;
     }

@@ -1,5 +1,13 @@
 import * as THREE from 'three';
-import { Crowd, NavMeshQuery, getNavMeshPositionsAndIndices } from '@recast-navigation/core';
+import {
+  createDefaultQueryFilter,
+  createFindNearestPolyResult,
+  findNearestPoly,
+  findRandomPoint,
+  findRandomPointAroundCircle
+} from 'navcat';
+import { crowd } from 'navcat/blocks';
+import { createNavMeshHelper } from 'navcat/three';
 
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
 const ORIENT_QUAT = new THREE.Quaternion();
@@ -12,6 +20,8 @@ const SHARED_GEOMETRIES = {
   pedestrianHead: new THREE.SphereGeometry(0.16, 10, 8)
 };
 const MATERIAL_CACHE = new Map();
+const NEAREST_RESULT = createFindNearestPolyResult();
+const DEFAULT_SEARCH_HALF_EXTENTS = [18, 6, 18];
 
 const VEHICLE_AGENT_PARAMS = {
   radius: 2.2,
@@ -21,9 +31,10 @@ const VEHICLE_AGENT_PARAMS = {
   collisionQueryRange: 8.0,
   pathOptimizationRange: 24.0,
   separationWeight: 0.5,
-  updateFlags: 7,
-  obstacleAvoidanceType: 0,
-  queryFilterType: 0
+  updateFlags:
+    crowd.CrowdUpdateFlags.ANTICIPATE_TURNS |
+    crowd.CrowdUpdateFlags.OBSTACLE_AVOIDANCE |
+    crowd.CrowdUpdateFlags.SEPARATION
 };
 
 const PEDESTRIAN_AGENT_PARAMS = {
@@ -34,9 +45,10 @@ const PEDESTRIAN_AGENT_PARAMS = {
   collisionQueryRange: 2.0,
   pathOptimizationRange: 8.0,
   separationWeight: 1.2,
-  updateFlags: 7,
-  obstacleAvoidanceType: 0,
-  queryFilterType: 0
+  updateFlags:
+    crowd.CrowdUpdateFlags.ANTICIPATE_TURNS |
+    crowd.CrowdUpdateFlags.OBSTACLE_AVOIDANCE |
+    crowd.CrowdUpdateFlags.SEPARATION
 };
 
 export function createNpcCrowdSystem({ config, state }) {
@@ -47,29 +59,19 @@ export function createNpcCrowdSystem({ config, state }) {
 
   let activeStage = null;
   let activeRevision = -1;
-  let vehicleCrowd = null;
-  let pedestrianCrowd = null;
-  let vehicleQuery = null;
-  let pedestrianQuery = null;
-  let vehicleAgents = [];
-  let pedestrianAgents = [];
+  let vehicleRuntime = null;
+  let pedestrianRuntime = null;
 
-  // Smoothed player velocity for forward-biased spawning
   const prevFocusPos = new THREE.Vector3();
   const playerVelocity = new THREE.Vector3();
   let velocityInitialized = false;
 
   function teardown() {
-    vehicleCrowd?.destroy();
-    pedestrianCrowd?.destroy();
-    vehicleQuery?.destroy();
-    pedestrianQuery?.destroy();
-    vehicleCrowd = null;
-    pedestrianCrowd = null;
-    vehicleQuery = null;
-    pedestrianQuery = null;
-    vehicleAgents = [];
-    pedestrianAgents = [];
+    disposeRuntime(vehicleRuntime);
+    disposeRuntime(pedestrianRuntime);
+    vehicleRuntime = null;
+    pedestrianRuntime = null;
+
     while (agentRoot.children.length) agentRoot.remove(agentRoot.children[0]);
     while (debugRoot.children.length) debugRoot.remove(debugRoot.children[0]);
   }
@@ -89,53 +91,33 @@ export function createNpcCrowdSystem({ config, state }) {
       teardown();
 
       const nav = stage?.agentNavigation;
-      console.log('[npc-crowd] syncStage nav:', nav ? Object.keys(nav) : 'null', 'enabled:', config.agentTraffic.enabled);
-
-      if (!config.agentTraffic.enabled || !nav?.vehicleNavMesh) {
+      if (!config.agentTraffic.enabled || (!nav?.vehicleNavMesh && !nav?.pedestrianNavMesh)) {
         agentRoot.visible = false;
+        debugRoot.visible = false;
         return;
       }
 
       const settings = getStageTrafficSettings(config.agentTraffic, stage?.id);
-      console.log('[npc-crowd] spawning vehicles:', settings.vehicleCount, 'peds:', settings.pedestrianCount);
 
       if (nav.vehicleNavMesh) {
-        vehicleQuery = new NavMeshQuery(nav.vehicleNavMesh);
-        vehicleCrowd = new Crowd(nav.vehicleNavMesh, {
-          maxAgents: settings.vehicleCount,
-          maxAgentRadius: 3
+        vehicleRuntime = createCrowdRuntime('vehicle', settings.vehicleCount, nav.vehicleNavMesh, focusPosition, config, {
+          agentRoot,
+          debugRoot
         });
-        vehicleAgents = spawnAgents(
-          'vehicle', settings.vehicleCount,
-          vehicleCrowd, vehicleQuery, focusPosition, config
-        );
-        console.log('[npc-crowd] vehicle agents spawned:', vehicleAgents.length);
-        for (const a of vehicleAgents) agentRoot.add(a.mesh);
+        mountRuntime(vehicleRuntime);
       }
 
       if (nav.pedestrianNavMesh) {
-        pedestrianQuery = new NavMeshQuery(nav.pedestrianNavMesh);
-        pedestrianCrowd = new Crowd(nav.pedestrianNavMesh, {
-          maxAgents: settings.pedestrianCount,
-          maxAgentRadius: 1
+        pedestrianRuntime = createCrowdRuntime('pedestrian', settings.pedestrianCount, nav.pedestrianNavMesh, focusPosition, config, {
+          agentRoot,
+          debugRoot
         });
-        pedestrianAgents = spawnAgents(
-          'pedestrian', settings.pedestrianCount,
-          pedestrianCrowd, pedestrianQuery, focusPosition, config
-        );
-        console.log('[npc-crowd] pedestrian agents spawned:', pedestrianAgents.length);
-        for (const a of pedestrianAgents) agentRoot.add(a.mesh);
+        mountRuntime(pedestrianRuntime);
       }
 
-      // Build navmesh debug helpers
-      if (nav.vehicleNavMesh) {
-        debugRoot.add(buildNavMeshDebug(nav.vehicleNavMesh, '#3ab4ff', '#7bd4ff', 0.3));
-      }
-      if (nav.pedestrianNavMesh) {
-        debugRoot.add(buildNavMeshDebug(nav.pedestrianNavMesh, '#3fd97f', '#8ff0b0', 0.25));
-      }
-
-      agentRoot.visible = true;
+      const enabled = Boolean(vehicleRuntime || pedestrianRuntime);
+      agentRoot.visible = enabled;
+      debugRoot.visible = enabled && Boolean(state.navDebugVisible);
     },
 
     update(stage, followPosition, deltaSeconds) {
@@ -146,7 +128,7 @@ export function createNpcCrowdSystem({ config, state }) {
         this.syncStage(stage, followPosition);
       }
 
-      const enabled = Boolean(vehicleCrowd || pedestrianCrowd);
+      const enabled = Boolean(vehicleRuntime || pedestrianRuntime);
       agentRoot.visible = enabled;
       debugRoot.visible = enabled && Boolean(state.navDebugVisible);
       if (!enabled) return;
@@ -155,84 +137,117 @@ export function createNpcCrowdSystem({ config, state }) {
       const focusPos = followPosition || new THREE.Vector3();
       const despawnDist = config.agentTraffic.despawnDistance;
 
-      // Track smoothed player velocity for forward-biased spawning
       if (!velocityInitialized) {
         prevFocusPos.copy(focusPos);
         velocityInitialized = true;
       }
-      const rawVel = new THREE.Vector3().subVectors(focusPos, prevFocusPos).divideScalar(Math.max(dt, 0.001));
-      playerVelocity.lerp(rawVel, 0.12); // smooth out jitter
+      const rawVelocity = new THREE.Vector3().subVectors(focusPos, prevFocusPos).divideScalar(Math.max(dt, 0.001));
+      playerVelocity.lerp(rawVelocity, 0.12);
       prevFocusPos.copy(focusPos);
 
-      if (vehicleCrowd) {
-        vehicleCrowd.update(dt);
-        for (const a of vehicleAgents) {
-          tickAgent(a, vehicleQuery, focusPos, playerVelocity, despawnDist);
-        }
-      }
-
-      if (pedestrianCrowd) {
-        pedestrianCrowd.update(dt);
-        for (const a of pedestrianAgents) {
-          tickAgent(a, pedestrianQuery, focusPos, playerVelocity, despawnDist);
-        }
-      }
+      if (vehicleRuntime) updateCrowdRuntime(vehicleRuntime, focusPos, playerVelocity, despawnDist, dt);
+      if (pedestrianRuntime) updateCrowdRuntime(pedestrianRuntime, focusPos, playerVelocity, despawnDist, dt);
     },
 
     dispose() {
       teardown();
+      agentRoot.visible = false;
+      debugRoot.visible = false;
     }
   };
 }
 
-function spawnAgents(kind, count, crowd, query, focusPosition, config) {
-  const agents = [];
-  const speedRange = config.agentTraffic.speedRange[kind];
-  const baseParams = kind === 'vehicle' ? VEHICLE_AGENT_PARAMS : PEDESTRIAN_AGENT_PARAMS;
-
-  for (let i = 0; i < count; i++) {
-    const spawnPt = findSpawnPoint(query, focusPosition, config.agentTraffic.spawnRadius);
-    if (!spawnPt) continue;
-
-    const speed = randomRange(speedRange[0], speedRange[1]);
-    const crowdAgent = crowd.addAgent(spawnPt, { ...baseParams, maxSpeed: speed });
-    if (!crowdAgent) continue;
-
-    const targetPt = getRandomPoint(query);
-    if (targetPt) crowdAgent.requestMoveTarget(targetPt);
-
-    const mesh = kind === 'vehicle' ? createVehicleVisual(i) : createPedestrianVisual(i);
-    mesh.position.set(spawnPt.x, spawnPt.y, spawnPt.z);
-
-    agents.push({ kind, crowdAgent, mesh, idleFrames: 0 });
+function mountRuntime(runtime) {
+  if (!runtime) return;
+  for (const agent of runtime.agents) {
+    runtime.agentRoot.add(agent.mesh);
   }
-
-  return agents;
+  if (runtime.debugHelper) {
+    runtime.debugRoot.add(runtime.debugHelper.object);
+  }
 }
 
-function tickAgent(agent, query, focusPos, playerVelocity, despawnDist) {
-  if (!agent.crowdAgent) return;
+function disposeRuntime(runtime) {
+  if (!runtime) return;
+  runtime.debugHelper?.dispose();
+}
 
-  const pos = agent.crowdAgent.position();
-  agent.mesh.position.set(pos.x, pos.y, pos.z);
+function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) {
+  const queryFilter = createDefaultQueryFilter();
+  const speedRange = config.agentTraffic.speedRange[kind];
+  const baseParams = kind === 'vehicle' ? VEHICLE_AGENT_PARAMS : PEDESTRIAN_AGENT_PARAMS;
+  const crowdState = crowd.create(baseParams.radius);
+  const agents = [];
 
-  const vel = agent.crowdAgent.velocity();
-  const horizSpeed = Math.hypot(vel.x, vel.z);
+  for (let i = 0; i < count; i++) {
+    const spawn = findSpawnPoint(navMesh, queryFilter, focusPosition, config.agentTraffic.spawnRadius);
+    if (!spawn) continue;
+
+    const maxSpeed = randomRange(speedRange[0], speedRange[1]);
+    const agentParams = {
+      ...baseParams,
+      maxSpeed,
+      queryFilter
+    };
+    const agentId = crowd.addAgent(crowdState, navMesh, spawn.position, agentParams);
+    const mesh = kind === 'vehicle' ? createVehicleVisual(i) : createPedestrianVisual(i);
+    mesh.position.set(spawn.position[0], spawn.position[1], spawn.position[2]);
+
+    agents.push({
+      kind,
+      agentId,
+      mesh,
+      agentParams,
+      idleFrames: 0
+    });
+
+    assignRandomTarget(crowdState, navMesh, queryFilter, agentId);
+  }
+
+  const debugHelper = createNavMeshHelper(navMesh);
+  debugHelper.object.position.y += 0.08;
+
+  return {
+    kind,
+    navMesh,
+    crowd: crowdState,
+    queryFilter,
+    agents,
+    agentRoot: roots.agentRoot,
+    debugRoot: roots.debugRoot,
+    debugHelper
+  };
+}
+
+function updateCrowdRuntime(runtime, focusPos, playerVelocity, despawnDist, deltaSeconds) {
+  crowd.update(runtime.crowd, runtime.navMesh, deltaSeconds);
+
+  for (const agent of runtime.agents) {
+    tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist);
+  }
+}
+
+function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist) {
+  const crowdAgent = runtime.crowd.agents[agent.agentId];
+  if (!crowdAgent) return;
+
+  const pos = crowdAgent.position;
+  agent.mesh.position.set(pos[0], pos[1], pos[2]);
+
+  const vel = crowdAgent.velocity;
+  const horizSpeed = Math.hypot(vel[0], vel[2]);
   if (horizSpeed > 0.1) {
-    const yaw = Math.atan2(vel.x, vel.z);
+    const yaw = Math.atan2(vel[0], vel[2]);
     ORIENT_QUAT.setFromAxisAngle(UP_AXIS, yaw);
     agent.mesh.quaternion.copy(ORIENT_QUAT);
   }
 
-  // Pedestrian walk bob
   if (agent.kind === 'pedestrian' && horizSpeed > 0.05) {
     agent.mesh.position.y += Math.sin(Date.now() * 0.01) * 0.03;
   }
 
-  // Directional despawn: agents behind the player vanish sooner so they can
-  // reappear ahead — agents in front get the full despawn radius.
-  const dx = pos.x - focusPos.x;
-  const dz = pos.z - focusPos.z;
+  const dx = pos[0] - focusPos.x;
+  const dz = pos[2] - focusPos.z;
   const distSq = dx * dx + dz * dz;
   const speed2D = Math.hypot(playerVelocity.x, playerVelocity.z);
   let effectiveDespawn = despawnDist;
@@ -240,28 +255,28 @@ function tickAgent(agent, query, focusPos, playerVelocity, despawnDist) {
     const fwdX = playerVelocity.x / speed2D;
     const fwdZ = playerVelocity.z / speed2D;
     const dot = (dx / Math.sqrt(distSq + 0.001)) * fwdX + (dz / Math.sqrt(distSq + 0.001)) * fwdZ;
-    // Behind player → shrink despawn to 55 %, ahead → full distance
     effectiveDespawn = despawnDist * (dot < 0 ? 0.55 : 1.0);
   }
 
   if (distSq > effectiveDespawn * effectiveDespawn) {
-    const newPt = findForwardSpawnPoint(query, focusPos, playerVelocity, despawnDist * 0.8);
-    if (newPt) {
-      agent.crowdAgent.teleport(newPt);
-      const target = getRandomPoint(query);
-      if (target) agent.crowdAgent.requestMoveTarget(target);
+    const spawn = findForwardSpawnPoint(runtime.navMesh, runtime.queryFilter, focusPos, playerVelocity, despawnDist * 0.8);
+    if (spawn) {
+      respawnAgent(runtime, agent, spawn);
     }
+    return;
+  }
+
+  if (crowd.isAgentAtTarget(runtime.crowd, agent.agentId, agent.kind === 'vehicle' ? 5 : 1.25)) {
+    assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
     agent.idleFrames = 0;
     return;
   }
 
-  // Reassign target if agent is stuck or idle
-  const speed = Math.hypot(vel.x, vel.y, vel.z);
+  const speed = Math.hypot(vel[0], vel[1], vel[2]);
   if (speed < 0.15) {
     agent.idleFrames++;
     if (agent.idleFrames > 60) {
-      const target = getRandomPoint(query);
-      if (target) agent.crowdAgent.requestMoveTarget(target);
+      assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
       agent.idleFrames = 0;
     }
   } else {
@@ -269,53 +284,73 @@ function tickAgent(agent, query, focusPos, playerVelocity, despawnDist) {
   }
 }
 
-function findSpawnPoint(query, focusPos, radius) {
-  if (focusPos?.isVector3) {
-    const { success, randomPoint } = query.findRandomPointAroundCircle(focusPos, radius);
-    if (success) return randomPoint;
-  }
-  return getRandomPoint(query);
+function respawnAgent(runtime, agent, spawn) {
+  crowd.removeAgent(runtime.crowd, agent.agentId);
+  agent.agentId = crowd.addAgent(runtime.crowd, runtime.navMesh, spawn.position, agent.agentParams);
+  agent.mesh.position.set(spawn.position[0], spawn.position[1], spawn.position[2]);
+  agent.idleFrames = 0;
+  assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
 }
 
-/**
- * Sample several candidate points and return the one most ahead of the player.
- * Falls back to a regular random point if there's no meaningful velocity.
- */
-function findForwardSpawnPoint(query, focusPos, playerVelocity, radius) {
+function assignRandomTarget(crowdState, navMesh, queryFilter, agentId) {
+  const target = getRandomPoint(navMesh, queryFilter);
+  if (!target) return false;
+  return crowd.requestMoveTarget(crowdState, agentId, target.nodeRef, target.position);
+}
+
+function findSpawnPoint(navMesh, queryFilter, focusPos, radius) {
+  if (focusPos?.isVector3) {
+    const center = [focusPos.x, focusPos.y, focusPos.z];
+    const nearest = findNearestPoly(NEAREST_RESULT, navMesh, center, DEFAULT_SEARCH_HALF_EXTENTS, queryFilter);
+    if (nearest.success) {
+      const around = findRandomPointAroundCircle(navMesh, nearest.nodeRef, nearest.position, radius, queryFilter, Math.random);
+      if (around.success) return around;
+    }
+  }
+
+  return getRandomPoint(navMesh, queryFilter);
+}
+
+function findForwardSpawnPoint(navMesh, queryFilter, focusPos, playerVelocity, radius) {
   const speed2D = Math.hypot(playerVelocity.x, playerVelocity.z);
   if (speed2D < 0.5 || !focusPos?.isVector3) {
-    return findSpawnPoint(query, focusPos, radius);
+    return findSpawnPoint(navMesh, queryFilter, focusPos, radius);
+  }
+
+  const center = [focusPos.x, focusPos.y, focusPos.z];
+  const nearest = findNearestPoly(NEAREST_RESULT, navMesh, center, DEFAULT_SEARCH_HALF_EXTENTS, queryFilter);
+  if (!nearest.success) {
+    return getRandomPoint(navMesh, queryFilter);
   }
 
   const fwdX = playerVelocity.x / speed2D;
   const fwdZ = playerVelocity.z / speed2D;
 
-  let bestPt = null;
+  let bestPoint = null;
   let bestScore = -Infinity;
 
   for (let i = 0; i < 8; i++) {
-    const { success, randomPoint: pt } = query.findRandomPointAroundCircle(focusPos, radius);
-    if (!success) continue;
-    const dx = pt.x - focusPos.x;
-    const dz = pt.z - focusPos.z;
+    const candidate = findRandomPointAroundCircle(navMesh, nearest.nodeRef, nearest.position, radius, queryFilter, Math.random);
+    if (!candidate.success) continue;
+
+    const dx = candidate.position[0] - focusPos.x;
+    const dz = candidate.position[2] - focusPos.z;
     const len = Math.hypot(dx, dz) + 0.001;
-    // Score by forward alignment; prefer points at least 40 units away to avoid
-    // teleporting right next to the player
     const forwardDot = (dx / len) * fwdX + (dz / len) * fwdZ;
     const distBonus = len > 40 ? 0.3 : 0;
     const score = forwardDot + distBonus;
     if (score > bestScore) {
       bestScore = score;
-      bestPt = pt;
+      bestPoint = candidate;
     }
   }
 
-  return bestPt || findSpawnPoint(query, focusPos, radius);
+  return bestPoint || findSpawnPoint(navMesh, queryFilter, focusPos, radius);
 }
 
-function getRandomPoint(query) {
-  const { success, randomPoint } = query.findRandomPoint();
-  return success ? randomPoint : null;
+function getRandomPoint(navMesh, queryFilter) {
+  const result = findRandomPoint(navMesh, queryFilter, Math.random);
+  return result.success ? result : null;
 }
 
 function getStageTrafficSettings(agentTraffic, stageId) {
@@ -342,6 +377,7 @@ function createVehicleVisual(index) {
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
+
   const cabin = new THREE.Mesh(
     SHARED_GEOMETRIES.vehicleCabin,
     getCachedMaterial('vehicle-cabin', () =>
@@ -371,6 +407,7 @@ function createPedestrianVisual(index) {
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
+
   const head = new THREE.Mesh(
     SHARED_GEOMETRIES.pedestrianHead,
     getCachedMaterial('pedestrian-head', () =>
@@ -391,57 +428,4 @@ function getCachedMaterial(key, factory) {
 
 function randomRange(min, max) {
   return min + Math.random() * (max - min);
-}
-
-/**
- * Build a debug group for a navmesh: solid fill + wireframe overlay.
- * Vehicle navmesh is blue, pedestrian is green.
- */
-function buildNavMeshDebug(navMesh, fillColor, wireColor, fillOpacity) {
-  const [positions, indices] = getNavMeshPositionsAndIndices(navMesh);
-
-  // Flatten Y to 0 — recast includes height-field walls that look like tall spikes in debug
-  const posArray = new Float32Array(positions);
-  for (let i = 1; i < posArray.length; i += 3) posArray[i] = 0;
-  const idxArray = new Uint32Array(indices);
-
-  const fillGeo = new THREE.BufferGeometry();
-  fillGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-  fillGeo.setIndex(new THREE.BufferAttribute(idxArray, 1));
-  fillGeo.computeVertexNormals();
-
-  const wireGeo = new THREE.BufferGeometry();
-  wireGeo.setAttribute('position', new THREE.BufferAttribute(posArray.slice(), 3));
-  wireGeo.setIndex(new THREE.BufferAttribute(idxArray.slice(), 1));
-
-  const fillMesh = new THREE.Mesh(
-    fillGeo,
-    new THREE.MeshBasicMaterial({
-      color: fillColor,
-      transparent: true,
-      opacity: fillOpacity,
-      depthWrite: false,
-      depthTest: false,
-      side: THREE.DoubleSide
-    })
-  );
-  fillMesh.renderOrder = 10;
-
-  const wireMesh = new THREE.Mesh(
-    wireGeo,
-    new THREE.MeshBasicMaterial({
-      color: wireColor,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.75,
-      depthWrite: false,
-      depthTest: false
-    })
-  );
-  wireMesh.renderOrder = 11;
-
-  const group = new THREE.Group();
-  group.position.y = 0.08;
-  group.add(fillMesh, wireMesh);
-  return group;
 }
