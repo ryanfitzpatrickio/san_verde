@@ -14,6 +14,13 @@ const LOD_SUFFIX_RE = /\.(high|medium|low)\.glb$/i;
 const GLB_RE = /\.glb$/i;
 
 const LOD_CONFIG = Object.freeze({
+  high: Object.freeze({
+    textures: {
+      color: { resize: [2048, 2048], format: 'webp', quality: 88, effort: 6 },
+      normal: { resize: [2048, 2048], format: 'webp', quality: 82, effort: 6, lossless: false },
+      data: { resize: [2048, 2048], format: 'webp', quality: 84, effort: 6 }
+    }
+  }),
   medium: Object.freeze({
     ratio: 0.12,
     error: 0.01,
@@ -50,6 +57,39 @@ async function bakeTier(io, inputPath, outputPath, { ratio, error }) {
       simplifier: MeshoptSimplifier,
       ratio,
       error
+    }),
+    prune()
+  );
+  await io.write(outputPath, document);
+}
+
+async function bakeHighTier(io, inputPath, outputPath, config) {
+  const document = await io.read(inputPath);
+  await document.transform(
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.color.format,
+      resize: config.textures.color.resize,
+      quality: config.textures.color.quality,
+      effort: config.textures.color.effort,
+      slots: /(baseColorTexture|emissiveTexture)$/i
+    }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.normal.format,
+      resize: config.textures.normal.resize,
+      quality: config.textures.normal.quality,
+      effort: config.textures.normal.effort,
+      lossless: config.textures.normal.lossless,
+      slots: /normalTexture/i
+    }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.data.format,
+      resize: config.textures.data.resize,
+      quality: config.textures.data.quality,
+      effort: config.textures.data.effort,
+      slots: /(metallicRoughnessTexture|occlusionTexture)$/i
     }),
     prune()
   );
@@ -118,7 +158,7 @@ async function main() {
     const mediumPath = getOutputPath(sourcePath, 'medium');
     const lowPath = getOutputPath(sourcePath, 'low');
 
-    await fs.copyFile(sourcePath, highPath);
+    await bakeHighTier(io, sourcePath, highPath, LOD_CONFIG.high);
     await bakeTierWithTextures(io, sourcePath, mediumPath, LOD_CONFIG.medium);
     await bakeTierWithTextures(io, sourcePath, lowPath, LOD_CONFIG.low);
 
