@@ -9,6 +9,7 @@
  * Usage:
  *   npm run assets:optimize              # models + textures
  *   npm run assets:optimize:models       # GLBs only (faster)
+ *   npm run assets:optimize:buildings    # San Verde building GLBs only
  *
  * Output folder: web-assets/
  * Upload web-assets/ to your storage bucket as a drop-in replacement.
@@ -28,6 +29,8 @@ const ROOT = path.join(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 const OUT = path.join(ROOT, 'web-assets');
 const MODELS_ONLY = process.argv.includes('--models-only');
+const BUILDINGS_ONLY = process.argv.includes('--buildings-only');
+const SHOULD_PROCESS_TEXTURES = !MODELS_ONLY && !BUILDINGS_ONLY;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,10 +149,14 @@ console.log(`\nOptimizing assets → web-assets/\n`);
 
 // Models
 console.log('── Models ────────────────────────────────────────────────────────');
-await processDir(path.join(PUBLIC, 'models'), path.join(OUT, 'models'));
+if (BUILDINGS_ONLY) {
+  await processDir(path.join(PUBLIC, 'models', 'buildings'), path.join(OUT, 'models', 'buildings'));
+} else {
+  await processDir(path.join(PUBLIC, 'models'), path.join(OUT, 'models'));
+}
 
 // Textures (skip if --models-only)
-if (!MODELS_ONLY) {
+if (SHOULD_PROCESS_TEXTURES) {
   console.log('\n── Textures ──────────────────────────────────────────────────────');
   await processDir(path.join(PUBLIC, 'textures'), path.join(OUT, 'textures'));
 

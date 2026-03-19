@@ -15,6 +15,7 @@ public/models/*.zip
 public/models/Locomotion Pack/
 public/models/Pistol_Handgun Locomotion Pack/
 public/models/Pro Rifle Pack (1)/
+public/models/buildings/
 
 # Python cache
 scripts/__pycache__/

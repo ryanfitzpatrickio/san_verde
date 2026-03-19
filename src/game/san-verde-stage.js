@@ -9,11 +9,16 @@ import {
   BUILDING_ASSET_MODE_FALLBACK,
   BUILDING_ASSET_MODE_GLB_ONLY,
   BUILDING_ASSET_MODE_PROCEDURAL_ONLY,
+  BUILDING_ASSET_MODE_PREVIEW_GLB,
+  applyCatalogPlacement,
   catalogEntryHasGlb,
   filterCatalogEntriesForGlb,
-  fitCatalogModelToFootprint,
   loadCatalogGlbInstance,
+  loadCatalogGlbLowInstance,
+  loadCatalogGlbMediumInstance,
+  loadCatalogGlbSimplifiedInstance,
   normalizeCatalogLod,
+  normalizeCatalogPlacement,
   prepareCatalogModelInstance
 } from './catalog-lod.js';
 import { buildSanVerdeNpcNavmesh } from './san-verde-navmesh.js';
@@ -92,14 +97,52 @@ const DEFAULT_SAN_VERDE_BAKE_CONFIG = Object.freeze({
   chunkSize: 800,
   detailRadius: 900,
   massRadius: 2200,
+  assignedGlbOnly: false,
   defaultStageMode: 'procedural_only',
   detailAssetMode: 'chunk_baked',
   midAssetMode: 'chunk_baked',
-  farAssetMode: 'skyline_merged'
+  farAssetMode: 'skyline_merged',
+  glbPreviewEntries: ['bungalow_urban', 'townhouse_single']
 });
 const SAN_VERDE_BUILDING_LOD_DISTANCES = Object.freeze({
   glb: 0,
   procedural: 24
+});
+const SAN_VERDE_PREVIEW_BUILDING_LOD_DISTANCES = Object.freeze({
+  high: 0,
+  medium: 100,
+  low: 220
+});
+const SAN_VERDE_PREVIEW_BUILDING_LOD_SETTINGS = Object.freeze({
+  default: Object.freeze({
+    distances: SAN_VERDE_PREVIEW_BUILDING_LOD_DISTANCES,
+    simplifyRatios: Object.freeze({
+      medium: 0.6,
+      low: 0.3
+    })
+  }),
+  bungalow_urban: Object.freeze({
+    distances: Object.freeze({
+      high: 0,
+      medium: 180,
+      low: 360
+    }),
+    simplifyRatios: Object.freeze({
+      medium: 0.82,
+      low: 0.58
+    })
+  }),
+  townhouse_single: Object.freeze({
+    distances: Object.freeze({
+      high: 0,
+      medium: 120,
+      low: 260
+    }),
+    simplifyRatios: Object.freeze({
+      medium: 0.68,
+      low: 0.38
+    })
+  })
 });
 const CHUNK_BAKED_DETAIL_MATERIALS = new Map();
 const CLOUD_INSTANCE_MATRIX = new THREE.Matrix4();
@@ -339,7 +382,8 @@ function normalizeBakeConfig(bakeConfig) {
     ...(bakeConfig && typeof bakeConfig === 'object' ? bakeConfig : {}),
     chunkSize: clamp(Number(bakeConfig?.chunkSize) || DEFAULT_SAN_VERDE_BAKE_CONFIG.chunkSize, 100, 4000),
     detailRadius: clamp(Number(bakeConfig?.detailRadius) || DEFAULT_SAN_VERDE_BAKE_CONFIG.detailRadius, 50, 10000),
-    massRadius: clamp(Number(bakeConfig?.massRadius) || DEFAULT_SAN_VERDE_BAKE_CONFIG.massRadius, 100, 20000)
+    massRadius: clamp(Number(bakeConfig?.massRadius) || DEFAULT_SAN_VERDE_BAKE_CONFIG.massRadius, 100, 20000),
+    assignedGlbOnly: !!bakeConfig?.assignedGlbOnly
   };
 }
 
@@ -376,12 +420,21 @@ function normalizeCatalogEntry(entry) {
   };
 }
 
-export async function createSanVerdeStage({ gltfLoader, loadingManager, buildingAssetMode = BUILDING_ASSET_MODE_PROCEDURAL_ONLY, onProgress } = {}) {
+export async function createSanVerdeStage({
+  gltfLoader,
+  loadingManager,
+  buildingAssetMode = BUILDING_ASSET_MODE_PREVIEW_GLB,
+  assignedGlbOnly,
+  onProgress
+} = {}) {
   const report = (pct, label) => onProgress?.(Math.round(pct), label);
 
   report(3, 'Loading map data…');
   const data = await loadMapData();
-  const bakeConfig = normalizeBakeConfig(data.bake);
+  const bakeConfig = normalizeBakeConfig({
+    ...(data.bake && typeof data.bake === 'object' ? data.bake : {}),
+    ...(typeof assignedGlbOnly === 'boolean' ? { assignedGlbOnly } : {})
+  });
 
   const catalogs = loadCatalogEntries();
   const activeCatalogs = buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY
@@ -423,10 +476,15 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     detailRadius: bakeConfig.detailRadius,
     massRadius: bakeConfig.massRadius
   });
-  await createZoneBuildings(
+  const previewInstancer = await createZoneBuildings(
     data.zones, data.roads, activeCatalogs, chunkGrid,
     (t) => report(20 + t * 55, 'Placing buildings…'),
-    { gltfLoader, buildingAssetMode }
+    {
+      gltfLoader,
+      buildingAssetMode,
+      previewGlbIds: bakeConfig.glbPreviewEntries,
+      assignedGlbOnly: bakeConfig.assignedGlbOnly
+    }
   );
 
   const useChunkBakedDetail = bakeConfig.detailAssetMode === 'chunk_baked'
@@ -447,6 +505,9 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
   report(86, 'Adding trees & clouds…');
   await yieldToMain();
   group.add(chunkGrid.root);
+  if (previewInstancer?.root) {
+    group.add(previewInstancer.root);
+  }
   const skylineMesh = chunkGrid.buildSkylineMesh();
   if (skylineMesh) group.add(skylineMesh);
 
@@ -463,6 +524,7 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
   const spawnGroundY = groundSampler(spawn.x, spawn.z)?.height ?? spawn.y ?? 0;
   const spawnPosition = new THREE.Vector3(spawn.x, spawnGroundY, spawn.z);
   chunkGrid.update(spawnPosition);
+  previewInstancer?.update(spawnPosition);
 
   const stage = {
     id: 'san_verde',
@@ -478,9 +540,11 @@ export async function createSanVerdeStage({ gltfLoader, loadingManager, building
     overviewBounds: data.bounds,
     bakeConfig,
     chunkGrid,
+    previewInstancer,
     sampleGround: groundSampler,
     update(playerPos) {
       if (playerPos) chunkGrid.update(playerPos);
+      if (playerPos) previewInstancer?.update(playerPos);
     }
   };
 
@@ -759,6 +823,10 @@ function createNavMeshTreeBlocker(navMesh, clearance) {
 }
 
 async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress, dependencies = {}) {
+  const previewInstancer = shouldUseInstancedPreviewRuntime(dependencies)
+    ? new SanVerdePreviewInstancer(dependencies)
+    : null;
+  const assignedGlbOnly = dependencies.assignedGlbOnly === true;
   const roadSegments = buildRoadSegments(roads);
   const activeZones = (zones || []).filter(z => z.type !== 'park' && (z.points || []).length >= 3);
   const totalZones = Math.max(activeZones.length, 1);
@@ -785,7 +853,19 @@ async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress
     let plotIndex = 0;
     for (const plot of placements) {
       const rng = createSeededRandom(hashZonePlot(zone.id || zone.label || zone.type, plotIndex));
-      const entry = pickWeightedEntry(activeCatalogs, rng);
+      const hasExplicitEntry = typeof plot.entryId === 'string' && plot.entryId.trim().length > 0;
+      if (assignedGlbOnly && !hasExplicitEntry) {
+        plotIndex += 1;
+        continue;
+      }
+      const assignedEntry = hasExplicitEntry
+        ? catalogs.find((candidate) => candidate.id === plot.entryId)
+        : null;
+      if (assignedGlbOnly && hasExplicitEntry && !assignedEntry) {
+        plotIndex += 1;
+        continue;
+      }
+      const entry = assignedEntry || pickWeightedEntry(activeCatalogs, rng);
       const useExactPlotFootprint = savedPlots.length > 0;
       const frontage = useExactPlotFootprint
         ? Math.max(8, plot.width - Math.max(2.5, plot.width * 0.14))
@@ -793,18 +873,22 @@ async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress
       const depth = useExactPlotFootprint
         ? Math.max(10, plot.depth - Math.max(3.5, plot.depth * 0.2))
         : clamp(sampleRange(entry.lot.depth, rng), Math.max(10, plot.depth * 0.55), plot.depth);
-      const building = createBuildingFromEntry(entry, frontage, depth, rng, {
-        exactFootprint: useExactPlotFootprint
-      }, dependencies);
-      building.position.set(plot.x, 0, plot.z);
-      building.quaternion.copy(createPlotQuaternion(plot));
-      building.userData.noCollision = true;
-      building.userData.noSuspension = true;
-      const zoneStyle = ZONE_BUILDING_STYLE[zone.type];
-      const estHeight = zoneStyle
-        ? (zoneStyle.heightMin + zoneStyle.heightMax) * 0.5
-        : 12;
-      chunkGrid.addBuilding(building, plot.x, plot.z, frontage, depth, estHeight, plot.angle || 0);
+      if (previewInstancer?.supports(entry, { hasExplicitEntry })) {
+        previewInstancer.add(entry, plot, frontage, depth, {
+          hasExplicitEntry,
+          zoneType: zone.type,
+          options: {
+            exactFootprint: useExactPlotFootprint
+          }
+        });
+      } else {
+        addSanVerdeBuildingToChunkGrid(chunkGrid, zone.type, entry, plot, frontage, depth, rng, {
+          exactFootprint: useExactPlotFootprint
+        }, {
+          ...dependencies,
+          forceAssignedGlb: hasExplicitEntry
+        });
+      }
 
       if (plotIndex % 20 === 0) {
         const t = (zonesDone + plotIndex / Math.max(placements.length, 1)) / totalZones;
@@ -815,6 +899,298 @@ async function createZoneBuildings(zones, roads, catalogs, chunkGrid, onProgress
     }
     zonesDone += 1;
   }
+
+  if (previewInstancer) {
+    const fallbackPlacements = await previewInstancer.build();
+    for (const placement of fallbackPlacements) {
+      addSanVerdeBuildingToChunkGrid(
+        chunkGrid,
+        placement.zoneType,
+        placement.entry,
+        placement.plot,
+        placement.frontage,
+        placement.depth,
+        placement.rng,
+        placement.options,
+        {
+          ...dependencies,
+          forceAssignedGlb: true,
+          forceDisablePreviewInstancing: true
+        }
+      );
+    }
+  }
+  return previewInstancer;
+}
+
+function addSanVerdeBuildingToChunkGrid(chunkGrid, zoneType, entry, plot, frontage, depth, rng, options, dependencies) {
+  const building = createBuildingFromEntry(entry, frontage, depth, rng, options, dependencies);
+  building.position.set(plot.x, 0, plot.z);
+  building.quaternion.copy(createPlotQuaternion(plot));
+  building.userData.noCollision = true;
+  building.userData.noSuspension = true;
+  const zoneStyle = ZONE_BUILDING_STYLE[zoneType];
+  const estHeight = zoneStyle
+    ? (zoneStyle.heightMin + zoneStyle.heightMax) * 0.5
+    : 12;
+  chunkGrid.addBuilding(building, plot.x, plot.z, frontage, depth, estHeight, plot.angle || 0);
+}
+
+function shouldUseInstancedPreviewRuntime({ buildingAssetMode, gltfLoader } = {}) {
+  return (buildingAssetMode === BUILDING_ASSET_MODE_PREVIEW_GLB || buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY)
+    && !!gltfLoader;
+}
+
+class SanVerdePreviewInstancer {
+  constructor({ gltfLoader, previewGlbIds = [] } = {}) {
+    this.gltfLoader = gltfLoader;
+    this.previewSet = new Set(previewGlbIds);
+    this.root = new THREE.Group();
+    this.groups = new Map();
+    this.batches = [];
+    this.lastUpdatePosition = null;
+  }
+
+  supports(entry, { hasExplicitEntry = false } = {}) {
+    if (!entry) {
+      return false;
+    }
+
+    const allowedByMode = hasExplicitEntry || this.previewSet.has(entry.id);
+    if (!allowedByMode) {
+      return false;
+    }
+
+    const placement = normalizeCatalogPlacement(entry);
+    return placement?.fitMode === 'authored';
+  }
+
+  add(entry, plot, frontage, depth, metadata = {}) {
+    if (!this.groups.has(entry.id)) {
+      this.groups.set(entry.id, {
+        entry,
+        plots: []
+      });
+    }
+
+    const group = this.groups.get(entry.id);
+    group.plots.push({
+      x: plot.x,
+      z: plot.z,
+      frontage,
+      depth,
+      matrix: composePreviewInstanceMatrix(plot),
+      plot: { ...plot },
+      metadata
+    });
+  }
+
+  async build() {
+    const fallbacks = [];
+    for (const group of this.groups.values()) {
+      const batch = await buildInstancedPreviewBatch(group.entry, group.plots, this.gltfLoader);
+      if (!batch) {
+        for (const plot of group.plots) {
+          fallbacks.push({
+            entry: group.entry,
+            plot: plot.plot,
+            frontage: plot.frontage,
+            depth: plot.depth,
+            rng: createSeededRandom(hashZonePlot(group.entry.id, `${plot.plot.x}:${plot.plot.z}`)),
+            zoneType: plot.metadata.zoneType,
+            options: plot.metadata.options || {}
+          });
+        }
+        continue;
+      }
+      this.batches.push(batch);
+      this.root.add(batch.root);
+    }
+    return fallbacks;
+  }
+
+  update(playerPos) {
+    if (!playerPos) {
+      return;
+    }
+
+    if (this.lastUpdatePosition && this.lastUpdatePosition.distanceToSquared(playerPos) < 4) {
+      return;
+    }
+
+    if (!this.lastUpdatePosition) {
+      this.lastUpdatePosition = new THREE.Vector3();
+    }
+    this.lastUpdatePosition.copy(playerPos);
+
+    for (const batch of this.batches) {
+      batch.update(playerPos);
+    }
+  }
+}
+
+async function buildInstancedPreviewBatch(entry, plots, gltfLoader) {
+  if (!plots.length) {
+    return null;
+  }
+
+  const lodSettings = getPreviewBuildingLodSettings(entry.id);
+  const placement = normalizeCatalogPlacement(entry);
+  const root = new THREE.Group();
+  root.userData.noCollision = true;
+  root.userData.noSuspension = true;
+
+  const templates = {
+    high: await createInstancedPreviewTemplate(entry, gltfLoader, null, placement),
+    medium: await createInstancedPreviewTemplate(entry, gltfLoader, lodSettings.simplifyRatios.medium, placement, 'medium'),
+    low: await createInstancedPreviewTemplate(entry, gltfLoader, lodSettings.simplifyRatios.low, placement, 'low')
+  };
+
+  const meshes = {};
+  for (const tier of ['high', 'medium', 'low']) {
+    const template = templates[tier];
+    if (!template) {
+      continue;
+    }
+    const mesh = new THREE.InstancedMesh(template.geometry, template.material, plots.length);
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.userData.noCollision = true;
+    mesh.userData.noSuspension = true;
+    mesh.userData.stageShadowCaster = true;
+    mesh.userData.keepChunkDetailObject = true;
+    mesh.userData.skipChunkFootprint = true;
+    mesh.userData.perfCategory = `sv:instanced ${entry.id}:${tier}`;
+    meshes[tier] = mesh;
+    root.add(mesh);
+  }
+
+  if (!meshes.high && !meshes.medium && !meshes.low) {
+    return null;
+  }
+
+  return {
+    entry,
+    root,
+    plots,
+    meshes,
+    distances: lodSettings.distances,
+    update(playerPos) {
+      let highCount = 0;
+      let mediumCount = 0;
+      let lowCount = 0;
+      const mediumSq = this.distances.medium * this.distances.medium;
+      const lowSq = this.distances.low * this.distances.low;
+
+      for (const plot of this.plots) {
+        const dx = plot.x - playerPos.x;
+        const dz = plot.z - playerPos.z;
+        const distSq = dx * dx + dz * dz;
+
+        if (distSq < mediumSq && this.meshes.high) {
+          this.meshes.high.setMatrixAt(highCount, plot.matrix);
+          highCount += 1;
+          continue;
+        }
+
+        if (distSq < lowSq && this.meshes.medium) {
+          this.meshes.medium.setMatrixAt(mediumCount, plot.matrix);
+          mediumCount += 1;
+          continue;
+        }
+
+        if (this.meshes.low) {
+          this.meshes.low.setMatrixAt(lowCount, plot.matrix);
+          lowCount += 1;
+        }
+      }
+
+      if (this.meshes.high) {
+        this.meshes.high.count = highCount;
+        this.meshes.high.instanceMatrix.needsUpdate = true;
+      }
+      if (this.meshes.medium) {
+        this.meshes.medium.count = mediumCount;
+        this.meshes.medium.instanceMatrix.needsUpdate = true;
+      }
+      if (this.meshes.low) {
+        this.meshes.low.count = lowCount;
+        this.meshes.low.instanceMatrix.needsUpdate = true;
+      }
+    }
+  };
+}
+
+async function createInstancedPreviewTemplate(entry, gltfLoader, simplifyRatio, placement, tier = 'high') {
+  const model = tier === 'medium'
+    ? await loadCatalogGlbMediumInstance(entry, gltfLoader, simplifyRatio)
+    : tier === 'low'
+      ? await loadCatalogGlbLowInstance(entry, gltfLoader, simplifyRatio)
+      : await loadCatalogGlbInstance(entry, gltfLoader);
+  if (!model) {
+    return null;
+  }
+
+  prepareCatalogModelInstance(model, { stageShadowCaster: true });
+  applyCatalogPlacement(model, 1, 1, Math.random, { exactFootprint: true, preserveAspect: true }, placement);
+  return extractSingleMaterialTemplate(model);
+}
+
+function extractSingleMaterialTemplate(root) {
+  root.updateMatrixWorld(true);
+  const geometries = [];
+  let material = null;
+
+  root.traverse((child) => {
+    if (!child.isMesh || !child.geometry || Array.isArray(child.material)) {
+      return;
+    }
+
+    if (material && material !== child.material) {
+      material = null;
+      geometries.length = 0;
+      return;
+    }
+
+    if (!material) {
+      material = child.material;
+    }
+
+    const geometry = child.geometry.clone();
+    geometry.applyMatrix4(child.matrixWorld);
+    geometries.push(geometry);
+  });
+
+  if (!material || !geometries.length) {
+    for (const geometry of geometries) {
+      geometry.dispose();
+    }
+    return null;
+  }
+
+  const merged = mergeGeometries(geometries, false);
+  for (const geometry of geometries) {
+    geometry.dispose();
+  }
+  if (!merged) {
+    return null;
+  }
+
+  return {
+    geometry: merged,
+    material
+  };
+}
+
+function composePreviewInstanceMatrix(plot) {
+  const matrix = new THREE.Matrix4();
+  const quaternion = createPlotQuaternion(plot);
+  const position = new THREE.Vector3(plot.x, 0, plot.z);
+  matrix.compose(position, quaternion, new THREE.Vector3(1, 1, 1));
+  return matrix;
 }
 
 function generateRuntimeZonePlots(points, zoneType, roadSegments) {
@@ -1994,7 +2370,8 @@ function normalizePlot(plot) {
     z,
     width,
     depth,
-    angle
+    angle,
+    entryId: typeof plot.entryId === 'string' && plot.entryId.trim() ? plot.entryId.trim() : undefined
   };
 }
 
@@ -2182,15 +2559,45 @@ function createProceduralBuildingFromEntry(entry, frontage, depth, rng, options 
 }
 
 function createBuildingFromEntry(entry, frontage, depth, rng, options = {}, dependencies = {}) {
-  const { gltfLoader, buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK } = dependencies;
+  const {
+    gltfLoader,
+    buildingAssetMode = BUILDING_ASSET_MODE_FALLBACK,
+    previewGlbIds = [],
+    forceAssignedGlb = false,
+    forceDisablePreviewInstancing = false
+  } = dependencies;
   const procedural = createProceduralBuildingFromEntry(entry, frontage, depth, rng, options);
+  const previewSet = new Set(previewGlbIds);
+  const allowPreviewGlb = !forceDisablePreviewInstancing
+    && buildingAssetMode === BUILDING_ASSET_MODE_PREVIEW_GLB
+    && previewSet.has(entry.id);
+  const allowAssignedGlb = forceAssignedGlb && buildingAssetMode === BUILDING_ASSET_MODE_PREVIEW_GLB;
 
   if (!gltfLoader || buildingAssetMode === BUILDING_ASSET_MODE_PROCEDURAL_ONLY) {
     return buildingAssetMode === BUILDING_ASSET_MODE_GLB_ONLY ? new THREE.Group() : procedural;
   }
 
+  if (buildingAssetMode === BUILDING_ASSET_MODE_PREVIEW_GLB && !allowPreviewGlb && !allowAssignedGlb) {
+    return procedural;
+  }
+
   const lod = new THREE.LOD();
   lod.userData.stageShadowCaster = true;
+  if (allowPreviewGlb) {
+    lod.userData.keepChunkDetailObject = true;
+    lod.userData.skipChunkFootprint = true;
+    void attachPreviewCatalogLods(
+      entry,
+      lod,
+      frontage,
+      depth,
+      rng,
+      { ...options, exactFootprint: true, preserveAspect: true },
+      gltfLoader
+    );
+    return lod;
+  }
+
   if (buildingAssetMode !== BUILDING_ASSET_MODE_GLB_ONLY) {
     lod.addLevel(procedural, SAN_VERDE_BUILDING_LOD_DISTANCES.procedural);
   }
@@ -2210,8 +2617,46 @@ async function attachCatalogLod1(entry, lod, frontage, depth, rng, options, gltf
   }
 
   prepareCatalogModelInstance(glbRoot, { stageShadowCaster: true });
-  fitCatalogModelToFootprint(glbRoot, frontage, depth, rng, options);
+  applyCatalogPlacement(glbRoot, frontage, depth, rng, options, normalizeCatalogPlacement(entry));
   lod.addLevel(glbRoot, SAN_VERDE_BUILDING_LOD_DISTANCES.glb);
+}
+
+async function attachPreviewCatalogLods(entry, lod, frontage, depth, rng, options, gltfLoader) {
+  if (!await catalogEntryHasGlb(entry)) {
+    return;
+  }
+
+  const lodSettings = getPreviewBuildingLodSettings(entry?.id);
+
+  const high = await loadCatalogGlbInstance(entry, gltfLoader);
+  if (high) {
+    prepareCatalogModelInstance(high, { stageShadowCaster: true });
+    applyPreviewModelPlacement(high, entry, frontage, depth, rng, options);
+    lod.addLevel(high, lodSettings.distances.high);
+  }
+
+  const medium = await loadCatalogGlbMediumInstance(entry, gltfLoader, lodSettings.simplifyRatios.medium);
+  if (medium) {
+    prepareCatalogModelInstance(medium, { stageShadowCaster: true });
+    applyPreviewModelPlacement(medium, entry, frontage, depth, rng, options);
+    lod.addLevel(medium, lodSettings.distances.medium);
+  }
+
+  const low = await loadCatalogGlbLowInstance(entry, gltfLoader, lodSettings.simplifyRatios.low);
+  if (low) {
+    prepareCatalogModelInstance(low, { stageShadowCaster: true });
+    applyPreviewModelPlacement(low, entry, frontage, depth, rng, options);
+    lod.addLevel(low, lodSettings.distances.low);
+  }
+}
+
+function getPreviewBuildingLodSettings(entryId) {
+  return SAN_VERDE_PREVIEW_BUILDING_LOD_SETTINGS[entryId] || SAN_VERDE_PREVIEW_BUILDING_LOD_SETTINGS.default;
+}
+
+function applyPreviewModelPlacement(model, entry, frontage, depth, rng, options) {
+  applyCatalogPlacement(model, frontage, depth, rng, options, normalizeCatalogPlacement(entry));
+  return model;
 }
 
 function addBuildingFeatures(group, entry, materials) {

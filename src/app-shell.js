@@ -383,6 +383,7 @@ export function createAppShell(root) {
         <button data-role="toggle-autopilot"></button>
         <button data-role="toggle-cinematic"></button>
         <button data-role="toggle-nav-debug"></button>
+        <button data-role="toggle-assigned-glb-only"></button>
         <button data-role="toggle-fog"></button>
         <button data-role="toggle-door"></button>
         <button data-role="toggle-rotation"></button>
@@ -517,6 +518,7 @@ export function createAppShell(root) {
     toggleAutopilot: root.querySelector('[data-role="toggle-autopilot"]'),
     toggleCinematic: root.querySelector('[data-role="toggle-cinematic"]'),
     toggleNavDebug: root.querySelector('[data-role="toggle-nav-debug"]'),
+    toggleAssignedGlbOnly: root.querySelector('[data-role="toggle-assigned-glb-only"]'),
     toggleFog: root.querySelector('[data-role="toggle-fog"]'),
     toggleDoor: root.querySelector('[data-role="toggle-door"]'),
     toggleRotation: root.querySelector('[data-role="toggle-rotation"]'),
@@ -574,6 +576,7 @@ export function createInitialState(ui) {
     autopilotEnabled: false,
     cinematicCameraEnabled: false,
     navDebugVisible: false,
+    sanVerdeAssignedGlbOnly: null,
     fogEnabled: true,
     overviewPan: {
       forward: false,

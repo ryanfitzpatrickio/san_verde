@@ -15,6 +15,7 @@ export const STAGE_OPTIONS = [
   { id: 'bloomville', label: 'Bloomville' },
   { id: 'bloomville_glb', label: 'Bloomville GLB' },
   { id: 'san_verde', label: 'San Verde' },
+  { id: 'san_verde_test', label: 'San Verde (Test)' },
   { id: 'san_verde_glb', label: 'San Verde GLB' }
 ];
 
@@ -44,6 +45,13 @@ export async function createStage(stageId = 'test_course', dependencies = {}) {
 
   if (stageId === 'san_verde') {
     return createSanVerdeStage(dependencies);
+  }
+
+  if (stageId === 'san_verde_test') {
+    return createSanVerdeStage({
+      ...dependencies,
+      assignedGlbOnly: true
+    });
   }
 
   if (stageId === 'san_verde_glb') {
@@ -121,7 +129,8 @@ function createTestCourseStage() {
 
   // Portal
   const PORTAL_SPECS = [
-    { position: new THREE.Vector3(0, 0, -75), label: 'San Verde', color: '#00e5ff', target: 'san_verde', rotY: Math.PI }
+    { position: new THREE.Vector3(-10, 0, -75), label: 'San Verde', color: '#00e5ff', target: 'san_verde', rotY: Math.PI },
+    { position: new THREE.Vector3(10, 0, -75), label: 'San Verde (Test)', color: '#ff4343', target: 'san_verde_test', rotY: Math.PI }
   ];
 
   const portalObjects = PORTAL_SPECS.map((spec) => {

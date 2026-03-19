@@ -79,10 +79,24 @@ function getStageBehaviorId(stageId) {
   if (stageId === 'bloomville_glb') {
     return 'bloomville';
   }
+  if (stageId === 'san_verde_test') {
+    return 'san_verde';
+  }
   if (stageId === 'san_verde_glb') {
     return 'san_verde';
   }
   return stageId;
+}
+
+function isSanVerdeStageId(stageId) {
+  return stageId === 'san_verde' || stageId === 'san_verde_glb' || stageId === 'san_verde_test';
+}
+
+function resolveSanVerdeAssignedGlbOnly(stage = activeStage) {
+  if (typeof state.sanVerdeAssignedGlbOnly === 'boolean') {
+    return state.sanVerdeAssignedGlbOnly;
+  }
+  return stage?.bakeConfig?.assignedGlbOnly === true;
 }
 
 function logBike(event, payload) {
@@ -313,6 +327,7 @@ ui.toggleLap.textContent = `Drive mode: ${state.driveMode ? 'On' : 'Off'}`;
 ui.toggleAutopilot.textContent = `Autopilot: ${state.autopilotEnabled ? 'On' : 'Off'}`;
 ui.toggleCinematic.textContent = `Camera: ${state.cinematicCameraEnabled ? 'Cinematic' : 'Normal'}`;
 ui.toggleNavDebug.textContent = `Nav Debug: ${state.navDebugVisible ? 'On' : 'Off'}`;
+ui.toggleAssignedGlbOnly.textContent = `Assigned GLB Test: ${resolveSanVerdeAssignedGlbOnly() ? 'On' : 'Off'}`;
 ui.toggleFog.textContent = `Fog: ${state.fogEnabled ? 'On' : 'Off'}`;
 syncControlOutputs();
 syncOverlayVisibility();
@@ -522,6 +537,7 @@ async function bootstrap() {
     applyGarageSnapshot,
     setEngineType,
     setStageId: rebuildStage,
+    rebuildStage,
     setChassisHeight,
     setDriveInput,
     setDrivingStyle,
@@ -624,11 +640,19 @@ async function rebuildStage(context, stageId) {
     disposeObjectTree,
     gltfLoader: context.gltfLoader,
     loadingManager: context.loadingManager,
+    assignedGlbOnly: stageId === 'san_verde_test'
+      ? true
+      : isSanVerdeStageId(stageId)
+        ? resolveSanVerdeAssignedGlbOnly()
+        : undefined,
     onProgress: (pct, label) => setLoadScreen(pct, label),
   });
   initializeStageSamplingAndPhysics(stage);
   applyStageShadowPolicy(stage);
   activeStage = stage;
+  if (isSanVerdeStageId(stageId)) {
+    state.sanVerdeAssignedGlbOnly = stage.bakeConfig?.assignedGlbOnly === true;
+  }
   activeStagePhysicsRevision = stage.physicsRevision ?? 0;
   applyStageAtmosphere(context.scene, stage.id);
   clearGroup(context.stageMount, { dispose: true });
@@ -652,6 +676,7 @@ async function rebuildStage(context, stageId) {
   }
   updateBloomvilleMinimapOverlay(context);
   agentSystem.syncStage(stage, playerSystem.getActiveStagePosition(context));
+  ui.toggleAssignedGlbOnly.textContent = `Assigned GLB Test: ${resolveSanVerdeAssignedGlbOnly(stage) ? 'On' : 'Off'}`;
 
   await context.renderer.compileAsync(context.scene, context.camera);
   setLoadScreen(100, 'Ready');
@@ -2414,6 +2439,7 @@ function applyGarageSnapshot(snapshot) {
   ui.toggleAutopilot.textContent = `Autopilot: ${state.autopilotEnabled ? 'On' : 'Off'}`;
   ui.toggleCinematic.textContent = `Camera: ${state.cinematicCameraEnabled ? 'Cinematic' : 'Normal'}`;
   ui.toggleNavDebug.textContent = `Nav Debug: ${state.navDebugVisible ? 'On' : 'Off'}`;
+  ui.toggleAssignedGlbOnly.textContent = `Assigned GLB Test: ${resolveSanVerdeAssignedGlbOnly() ? 'On' : 'Off'}`;
   ui.toggleFog.textContent = `Fog: ${state.fogEnabled ? 'On' : 'Off'}`;
   ui.driveStyle.value = state.drivingStyle;
   ui.driveStyleDescription.textContent =
@@ -2591,6 +2617,7 @@ function syncControlOutputs() {
   ui.bikeRearRotateYValue.textContent = state.bikeRearWheelRotation[1].toFixed(2);
   ui.bikeRearRotateZValue.textContent = state.bikeRearWheelRotation[2].toFixed(2);
   ui.toggleNavDebug.textContent = `Nav Debug: ${state.navDebugVisible ? 'On' : 'Off'}`;
+  ui.toggleAssignedGlbOnly.textContent = `Assigned GLB Test: ${resolveSanVerdeAssignedGlbOnly() ? 'On' : 'Off'}`;
   ui.rideHeight.disabled = usesSocketWheelAnchors();
   ui.rideHeight.title = usesSocketWheelAnchors() ? 'Socketed cars author wheel height in the GLB.' : '';
   syncEngineOutputs();

@@ -26,33 +26,36 @@ function yieldToMain() {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
 
-function collectChunkMergeBuckets(root, resolveBakeMaterial) {
+function collectChunkMergeBuckets(roots, resolveBakeMaterial) {
   const buckets = new Map();
-  root.updateMatrixWorld(true);
+  const sourceRoots = Array.isArray(roots) ? roots : [roots];
 
-  root.traverse((child) => {
-    if (!child.isMesh || child.isInstancedMesh || !child.geometry || Array.isArray(child.material)) {
-      return;
-    }
+  for (const root of sourceRoots) {
+    root.updateMatrixWorld(true);
+    root.traverse((child) => {
+      if (!child.isMesh || child.isInstancedMesh || !child.geometry || Array.isArray(child.material)) {
+        return;
+      }
 
-    const resolved = resolveBakeMaterial?.(child, child.material) || {
-      key: child.material,
-      material: child.material
-    };
-    const bucketKey = resolved.key ?? child.material;
-    let bucket = buckets.get(bucketKey);
-    if (!bucket) {
-      bucket = {
-        material: resolved.material ?? child.material,
-        geometries: []
+      const resolved = resolveBakeMaterial?.(child, child.material) || {
+        key: child.material,
+        material: child.material
       };
-      buckets.set(bucketKey, bucket);
-    }
+      const bucketKey = resolved.key ?? child.material;
+      let bucket = buckets.get(bucketKey);
+      if (!bucket) {
+        bucket = {
+          material: resolved.material ?? child.material,
+          geometries: []
+        };
+        buckets.set(bucketKey, bucket);
+      }
 
-    const geometry = child.geometry.clone();
-    geometry.applyMatrix4(child.matrixWorld);
-    bucket.geometries.push(geometry);
-  });
+      const geometry = child.geometry.clone();
+      geometry.applyMatrix4(child.matrixWorld);
+      bucket.geometries.push(geometry);
+    });
+  }
 
   return buckets;
 }
@@ -104,7 +107,9 @@ export class ChunkGrid {
     const cz = Math.floor(z / this.cellSize);
     const chunk = this._getOrCreate(cx, cz);
     chunk.detail.add(object);
-    chunk.footprints.push({ x, z, w, d, h, angle });
+    if (!object.userData?.skipChunkFootprint) {
+      chunk.footprints.push({ x, z, w, d, h, angle });
+    }
   }
 
   async buildMassGeometry(onProgress) {
@@ -146,8 +151,10 @@ export class ChunkGrid {
 
     for (let index = 0; index < chunks.length; index += 1) {
       const chunk = chunks[index];
-      const buckets = collectChunkMergeBuckets(chunk.detail, options.resolveBakeMaterial);
-      if (!buckets.size) {
+      const retainedChildren = chunk.detail.children.filter((child) => child.userData?.keepChunkDetailObject);
+      const bakeSources = chunk.detail.children.filter((child) => !child.userData?.keepChunkDetailObject);
+      const buckets = collectChunkMergeBuckets(bakeSources, options.resolveBakeMaterial);
+      if (!buckets.size && !retainedChildren.length) {
         onProgress?.((index + 1) / totalChunks);
         continue;
       }
@@ -172,6 +179,10 @@ export class ChunkGrid {
         mesh.userData.stageShadowCaster = true;
         mesh.userData.chunkBakedDetail = true;
         chunk.detail.add(mesh);
+      }
+
+      for (const child of retainedChildren) {
+        chunk.detail.add(child);
       }
 
       onProgress?.((index + 1) / totalChunks);

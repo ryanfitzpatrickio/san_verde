@@ -15,7 +15,10 @@
     "catalog:screenshots": "vite scripts --port 3456",
     "catalog:manager": "vite scripts --port 3457",
     "assets:optimize": "node scripts/optimize-web-assets.mjs",
-    "assets:optimize:models": "node scripts/optimize-web-assets.mjs --models-only"
+    "assets:optimize:models": "node scripts/optimize-web-assets.mjs --models-only",
+    "assets:optimize:buildings": "node scripts/optimize-web-assets.mjs --buildings-only",
+    "buildings:bake-lods": "node scripts/bake-building-lods.mjs",
+    "san-verde:bake-preview-glbs": "node scripts/bake-san-verde-preview-glbs.mjs"
   },
   "dependencies": {
     "@perplexdotgg/bounce": "^1.7.0",
@@ -32,6 +35,7 @@
     "@gltf-transform/functions": "^4.1.0",
     "canvas": "^3.2.1",
     "draco3dgltf": "^1.5.7",
+    "meshoptimizer": "^1.0.1",
     "sharp": "^0.34.1",
     "vite": "^7.1.0"
   }

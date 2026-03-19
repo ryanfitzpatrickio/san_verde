@@ -122,6 +122,14 @@ npm run assets:optimize
 gsutil -m cp -r web-assets/models gs://sanverde_assets/public/
 gsutil -m cp -r web-assets/textures gs://sanverde_assets/public/
 gsutil -m cp -r "web-assets/full textures" gs://sanverde_assets/public/
+gsutil -m cp -r web-assets/models/buildings gs://sanverde_assets/public/models/
+```
+
+Targeted San Verde building upload:
+```bash
+npm run assets:optimize:buildings
+gsutil -m cp web-assets/models/buildings/bungalow_urban.glb gs://sanverde_assets/public/models/buildings/
+gsutil -m cp web-assets/models/buildings/townhouse_single.glb gs://sanverde_assets/public/models/buildings/
 ```
 
 ---

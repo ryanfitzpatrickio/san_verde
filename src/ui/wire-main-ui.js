@@ -24,6 +24,7 @@ export function wireMainUi(options) {
     shouldUseStageOverview,
     syncOverlayVisibility,
     setStatus,
+    rebuildStage,
     toggleDoorState,
     loadSelectedBuiltInCar,
     loadLocalAsset,
@@ -234,8 +235,29 @@ export function wireMainUi(options) {
     setStatus(state.navDebugVisible ? 'Navigation debug enabled' : 'Navigation debug disabled');
   };
 
+  const syncAssignedGlbOnlyText = () => {
+    const enabled = state.sanVerdeAssignedGlbOnly === true;
+    ui.toggleAssignedGlbOnly.textContent = `Assigned GLB Test: ${enabled ? 'On' : 'Off'}`;
+  };
+
+  const toggleAssignedGlbOnly = async () => {
+    if (state.selectedStageId !== 'san_verde' && state.selectedStageId !== 'san_verde_glb') {
+      setStatus('Assigned GLB test is only available in San Verde');
+      return;
+    }
+
+    state.sanVerdeAssignedGlbOnly = !(state.sanVerdeAssignedGlbOnly === true);
+    syncAssignedGlbOnlyText();
+    await rebuildStage(context, state.selectedStageId);
+    setStatus(state.sanVerdeAssignedGlbOnly ? 'Assigned GLB test enabled' : 'Assigned GLB test disabled');
+  };
+
   ui.toggleNavDebug.addEventListener('click', () => {
     toggleNavDebugVisibility();
+  });
+
+  ui.toggleAssignedGlbOnly.addEventListener('click', () => {
+    void toggleAssignedGlbOnly();
   });
 
   ui.toggleFog.addEventListener('click', () => {
@@ -365,6 +387,12 @@ export function wireMainUi(options) {
 
     if (!event.repeat && event.code === 'KeyI') {
       toggleNavDebugVisibility();
+      event.preventDefault();
+      return;
+    }
+
+    if (!event.repeat && event.code === 'KeyK') {
+      void toggleAssignedGlbOnly();
       event.preventDefault();
       return;
     }

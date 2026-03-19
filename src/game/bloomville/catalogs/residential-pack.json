@@ -114,6 +114,14 @@
         "material": "roof",
         "texture": "roof_tile_clay"
       },
+      "lod1": {
+        "type": "glb",
+        "placement": {
+          "fitMode": "authored",
+          "uniformScale": 20,
+          "yawDegrees": 180
+        }
+      },
       "textures": {
         "body": "stucco_white",
         "accent": "brick_brown",
@@ -245,6 +253,14 @@
         "inset": 0.3,
         "material": "roof",
         "texture": "roof_metal"
+      },
+      "lod1": {
+        "type": "glb",
+        "placement": {
+          "fitMode": "authored",
+          "uniformScale": 18,
+          "yawDegrees": 90
+        }
       },
       "textures": {
         "body": "stucco_gray",
