@@ -20,3 +20,4 @@ public/models/buildings/
 # Python cache
 scripts/__pycache__/
 cors.json
+AGENTS.md

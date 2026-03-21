@@ -67,9 +67,12 @@ export async function createStage(stageId = 'test_course', dependencies = {}) {
 function createTestCourseStage() {
   const group = new THREE.Group();
   const groundTexture = getTestGroundTexture();
+  const TEST_PAD_RADIUS = 128;
+  const TEST_ASPHALT_SIZE = 256;
+  const TEST_WALL_HALF = 124;
 
   const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(120, 144),
+    new THREE.CircleGeometry(172, 160),
     new THREE.MeshPhysicalMaterial({
       color: '#071019',
       roughness: 0.9,
@@ -82,7 +85,7 @@ function createTestCourseStage() {
   group.add(floor);
 
   const asphalt = new THREE.Mesh(
-    new THREE.PlaneGeometry(160, 160),
+    new THREE.PlaneGeometry(TEST_ASPHALT_SIZE, TEST_ASPHALT_SIZE),
     new THREE.MeshPhysicalMaterial({
       color: '#ffffff',
       roughness: 0.94,
@@ -97,7 +100,7 @@ function createTestCourseStage() {
   group.add(asphalt);
 
   const padBorder = new THREE.Mesh(
-    new THREE.RingGeometry(78, 85, 128),
+    new THREE.RingGeometry(TEST_PAD_RADIUS - 4, TEST_PAD_RADIUS + 4, 160),
     new THREE.MeshBasicMaterial({
       color: '#14304c',
       transparent: true,
@@ -112,7 +115,7 @@ function createTestCourseStage() {
 
   // Drift ring marker
   const driftRing = new THREE.Mesh(
-    new THREE.RingGeometry(34, 35.2, 128),
+    new THREE.RingGeometry(52, 53.4, 144),
     new THREE.MeshBasicMaterial({ color: '#f4f1df', transparent: true, opacity: 0.5 })
   );
   driftRing.userData.noSuspension = true;
@@ -123,14 +126,14 @@ function createTestCourseStage() {
 
   group.add(createSandboxStartLine(new THREE.Vector3(0, 0.03, 26)));
   group.add(createSandboxGuideMarks());
-  group.add(createSandboxCones(55));
+  group.add(createSandboxCones(78));
   group.add(createSuspensionTestFeatures());
-  group.add(createCourseBoundaryWalls());
+  group.add(createCourseBoundaryWalls(TEST_WALL_HALF));
 
   // Portal
   const PORTAL_SPECS = [
-    { position: new THREE.Vector3(-10, 0, -75), label: 'San Verde', color: '#00e5ff', target: 'san_verde', rotY: Math.PI },
-    { position: new THREE.Vector3(10, 0, -75), label: 'San Verde (Test)', color: '#ff4343', target: 'san_verde_test', rotY: Math.PI }
+    { position: new THREE.Vector3(-12, 0, -121), label: 'San Verde', color: '#00e5ff', target: 'san_verde', rotY: Math.PI },
+    { position: new THREE.Vector3(12, 0, -121), label: 'San Verde (Test)', color: '#ff4343', target: 'san_verde_test', rotY: Math.PI }
   ];
 
   const portalObjects = PORTAL_SPECS.map((spec) => {
@@ -146,16 +149,16 @@ function createTestCourseStage() {
     group,
     startPosition: new THREE.Vector3(0, 0, 21),
     startYaw: Math.PI,
-    driveBounds: 74,
+    driveBounds: 120,
     navigation: createWaypointLoopNavigation([
-      new THREE.Vector3(0, 0, 55),
-      new THREE.Vector3(42, 0, 38),
-      new THREE.Vector3(55, 0, 0),
-      new THREE.Vector3(38, 0, -42),
-      new THREE.Vector3(0, 0, -55),
-      new THREE.Vector3(-42, 0, -38),
-      new THREE.Vector3(-55, 0, 0),
-      new THREE.Vector3(-38, 0, 42)
+      new THREE.Vector3(0, 0, 92),
+      new THREE.Vector3(68, 0, 68),
+      new THREE.Vector3(92, 0, 0),
+      new THREE.Vector3(68, 0, -68),
+      new THREE.Vector3(0, 0, -92),
+      new THREE.Vector3(-68, 0, -68),
+      new THREE.Vector3(-92, 0, 0),
+      new THREE.Vector3(-68, 0, 68)
     ]),
     agentNavigation: null,
     agentNavigationRevision: 0,
@@ -558,7 +561,7 @@ function createHighwayChunkPosts(curve, count, offset, materials) {
   return group;
 }
 
-function createCourseBoundaryWalls() {
+function createCourseBoundaryWalls(halfExtent = 76) {
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({
     color: '#1c222c',
@@ -567,7 +570,7 @@ function createCourseBoundaryWalls() {
   });
   const H = 0.52;
   const T = 0.55;
-  const HALF = 76;
+  const HALF = halfExtent;
   const walls = [
     { x: 0,     z:  HALF, w: HALF * 2 + T * 2, d: T },
     { x: 0,     z: -HALF, w: HALF * 2 + T * 2, d: T },
@@ -662,11 +665,11 @@ function createSandboxCones(ringRadius = 30) {
     cone.name = 'sandbox-cone';
     cone.userData.bounceDynamic = 'cone';
     cone.userData.bounceConeSpec = {
-      radius: 0.16,
-      height: 0.92,
-      mass: 1.5,
-      friction: 0.08,
-      restitution: 0.06
+      radius: 0.11,
+      height: 0.72,
+      mass: 0.28,
+      friction: 0.015,
+      restitution: 0.1
     };
     const top = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.28, 0.9, 20), coneMaterial);
     top.position.y = y + 0.48;
@@ -730,14 +733,14 @@ function createSuspensionTestFeatures() {
   }
   group.add(createFeatureStripe(-12.5, -3.9, 5.9, 19.5));
 
-  const ramp = createSandboxRamp(asphalt, 4.8, 7.6, 0.75);
+  const ramp = createSandboxRamp(asphalt, 5.8, 9.5, 1.15);
   ramp.position.set(16, 0, -13.8);
   ramp.castShadow = true;
   ramp.receiveShadow = true;
   group.add(ramp);
   group.add(createFeatureStripe(16, -10.1, 4.4, 0.34));
 
-  const landingPad = new THREE.Mesh(new THREE.PlaneGeometry(8.2, 10.5), new THREE.MeshBasicMaterial({
+  const landingPad = new THREE.Mesh(new THREE.PlaneGeometry(10.8, 14.5), new THREE.MeshBasicMaterial({
     color: '#dfe5ef',
     transparent: true,
     opacity: 0.28
@@ -745,8 +748,39 @@ function createSuspensionTestFeatures() {
   landingPad.userData.noSuspension = true;
   landingPad.userData.noCollision = true;
   landingPad.rotation.x = -Math.PI / 2;
-  landingPad.position.set(16, 0.026, -18);
+  landingPad.position.set(16, 0.026, -19.5);
   group.add(landingPad);
+
+  group.add(createPerimeterStuntRamps(asphalt));
+
+  return group;
+}
+
+function createPerimeterStuntRamps(material) {
+  const group = new THREE.Group();
+  const rampSpecs = [
+    { x: -68, z: 92, width: 7.2, length: 14, height: 1.8, rotY: 0 },
+    { x: -26, z: 92, width: 8.4, length: 16, height: 2.5, rotY: 0 },
+    { x: 20, z: 92, width: 9.8, length: 18, height: 3.3, rotY: 0 },
+    { x: 70, z: 90, width: 11.8, length: 22, height: 4.6, rotY: 0 },
+    { x: -96, z: 28, width: 9.4, length: 18, height: 2.8, rotY: -Math.PI * 0.5 },
+    { x: 96, z: -24, width: 10.4, length: 20, height: 3.6, rotY: Math.PI * 0.5 },
+    { x: 0, z: -22, width: 13.5, length: 26, height: 5.2, rotY: Math.PI }
+  ];
+
+  for (const spec of rampSpecs) {
+    const ramp = createSandboxRamp(material, spec.width, spec.length, spec.height);
+    ramp.position.set(spec.x, 0, spec.z);
+    ramp.rotation.y = spec.rotY;
+    ramp.castShadow = true;
+    ramp.receiveShadow = true;
+    group.add(ramp);
+
+    const stripeDepth = Math.max(spec.length * 1.22, 0.34);
+    const stripe = createFeatureStripe(spec.x, spec.z - Math.cos(spec.rotY) * (spec.length * 0.08), spec.width * 0.96, stripeDepth);
+    stripe.rotation.z = spec.rotY;
+    group.add(stripe);
+  }
 
   return group;
 }
@@ -801,26 +835,28 @@ function createEllipsoidBump(material, width, length, height) {
 }
 
 function createSandboxRamp(material, width, length, height) {
-  const halfWidth = width * 0.5;
-  const halfLength = length * 0.5;
-  const positions = new Float32Array([
-    -halfWidth, 0, halfLength,
-    halfWidth, 0, halfLength,
-    -halfWidth, height, -halfLength,
-    halfWidth, height, -halfLength,
-    -halfWidth, 0, -halfLength,
-    halfWidth, 0, -halfLength
-  ]);
-  const indices = [
-    0, 1, 2, 1, 3, 2, // slope
-    4, 2, 5, 5, 2, 3, // back
-    0, 4, 1, 1, 4, 5, // bottom
-    0, 2, 4,          // left
-    1, 5, 3           // right
-  ];
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
+  const lipLength = Math.max(length * 0.12, 0.9);
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(length, 0);
+  shape.lineTo(length, height);
+  shape.lineTo(length - lipLength, height);
+  shape.bezierCurveTo(
+    length * 0.62,
+    height,
+    length * 0.28,
+    height * 0.18,
+    0,
+    0
+  );
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: width,
+    bevelEnabled: false,
+    steps: 1
+  });
+  geometry.rotateY(Math.PI * 0.5);
+  geometry.translate(-width * 0.5, 0, length * 0.5);
   geometry.computeVertexNormals();
   const ramp = new THREE.Mesh(geometry, material);
   return ramp;

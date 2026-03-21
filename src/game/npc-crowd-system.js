@@ -9,10 +9,36 @@ import {
 import { crowd } from 'navcat/blocks';
 import { createNavMeshHelper } from 'navcat/three';
 import { getBuiltInNpcArchetypesForCrowdKind } from '../assets/npc-registry.js';
+import { createAutopilotState, resolveRoadGraphRouteTarget } from './autopilot.js';
 import { createNpcActor } from './npc-actor.js';
+import {
+  beginTrafficLaneFrame,
+  createTrafficLaneRuntime,
+  evaluateTrafficLaneBehavior,
+  summarizeTrafficLaneRuntime
+} from './traffic-lane-runtime.js';
+import {
+  createNpcColliderRuntime,
+  createNpcCollider,
+  destroyNpcColliderRuntime,
+  isNpcColliderTouchingDynamic,
+  sampleNpcColliderCollision,
+  updateNpcCollider
+} from './npc-collider-runtime.js';
 
 const NEAREST_RESULT = createFindNearestPolyResult();
 const DEFAULT_SEARCH_HALF_EXTENTS = [18, 6, 18];
+const TEMP_AGENT_POS = new THREE.Vector3();
+const TEMP_AGENT_FORWARD = new THREE.Vector3();
+const TEMP_LANE_TARGET = new THREE.Vector3();
+const TEMP_PLAYER_BLOCK_OFFSET = new THREE.Vector3();
+const TEMP_PLAYER_BLOCK_FORWARD = new THREE.Vector3();
+const TEMP_PLAYER_BLOCK_RIGHT = new THREE.Vector3();
+const PLAYER_BLOCK_STATE_NONE = Object.freeze({
+  active: false,
+  desiredSpeed: null,
+  distanceAhead: Number.POSITIVE_INFINITY
+});
 
 const VEHICLE_AGENT_PARAMS = {
   radius: 2.2,
@@ -52,6 +78,7 @@ export function createNpcCrowdSystem({ config, state }) {
   let activeRevision = -1;
   let vehicleRuntime = null;
   let pedestrianRuntime = null;
+  let colliderRuntime = null;
 
   const prevFocusPos = new THREE.Vector3();
   const playerVelocity = new THREE.Vector3();
@@ -62,6 +89,8 @@ export function createNpcCrowdSystem({ config, state }) {
     disposeRuntime(pedestrianRuntime);
     vehicleRuntime = null;
     pedestrianRuntime = null;
+    destroyNpcColliderRuntime(colliderRuntime);
+    colliderRuntime = null;
 
     while (agentRoot.children.length) agentRoot.remove(agentRoot.children[0]);
     while (debugRoot.children.length) debugRoot.remove(debugRoot.children[0]);
@@ -80,6 +109,7 @@ export function createNpcCrowdSystem({ config, state }) {
       activeStage = stage || null;
       activeRevision = stage?.agentNavigationRevision ?? 0;
       teardown();
+      colliderRuntime = createNpcColliderRuntime(stage?.physics);
 
       const nav = stage?.agentNavigation;
       if (!config.agentTraffic.enabled || (!nav?.vehicleNavMesh && !nav?.pedestrianNavMesh)) {
@@ -93,7 +123,9 @@ export function createNpcCrowdSystem({ config, state }) {
       if (nav.vehicleNavMesh) {
         vehicleRuntime = createCrowdRuntime('vehicle', settings.vehicleCount, nav.vehicleNavMesh, focusPosition, config, {
           agentRoot,
-          debugRoot
+          debugRoot,
+          colliderRuntime,
+          stageNavigation: stage?.navigation
         });
         mountRuntime(vehicleRuntime);
       }
@@ -101,7 +133,9 @@ export function createNpcCrowdSystem({ config, state }) {
       if (nav.pedestrianNavMesh) {
         pedestrianRuntime = createCrowdRuntime('pedestrian', settings.pedestrianCount, nav.pedestrianNavMesh, focusPosition, config, {
           agentRoot,
-          debugRoot
+          debugRoot,
+          colliderRuntime,
+          stageNavigation: stage?.navigation
         });
         mountRuntime(pedestrianRuntime);
       }
@@ -138,6 +172,16 @@ export function createNpcCrowdSystem({ config, state }) {
 
       if (vehicleRuntime) updateCrowdRuntime(vehicleRuntime, focusPos, playerVelocity, despawnDist, dt);
       if (pedestrianRuntime) updateCrowdRuntime(pedestrianRuntime, focusPos, playerVelocity, despawnDist, dt);
+    },
+
+    sampleCollision(origin, direction, far) {
+      return sampleNpcColliderCollision(colliderRuntime, origin, direction, far);
+    },
+
+    getDebugSummary() {
+      return vehicleRuntime?.laneRuntime
+        ? summarizeTrafficLaneRuntime(vehicleRuntime.laneRuntime)
+        : 'Traffic: n/a';
     },
 
     dispose() {
@@ -203,11 +247,28 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
       agentId,
       actor,
       agentParams,
+      baseMaxSpeed: maxSpeed,
       idleFrames: 0,
-      yaw: 0
+      yaw: 0,
+      laneTargetRefresh: 0,
+      navState: kind === 'vehicle' && roots.stageNavigation?.mode === 'roadGraph'
+        ? createAutopilotState()
+        : null,
+      lastLaneRoute: null,
+      lastLaneTarget: new THREE.Vector3(Number.NaN, Number.NaN, Number.NaN),
+      playerBlockSeconds: 0,
+      laneChangeCooldown: 0,
+      blockedSeconds: 0,
+      stuckSeconds: 0,
+      lastPosition: new THREE.Vector3(spawn.position[0] || 0, spawn.position[1] || 0, spawn.position[2] || 0)
     });
+    if (roots.colliderRuntime) {
+      createNpcCollider(roots.colliderRuntime, agents[agents.length - 1]);
+    }
 
-    assignRandomTarget(crowdState, navMesh, queryFilter, agentId);
+    if (!(kind === 'vehicle' && roots.stageNavigation?.mode === 'roadGraph')) {
+      assignRandomTarget(crowdState, navMesh, queryFilter, agentId);
+    }
   }
 
   const debugHelper = createNavMeshHelper(navMesh);
@@ -222,6 +283,9 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
     elapsedTime: 0,
     agentRoot: roots.agentRoot,
     debugRoot: roots.debugRoot,
+    colliderRuntime: roots.colliderRuntime || null,
+    stageNavigation: roots.stageNavigation || null,
+    laneRuntime: kind === 'vehicle' ? createTrafficLaneRuntime(roots.stageNavigation) : null,
     debugHelper
   };
 }
@@ -229,6 +293,10 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
 function updateCrowdRuntime(runtime, focusPos, playerVelocity, despawnDist, deltaSeconds) {
   runtime.elapsedTime += deltaSeconds;
   crowd.update(runtime.crowd, runtime.navMesh, deltaSeconds);
+
+  if (runtime.laneRuntime) {
+    beginTrafficLaneFrame(runtime.laneRuntime, runtime.agents, runtime.crowd, deltaSeconds);
+  }
 
   for (const agent of runtime.agents) {
     tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaSeconds);
@@ -241,21 +309,88 @@ function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaS
 
   const pos = crowdAgent.position;
   const vel = crowdAgent.velocity;
+  const desiredVel = crowdAgent.desiredVelocity;
+  const corners = crowdAgent.corners || [];
   const horizSpeed = Math.hypot(vel[0], vel[2]);
+  const laneRoute = resolveVehicleLaneRoute(runtime, agent, pos, horizSpeed, deltaSeconds);
+  agent.lastLaneRoute = laneRoute || null;
+  const laneBehavior = evaluateTrafficLaneBehavior(runtime.laneRuntime, agent, laneRoute);
+  if (
+    laneBehavior &&
+    Number.isInteger(laneBehavior.preferredLaneIndex) &&
+    laneBehavior.preferredLaneIndex !== laneRoute?.laneIndex &&
+    agent.laneChangeCooldown <= 0
+  ) {
+    if (tryMoveVehicleTowardLane(runtime, agent, laneRoute, laneBehavior.preferredLaneIndex)) {
+      agent.laneChangeCooldown = 0.9;
+    }
+  }
+  const playerBlock = resolvePlayerTrafficBlock(runtime, agent, pos, focusPos, playerVelocity, laneRoute, deltaSeconds);
+  const laneLimitedSpeed = Number.isFinite(laneBehavior?.desiredSpeed)
+    ? laneBehavior.desiredSpeed
+    : agent.baseMaxSpeed;
+  const playerLimitedSpeed = playerBlock.active
+    ? Math.max(0.01, Math.min(agent.baseMaxSpeed, playerBlock.desiredSpeed ?? agent.baseMaxSpeed))
+    : agent.baseMaxSpeed;
+  crowdAgent.maxSpeed = Math.max(0.01, Math.min(agent.baseMaxSpeed, laneLimitedSpeed, playerLimitedSpeed));
   if (horizSpeed > 0.1) {
     agent.yaw = Math.atan2(vel[0], vel[2]);
+  } else if (laneRoute?.targetTangent) {
+    agent.yaw = Math.atan2(laneRoute.targetTangent.x, laneRoute.targetTangent.z);
+  } else if (corners.length) {
+    const nextCorner = corners[0]?.position;
+    if (Array.isArray(nextCorner)) {
+      const dx = nextCorner[0] - pos[0];
+      const dz = nextCorner[2] - pos[2];
+      if (Math.hypot(dx, dz) > 0.25) {
+        agent.yaw = Math.atan2(dx, dz);
+      }
+    }
+  }
+  if (runtime.colliderRuntime) {
+    updateNpcCollider(runtime.colliderRuntime, agent, pos, agent.yaw);
+  }
+  const collisionBlocked = runtime.colliderRuntime
+    ? isNpcColliderTouchingDynamic(runtime.colliderRuntime, agent)
+    : false;
+  if (agent.kind === 'vehicle' && playerBlock.active) {
+    crowdAgent.position[0] = agent.lastPosition.x;
+    crowdAgent.position[1] = agent.lastPosition.y;
+    crowdAgent.position[2] = agent.lastPosition.z;
+    crowdAgent.velocity[0] = 0;
+    crowdAgent.velocity[1] = 0;
+    crowdAgent.velocity[2] = 0;
+    crowdAgent.desiredVelocity[0] = 0;
+    crowdAgent.desiredVelocity[1] = 0;
+    crowdAgent.desiredVelocity[2] = 0;
+    if (runtime.colliderRuntime) {
+      updateNpcCollider(runtime.colliderRuntime, agent, crowdAgent.position, agent.yaw);
+    }
   }
   agent.actor.updatePresentation({
-    position: pos,
+    position: crowdAgent.position,
     yaw: agent.yaw,
-    speed: horizSpeed,
-    velocity: vel,
+    speed: collisionBlocked && agent.kind === 'vehicle' ? 0 : horizSpeed,
+    velocity: crowdAgent.velocity,
+    desiredVelocity: crowdAgent.desiredVelocity,
+    corners,
+    laneTargetPoint: laneRoute?.targetPoint || null,
+    laneTargetTangent: laneRoute?.targetTangent || null,
+    laneDesiredSpeed: Math.min(
+      laneRoute?.desiredSpeed ?? agent.baseMaxSpeed,
+      laneLimitedSpeed,
+      playerBlock.active
+        ? (playerBlock.desiredSpeed ?? agent.baseMaxSpeed)
+        : agent.baseMaxSpeed
+    ),
+    targetPosition: crowdAgent.targetPosition,
+    targetState: crowdAgent.targetState,
     timeSeconds: runtime.elapsedTime,
     deltaSeconds
   });
 
-  const dx = pos[0] - focusPos.x;
-  const dz = pos[2] - focusPos.z;
+  const dx = crowdAgent.position[0] - focusPos.x;
+  const dz = crowdAgent.position[2] - focusPos.z;
   const distSq = dx * dx + dz * dz;
   const speed2D = Math.hypot(playerVelocity.x, playerVelocity.z);
   let effectiveDespawn = despawnDist;
@@ -275,8 +410,15 @@ function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaS
   }
 
   if (crowd.isAgentAtTarget(runtime.crowd, agent.agentId, agent.kind === 'vehicle' ? 5 : 1.25)) {
-    assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+    if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
+      agent.laneTargetRefresh = 0;
+      agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+    } else {
+      assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+    }
     agent.idleFrames = 0;
+    agent.stuckSeconds = 0;
+    agent.lastPosition.set(pos[0] || 0, pos[1] || 0, pos[2] || 0);
     return;
   }
 
@@ -284,12 +426,19 @@ function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaS
   if (speed < 0.15) {
     agent.idleFrames++;
     if (agent.idleFrames > 60) {
-      assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+      if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
+        agent.laneTargetRefresh = 0;
+        agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+      } else {
+        assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+      }
       agent.idleFrames = 0;
     }
   } else {
     agent.idleFrames = 0;
   }
+
+  updateAgentStuckState(runtime, agent, crowdAgent, deltaSeconds, focusPos, playerVelocity, despawnDist, collisionBlocked);
 }
 
 function respawnAgent(runtime, agent, spawn) {
@@ -303,13 +452,275 @@ function respawnAgent(runtime, agent, spawn) {
     deltaSeconds: 0
   });
   agent.idleFrames = 0;
-  assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+  agent.stuckSeconds = 0;
+  agent.blockedSeconds = 0;
+  agent.laneTargetRefresh = 0;
+  agent.lastLaneRoute = null;
+  agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+  agent.lastPosition.set(spawn.position[0] || 0, spawn.position[1] || 0, spawn.position[2] || 0);
+  if (runtime.colliderRuntime) {
+    updateNpcCollider(runtime.colliderRuntime, agent, spawn.position, agent.yaw);
+  }
+  if (!(agent.navState && runtime.stageNavigation?.mode === 'roadGraph')) {
+    assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+  }
+}
+
+function updateAgentStuckState(runtime, agent, crowdAgent, deltaSeconds, focusPos, playerVelocity, despawnDist, collisionBlocked) {
+  if (agent.kind !== 'vehicle') {
+    agent.lastPosition.set(crowdAgent.position[0] || 0, crowdAgent.position[1] || 0, crowdAgent.position[2] || 0);
+    return;
+  }
+
+  const desiredSpeed = Math.hypot(
+    crowdAgent.desiredVelocity?.[0] || 0,
+    crowdAgent.desiredVelocity?.[1] || 0,
+    crowdAgent.desiredVelocity?.[2] || 0
+  );
+  const actualSpeed = Math.hypot(
+    crowdAgent.velocity?.[0] || 0,
+    crowdAgent.velocity?.[1] || 0,
+    crowdAgent.velocity?.[2] || 0
+  );
+  const movedDistance = agent.lastPosition.distanceToSquared(
+    TEMP_AGENT_POS.set(crowdAgent.position[0] || 0, crowdAgent.position[1] || 0, crowdAgent.position[2] || 0)
+  );
+  const hasValidTarget = crowdAgent.targetState === crowd.AgentTargetState.VALID
+    || crowdAgent.targetState === crowd.AgentTargetState.WAITING_FOR_PATH
+    || crowdAgent.targetState === crowd.AgentTargetState.WAITING_FOR_QUEUE;
+  const blockedByTraffic =
+    collisionBlocked &&
+    hasValidTarget &&
+    desiredSpeed > 0.75 &&
+    actualSpeed < 0.15 &&
+    movedDistance < 0.01;
+
+  if (blockedByTraffic) {
+    agent.blockedSeconds = (agent.blockedSeconds || 0) + deltaSeconds;
+  } else {
+    agent.blockedSeconds = Math.max(0, (agent.blockedSeconds || 0) - deltaSeconds * 2);
+  }
+
+  if (hasValidTarget && desiredSpeed > 0.75 && actualSpeed < 0.15 && movedDistance < 0.01 && !collisionBlocked) {
+    agent.stuckSeconds += deltaSeconds;
+  } else {
+    agent.stuckSeconds = Math.max(0, agent.stuckSeconds - deltaSeconds * 2);
+  }
+
+  if (
+    blockedByTraffic &&
+    agent.blockedSeconds > 1.35 &&
+    agent.lastLaneRoute &&
+    agent.lastLaneRoute.approachingIntersection &&
+    agent.laneChangeCooldown <= 0 &&
+    tryShiftVehicleLane(runtime, agent, agent.lastLaneRoute)
+  ) {
+    agent.blockedSeconds = 0.4;
+    agent.laneChangeCooldown = 1.4;
+  }
+
+  if (blockedByTraffic && agent.blockedSeconds > 3.25) {
+    if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
+      agent.navState.lastDecisionKey = null;
+      agent.laneTargetRefresh = 0;
+      agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+    } else {
+      assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+    }
+    agent.blockedSeconds = 0;
+  }
+
+  if (agent.stuckSeconds > 4) {
+    const spawn = findForwardSpawnPoint(runtime.navMesh, runtime.queryFilter, focusPos, playerVelocity, despawnDist * 0.6);
+    if (spawn) {
+      respawnAgent(runtime, agent, spawn);
+      return;
+    }
+  } else if (agent.stuckSeconds > 2.2) {
+    if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
+      agent.laneTargetRefresh = 0;
+      agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+    } else {
+      assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
+    }
+    agent.stuckSeconds = 0;
+  }
+
+  agent.lastPosition.set(crowdAgent.position[0] || 0, crowdAgent.position[1] || 0, crowdAgent.position[2] || 0);
 }
 
 function assignRandomTarget(crowdState, navMesh, queryFilter, agentId) {
   const target = getRandomPoint(navMesh, queryFilter);
   if (!target) return false;
   return crowd.requestMoveTarget(crowdState, agentId, target.nodeRef, target.position);
+}
+
+function resolveVehicleLaneRoute(runtime, agent, position, speed, deltaSeconds) {
+  if (agent.kind !== 'vehicle' || runtime.stageNavigation?.mode !== 'roadGraph' || !agent.navState) {
+    return null;
+  }
+
+  TEMP_AGENT_POS.set(position[0] || 0, position[1] || 0, position[2] || 0);
+  TEMP_AGENT_FORWARD.set(Math.sin(agent.yaw || 0), 0, Math.cos(agent.yaw || 0));
+  const route = resolveRoadGraphRouteTarget(
+    runtime.stageNavigation,
+    agent.navState,
+    TEMP_AGENT_POS,
+    TEMP_AGENT_FORWARD,
+    speed
+  );
+  if (!route?.targetPoint) {
+    return null;
+  }
+
+  agent.laneTargetRefresh = Math.max(0, (agent.laneTargetRefresh || 0) - Math.max(deltaSeconds || 0, 0));
+  const shouldRefreshTarget = agent.laneTargetRefresh <= 0
+    || !Number.isFinite(agent.lastLaneTarget.x)
+    || agent.lastLaneTarget.distanceToSquared(route.targetPoint) > 9;
+  if (shouldRefreshTarget && requestMoveTargetAtPosition(runtime, agent.agentId, route.targetPoint)) {
+    agent.lastLaneTarget.copy(route.targetPoint);
+    agent.laneTargetRefresh = 0.35;
+  }
+
+  return route;
+}
+
+function resolvePlayerTrafficBlock(runtime, agent, position, focusPos, playerVelocity, laneRoute, deltaSeconds) {
+  if (
+    agent.kind !== 'vehicle' ||
+    !focusPos?.isVector3 ||
+    runtime.stageNavigation?.mode !== 'roadGraph' ||
+    !laneRoute?.targetTangent
+  ) {
+    agent.playerBlockSeconds = 0;
+    agent.laneChangeCooldown = Math.max(0, (agent.laneChangeCooldown || 0) - Math.max(deltaSeconds || 0, 0));
+    return PLAYER_BLOCK_STATE_NONE;
+  }
+
+  TEMP_AGENT_POS.set(position[0] || 0, position[1] || 0, position[2] || 0);
+  TEMP_PLAYER_BLOCK_FORWARD.copy(laneRoute.targetTangent).setY(0);
+  if (TEMP_PLAYER_BLOCK_FORWARD.lengthSq() < 1e-6) {
+    TEMP_PLAYER_BLOCK_FORWARD.set(Math.sin(agent.yaw || 0), 0, Math.cos(agent.yaw || 0));
+  } else {
+    TEMP_PLAYER_BLOCK_FORWARD.normalize();
+  }
+  TEMP_PLAYER_BLOCK_RIGHT.set(TEMP_PLAYER_BLOCK_FORWARD.z, 0, -TEMP_PLAYER_BLOCK_FORWARD.x).normalize();
+  TEMP_PLAYER_BLOCK_OFFSET.copy(focusPos).sub(TEMP_AGENT_POS).setY(0);
+
+  const distanceAhead = TEMP_PLAYER_BLOCK_OFFSET.dot(TEMP_PLAYER_BLOCK_FORWARD);
+  const lateralOffset = Math.abs(TEMP_PLAYER_BLOCK_OFFSET.dot(TEMP_PLAYER_BLOCK_RIGHT));
+  const playerSpeed = Math.hypot(playerVelocity.x || 0, playerVelocity.z || 0);
+  const forwardWindow = THREE.MathUtils.clamp(5.5 + playerSpeed * 0.7, 5.5, 10.5);
+  const laneHalfWidth = runtime.stageNavigation?.roadsById
+    ?.get(laneRoute.roadId)
+    ?.road?.laneWidth
+    ? runtime.stageNavigation.roadsById.get(laneRoute.roadId).road.laneWidth * 0.65
+    : 1.8;
+  const sameLevel = Math.abs((focusPos.y || 0) - (TEMP_AGENT_POS.y || 0)) < 2.4;
+  const active =
+    sameLevel &&
+    distanceAhead > 0.4 &&
+    distanceAhead < forwardWindow &&
+    lateralOffset < Math.max(1.2, laneHalfWidth);
+
+  agent.laneChangeCooldown = Math.max(0, (agent.laneChangeCooldown || 0) - Math.max(deltaSeconds || 0, 0));
+  if (!active) {
+    agent.playerBlockSeconds = 0;
+    return PLAYER_BLOCK_STATE_NONE;
+  }
+
+  agent.playerBlockSeconds = (agent.playerBlockSeconds || 0) + Math.max(deltaSeconds || 0, 0);
+  if (agent.playerBlockSeconds > 1.1 && agent.laneChangeCooldown <= 0) {
+    if (tryShiftVehicleLane(runtime, agent, laneRoute)) {
+      agent.playerBlockSeconds = 0;
+      agent.laneChangeCooldown = 1.25;
+    }
+  }
+
+  const desiredSpeed = THREE.MathUtils.clamp(
+    ((distanceAhead - 1.6) / Math.max(forwardWindow - 1.6, 0.001)) * agent.baseMaxSpeed,
+    0,
+    agent.baseMaxSpeed
+  );
+
+  return {
+    active: true,
+    desiredSpeed,
+    distanceAhead
+  };
+}
+
+function tryShiftVehicleLane(runtime, agent, laneRoute) {
+  if (!agent.navState || !runtime.stageNavigation?.roadsById) {
+    return false;
+  }
+
+  const roadRecord = runtime.stageNavigation.roadsById.get(laneRoute.roadId);
+  const lanes = roadRecord?.lanesByDirection?.[laneRoute.direction];
+  if (!lanes || lanes.length <= 1) {
+    return false;
+  }
+
+  const currentIndex = THREE.MathUtils.clamp(Number(laneRoute.laneIndex) || 0, 0, lanes.length - 1);
+  const candidates = [];
+  for (let offset = 1; offset < lanes.length; offset += 1) {
+    const lower = currentIndex - offset;
+    const upper = currentIndex + offset;
+    if (lower >= 0) {
+      candidates.push(lower);
+    }
+    if (upper < lanes.length) {
+      candidates.push(upper);
+    }
+  }
+
+  const nextLaneIndex = candidates.find((index) => index !== currentIndex);
+  if (!Number.isInteger(nextLaneIndex)) {
+    return false;
+  }
+
+  agent.navState.laneIndex = nextLaneIndex;
+  agent.laneTargetRefresh = 0;
+  agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+  return true;
+}
+
+function tryMoveVehicleTowardLane(runtime, agent, laneRoute, targetLaneIndex) {
+  if (!agent.navState || !runtime.stageNavigation?.roadsById || !Number.isInteger(targetLaneIndex)) {
+    return false;
+  }
+
+  const roadRecord = runtime.stageNavigation.roadsById.get(laneRoute?.roadId);
+  const lanes = roadRecord?.lanesByDirection?.[laneRoute?.direction];
+  if (!lanes?.length) {
+    return false;
+  }
+
+  const currentIndex = THREE.MathUtils.clamp(Number(laneRoute.laneIndex) || 0, 0, lanes.length - 1);
+  const clampedTargetIndex = THREE.MathUtils.clamp(targetLaneIndex, 0, lanes.length - 1);
+  if (clampedTargetIndex === currentIndex) {
+    return false;
+  }
+
+  agent.navState.laneIndex = currentIndex + Math.sign(clampedTargetIndex - currentIndex);
+  agent.laneTargetRefresh = 0;
+  agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+  return true;
+}
+
+function requestMoveTargetAtPosition(runtime, agentId, point) {
+  TEMP_LANE_TARGET.copy(point);
+  const nearest = findNearestPoly(
+    NEAREST_RESULT,
+    runtime.navMesh,
+    [TEMP_LANE_TARGET.x, TEMP_LANE_TARGET.y, TEMP_LANE_TARGET.z],
+    DEFAULT_SEARCH_HALF_EXTENTS,
+    runtime.queryFilter
+  );
+  if (!nearest.success) {
+    return false;
+  }
+  return crowd.requestMoveTarget(runtime.crowd, agentId, nearest.nodeRef, nearest.position);
 }
 
 function findSpawnPoint(navMesh, queryFilter, focusPos, radius) {

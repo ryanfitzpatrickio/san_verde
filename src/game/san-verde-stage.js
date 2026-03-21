@@ -561,8 +561,11 @@ function buildRoadGraph(data) {
     return {
       id: road.id,
       name: road.id,
+      type: road.type,
       classification: road.type === 'boulevard' ? 'primary' : road.type === 'avenue' ? 'secondary' : 'local',
       width: ROAD_KIND_STYLE[road.type]?.roadWidth || 18,
+      medianWidth: ROAD_KIND_STYLE[road.type]?.medianWidth || 0,
+      lanesPerDirection: road.type === 'boulevard' ? 3 : road.type === 'avenue' ? 2 : 1,
       sidewalkWidth: ROAD_KIND_STYLE[road.type]?.sidewalkWidth || 5.2,
       points,
       curve: createRoadPath(points)

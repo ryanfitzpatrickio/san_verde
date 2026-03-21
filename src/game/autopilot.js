@@ -13,6 +13,8 @@ export function createAutopilotState() {
     waypointIndex: 0,
     roadId: null,
     direction: 1,
+    laneIndex: 0,
+    plannedTransition: null,
     lastDecisionKey: null,
     travelAxis: 'z',
     lineCoord: 0,
@@ -91,6 +93,7 @@ export function createRoadGraphNavigation(graph, options = {}) {
       road,
       path,
       totalLength: path.totalLength,
+      lanesByDirection: buildRoadLaneRecords(road),
       junctions: [],
       junctionsByKey: new Map()
     };
@@ -144,7 +147,8 @@ export function createRoadGraphNavigation(graph, options = {}) {
       secondary: options.secondarySpeed ?? 10.8,
       local: options.localSpeed ?? 8.6
     },
-    turnSpeed: options.turnSpeed ?? 6.8
+    turnSpeed: options.turnSpeed ?? 6.8,
+    laneChangeResnapDistance: options.laneChangeResnapDistance ?? 8
   };
 }
 
@@ -168,7 +172,7 @@ export function computeAutopilotInputs({ config, controller, transform, stageNav
       routeTarget = resolveHighwayTarget(stageNavigation, state, transform.position, currentForward, controller.speed);
       break;
     case 'roadGraph':
-      routeTarget = resolveRoadGraphTarget(stageNavigation, state, transform.position, currentForward, controller.speed);
+      routeTarget = resolveRoadGraphRouteTarget(stageNavigation, state, transform.position, currentForward, controller.speed);
       break;
     default:
       return null;
@@ -301,10 +305,11 @@ function resolveHighwayTarget(navigation, state, position, currentForward, speed
   };
 }
 
-function resolveRoadGraphTarget(navigation, state, position, currentForward, speed) {
+export function resolveRoadGraphRouteTarget(navigation, state, position, currentForward, speed) {
   resetStateForMode(state, 'roadGraph');
   let roadRecord = state.roadId ? navigation.roadsById.get(state.roadId) : null;
-  let currentSample = roadRecord ? projectPointToPath(roadRecord.path, position) : null;
+  let laneRecord = roadRecord ? getRoadLaneRecord(roadRecord, state.direction, state.laneIndex) : null;
+  let currentSample = laneRecord ? projectPointToPath(laneRecord.path, position) : null;
   const currentRoadLimit = roadRecord ? Math.max(navigation.resnapDistance, roadRecord.road.width * 0.85) : navigation.resnapDistance;
 
   if (!roadRecord || !currentSample || Math.sqrt(currentSample.distanceSq) > currentRoadLimit) {
@@ -313,9 +318,15 @@ function resolveRoadGraphTarget(navigation, state, position, currentForward, spe
       return null;
     }
     roadRecord = nearest.roadRecord;
+    laneRecord = nearest.laneRecord;
     currentSample = nearest.sample;
     state.roadId = roadRecord.id;
     state.direction = nearest.direction;
+    state.laneIndex = laneRecord?.index ?? 0;
+  } else if (!laneRecord || Math.sqrt(currentSample.distanceSq) > navigation.laneChangeResnapDistance) {
+    laneRecord = selectNearestLaneRecord(roadRecord, state.direction, position);
+    state.laneIndex = laneRecord?.index ?? 0;
+    currentSample = laneRecord ? projectPointToPath(laneRecord.path, position) : currentSample;
   }
 
   const upcomingJunction = getUpcomingRoadJunction(roadRecord, state.direction, currentSample.distanceAlong);
@@ -323,36 +334,69 @@ function resolveRoadGraphTarget(navigation, state, position, currentForward, spe
     ? Math.abs(upcomingJunction.distanceAlong - currentSample.distanceAlong)
     : Number.POSITIVE_INFINITY;
   const currentTravelTangent = state.direction > 0 ? currentSample.tangent : currentSample.tangent.clone().negate();
+  let plannedTransition = null;
+
+  if (upcomingJunction) {
+    if (state.plannedTransition?.nodeKey !== upcomingJunction.nodeKey) {
+      const previewChoice = chooseGraphTransition(
+        navigation,
+        roadRecord,
+        state.direction,
+        upcomingJunction.nodeKey,
+        currentTravelTangent
+      );
+      state.plannedTransition = previewChoice
+        ? {
+            nodeKey: upcomingJunction.nodeKey,
+            roadId: previewChoice.roadRecord.id,
+            direction: previewChoice.direction,
+            turnType: previewChoice.turnType
+          }
+        : null;
+    }
+    plannedTransition = state.plannedTransition;
+  } else {
+    state.plannedTransition = null;
+  }
 
   if (
     upcomingJunction &&
     distanceToNode < navigation.intersectionDecisionDistance &&
     state.lastDecisionKey !== upcomingJunction.nodeKey
   ) {
-    const nextChoice = chooseGraphTransition(
-      navigation,
-      roadRecord,
-      state.direction,
-      upcomingJunction.nodeKey,
-      currentTravelTangent
-    );
+    const nextChoice = plannedTransition
+      ? {
+          roadRecord: navigation.roadsById.get(plannedTransition.roadId),
+          direction: plannedTransition.direction,
+          turnType: plannedTransition.turnType
+        }
+      : chooseGraphTransition(
+          navigation,
+          roadRecord,
+          state.direction,
+          upcomingJunction.nodeKey,
+          currentTravelTangent
+        );
     state.lastDecisionKey = upcomingJunction.nodeKey;
+    state.plannedTransition = null;
 
-    if (nextChoice) {
+    if (nextChoice?.roadRecord) {
       roadRecord = nextChoice.roadRecord;
       state.roadId = roadRecord.id;
       state.direction = nextChoice.direction;
+      state.laneIndex = clampLaneIndex(roadRecord, state.direction, state.laneIndex);
+      laneRecord = getRoadLaneRecord(roadRecord, state.direction, state.laneIndex);
       const turnJunction = roadRecord.junctionsByKey.get(upcomingJunction.nodeKey);
       const turnSampleDistance = turnJunction
         ? THREE.MathUtils.clamp(
             turnJunction.distanceAlong + state.direction * 0.8,
             0,
-            roadRecord.totalLength
+            laneRecord?.path?.totalLength ?? roadRecord.totalLength
           )
         : state.direction > 0
           ? 0.6
-          : Math.max(roadRecord.totalLength - 0.6, 0);
-      currentSample = samplePathAtDistance(roadRecord.path, turnSampleDistance);
+          : Math.max((laneRecord?.path?.totalLength ?? roadRecord.totalLength) - 0.6, 0);
+      currentSample = samplePathAtDistance(laneRecord?.path || roadRecord.path, turnSampleDistance);
     }
   }
 
@@ -362,7 +406,7 @@ function resolveRoadGraphTarget(navigation, state, position, currentForward, spe
     navigation.lookAheadMax
   );
   const targetDistanceAlong = currentSample.distanceAlong + state.direction * lookAhead;
-  const targetSample = samplePathAtDistance(roadRecord.path, targetDistanceAlong);
+  const targetSample = samplePathAtDistance(laneRecord?.path || roadRecord.path, targetDistanceAlong);
   const targetTravelTangent = state.direction > 0 ? targetSample.tangent : targetSample.tangent.clone().negate();
   const targetPoint = currentSample.point.clone().lerp(targetSample.point, 0.78);
   const turnAngle = Math.abs(signedAngleBetweenVectors(currentTravelTangent, targetTravelTangent));
@@ -379,7 +423,17 @@ function resolveRoadGraphTarget(navigation, state, position, currentForward, spe
   return {
     targetPoint,
     targetTangent: targetTravelTangent,
-    desiredSpeed
+    desiredSpeed,
+    roadId: roadRecord.id,
+    direction: state.direction,
+    laneIndex: laneRecord?.index ?? 0,
+    currentDistanceAlong: currentSample.distanceAlong,
+    distanceToNode,
+    approachingIntersection: distanceToNode < navigation.intersectionDecisionDistance * 1.8,
+    nodeKey: upcomingJunction?.nodeKey ?? null,
+    plannedRoadId: plannedTransition?.roadId ?? null,
+    plannedDirection: plannedTransition?.direction ?? null,
+    plannedTurnType: plannedTransition?.turnType ?? 'straight'
   };
 }
 
@@ -543,16 +597,21 @@ function findNearestGraphRoad(navigation, position, currentForward) {
   let bestScore = Number.POSITIVE_INFINITY;
 
   for (const roadRecord of navigation.roadRecords) {
-    const sample = projectPointToPath(roadRecord.path, position);
-    const alignment = Math.abs(sample.tangent.dot(currentForward));
-    const score = sample.distanceSq - alignment * 6;
-    if (score < bestScore) {
-      bestScore = score;
-      bestMatch = {
-        roadRecord,
-        sample,
-        direction: sample.tangent.dot(currentForward) >= 0 ? 1 : -1
-      };
+    for (const direction of [1, -1]) {
+      const laneRecord = selectNearestLaneRecord(roadRecord, direction, position);
+      const sample = laneRecord ? projectPointToPath(laneRecord.path, position) : projectPointToPath(roadRecord.path, position);
+      const travelTangent = direction > 0 ? sample.tangent : sample.tangent.clone().negate();
+      const alignment = Math.abs(travelTangent.dot(currentForward));
+      const score = sample.distanceSq - alignment * 6;
+      if (score < bestScore) {
+        bestScore = score;
+        bestMatch = {
+          roadRecord,
+          laneRecord,
+          sample,
+          direction
+        };
+      }
     }
   }
 
@@ -585,11 +644,11 @@ function chooseGraphTransition(navigation, roadRecord, currentDirection, nodeKey
     }
 
     if (Math.abs(angle) < 0.42) {
-      straightPaths.push(turnChoice);
+      straightPaths.push({ ...turnChoice, turnType: 'straight' });
     } else if (angle < 0) {
-      leftTurns.push(turnChoice);
+      leftTurns.push({ ...turnChoice, turnType: 'left' });
     } else {
-      rightTurns.push(turnChoice);
+      rightTurns.push({ ...turnChoice, turnType: 'right' });
     }
   }
 
@@ -734,7 +793,7 @@ function getChunkByIndex(highway, chunkIndex) {
   return highway.chunks.find((chunk) => chunk.meta.index === chunkIndex) || null;
 }
 
-function projectPointToPath(pathData, position) {
+export function projectPointToPath(pathData, position) {
   if (!pathData?.points?.length) {
     return null;
   }
@@ -912,4 +971,104 @@ function resetStateForMode(state, mode) {
 
   const nextState = createAutopilotState();
   Object.assign(state, nextState, { mode });
+}
+
+function buildRoadLaneRecords(road) {
+  const lanesPerDirection = Math.max(1, Number(road?.lanesPerDirection || inferLanesPerDirection(road)));
+  const records = {
+    1: [],
+    [-1]: []
+  };
+
+  for (const direction of [1, -1]) {
+    for (let laneIndex = 0; laneIndex < lanesPerDirection; laneIndex += 1) {
+      const offset = computeLaneOffset(road, laneIndex, direction, lanesPerDirection);
+      const points = offsetRoadPoints(road.points, offset);
+      const curve = points.length >= 2
+        ? new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.35)
+        : null;
+      records[direction].push({
+        id: `${road.id}:${direction > 0 ? 'fwd' : 'rev'}:${laneIndex}`,
+        roadId: road.id,
+        direction,
+        index: laneIndex,
+        offset,
+        path: buildPolylineNavigationData(points, curve)
+      });
+    }
+  }
+
+  return records;
+}
+
+function inferLanesPerDirection(road) {
+  if (road?.classification === 'primary') return 3;
+  if (road?.classification === 'secondary') return 2;
+  return 1;
+}
+
+function computeLaneOffset(road, laneIndex, direction, lanesPerDirection) {
+  const roadWidth = Number(road?.width || 18);
+  const medianWidth = Number(road?.medianWidth || 0);
+  const carriageWidth = medianWidth > 0
+    ? Math.max((roadWidth - medianWidth) * 0.5, 3.2)
+    : Math.max(roadWidth * 0.5, 3.2);
+  const laneWidth = carriageWidth / lanesPerDirection;
+  const medianHalf = medianWidth * 0.5;
+  const centerDistance = medianHalf + laneWidth * (laneIndex + 0.5);
+  return direction > 0 ? -centerDistance : centerDistance;
+}
+
+function offsetRoadPoints(points, offset) {
+  return points.map((point, index) => {
+    const tangent = getPointTangent(points, index);
+    const rightNormal = RIGHT_VECTOR.set(tangent.z, 0, -tangent.x).normalize();
+    return point.clone().addScaledVector(rightNormal, offset);
+  });
+}
+
+function getPointTangent(points, index) {
+  const current = points[index];
+  const previous = points[index - 1] || current;
+  const next = points[index + 1] || current;
+  const tangent = next.clone().sub(previous).setY(0);
+  if (tangent.lengthSq() < EPSILON) {
+    return new THREE.Vector3(0, 0, 1);
+  }
+  return tangent.normalize();
+}
+
+export function getRoadLaneRecord(roadRecord, direction, laneIndex) {
+  const lanes = roadRecord?.lanesByDirection?.[direction];
+  if (!lanes?.length) {
+    return null;
+  }
+  const clampedIndex = THREE.MathUtils.clamp(Number(laneIndex) || 0, 0, lanes.length - 1);
+  return lanes[clampedIndex] || lanes[0] || null;
+}
+
+function clampLaneIndex(roadRecord, direction, laneIndex) {
+  const lanes = roadRecord?.lanesByDirection?.[direction];
+  if (!lanes?.length) {
+    return 0;
+  }
+  return THREE.MathUtils.clamp(Number(laneIndex) || 0, 0, lanes.length - 1);
+}
+
+function selectNearestLaneRecord(roadRecord, direction, position) {
+  const lanes = roadRecord?.lanesByDirection?.[direction];
+  if (!lanes?.length) {
+    return null;
+  }
+
+  let best = lanes[0];
+  let bestDistanceSq = Number.POSITIVE_INFINITY;
+  for (const lane of lanes) {
+    const sample = projectPointToPath(lane.path, position);
+    if (sample.distanceSq < bestDistanceSq) {
+      best = lane;
+      bestDistanceSq = sample.distanceSq;
+    }
+  }
+  return best;
 }

@@ -8,14 +8,19 @@ import { createSceneHelpers } from '../scene-helpers.js';
 import { CarVehicle } from '../vehicles/car-vehicle.js';
 import { buildMountedCarRig } from '../vehicles/car-rig.js';
 import { collectEmbeddedWheelAssets } from '../vehicles/car-rig-helpers.js';
-import { createKinematicCarState, updateKinematicCarState } from '../vehicles/kinematic-car-controller.js';
-import { createMountedCarController } from '../vehicles/mounted-car-controller.js';
+import { createMountedCarRuntime } from '../vehicles/car-runtime.js';
 import { inferVehicleForwardYawDegrees } from '../vehicles/vehicle-orientation.js';
 
 const SHARED_GLTF_LOADER = new GLTFLoader();
 const VEHICLE_TEMPLATE_CACHE = new Map();
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
 const TEMP_POSITION = new THREE.Vector3();
+const LOOKAHEAD_POINT = new THREE.Vector3();
+const NEXT_POINT = new THREE.Vector3();
+const TARGET_POINT = new THREE.Vector3();
+const DESIRED_VECTOR = new THREE.Vector3();
+const HEADING_VECTOR = new THREE.Vector3();
+const TURN_VECTOR = new THREE.Vector3();
 
 const TRAFFIC_STYLE = {
   transmissionMode: 'automatic',
@@ -30,7 +35,12 @@ const TRAFFIC_STYLE = {
   rollRate: 5.6,
   maxPitch: 0.06,
   maxRoll: 0.08,
-  steeringWheelTurnRatio: -5.4
+  steeringWheelTurnRatio: -5.4,
+  cornerBrakeAngleStart: 0.18,
+  cornerBrakeAngleFull: 0.95,
+  cornerSpeedMinFactor: 0.38,
+  targetApproachRadius: 7.5,
+  lookaheadDistance: 8.5
 };
 
 export async function loadTrafficVehicleActor(archetype) {
@@ -109,28 +119,50 @@ export async function loadTrafficVehicleActor(archetype) {
   const wheelRadius = presentation.wheelRadius || 0.42;
   const engineId = manifest?.preset?.engineId || 'mustang_390_v8_5mt';
   const engine = new EngineAudioSystem(engineId);
-  const mountedCarController = createMountedCarController({
+  const carRuntime = createMountedCarRuntime({
     root: actorRoot,
     bodyMount,
     wheelMount,
     steeringWheelRig,
     steeringWheelTurnRatio: TRAFFIC_STYLE.steeringWheelTurnRatio,
-    upAxis: UP_AXIS
+    upAxis: UP_AXIS,
+    initialState: {
+      wheelRadius
+    }
   });
-
-  const state = {
-    ...createKinematicCarState({ wheelRadius }),
-    engine
-  };
+  carRuntime.state.engine = engine;
 
   return {
     root: actorRoot,
-    update({ position, yaw = 0, speed = 0, deltaSeconds = 0 }) {
+    update({
+      position,
+      yaw = 0,
+      speed = 0,
+      deltaSeconds = 0,
+      desiredVelocity = null,
+      corners = null,
+      laneTargetPoint = null,
+      laneTargetTangent = null,
+      laneDesiredSpeed = null,
+      targetPosition = null
+    }) {
       TEMP_POSITION.copy(resolvePosition(position));
-      updateKinematicCarState(state, {
+      const driveTarget = resolveTrafficDriveTarget({
+        currentPosition: TEMP_POSITION,
+        fallbackYaw: yaw,
+        actualSpeed: speed,
+        desiredVelocity,
+        corners,
+        laneTargetPoint,
+        laneTargetTangent,
+        laneDesiredSpeed,
+        targetPosition,
+        style: TRAFFIC_STYLE
+      });
+      carRuntime.updateKinematic({
         targetPosition: TEMP_POSITION,
-        targetYaw: yaw,
-        targetSpeed: speed,
+        targetYaw: driveTarget.yaw,
+        targetSpeed: driveTarget.speed,
         deltaSeconds,
         style: TRAFFIC_STYLE,
         onDrivetrainStep: ({
@@ -141,7 +173,7 @@ export async function loadTrafficVehicleActor(archetype) {
           driveSpeed,
           wheelRadius: currentWheelRadius
         }) => {
-          state.engine.update({
+          carRuntime.state.engine.update({
             deltaSeconds: dt,
             throttleInput,
             brakeInput,
@@ -152,16 +184,6 @@ export async function loadTrafficVehicleActor(archetype) {
             desiredDirection
           });
         }
-      });
-
-      mountedCarController.applyPose({
-        position: state.position,
-        yaw: state.yaw,
-        bodyPitch: state.bodyPitch,
-        bodyRoll: state.bodyRoll,
-        steerAngle: state.steerAngle,
-        wheelSpin: state.wheelSpin,
-        suspensionOffset: 0
       });
     },
     dispose() {
@@ -229,4 +251,202 @@ function resolvePosition(position) {
   }
   TEMP_POSITION.set(0, 0, 0);
   return TEMP_POSITION;
+}
+
+function resolveTrafficDriveTarget({
+  currentPosition,
+  fallbackYaw,
+  actualSpeed,
+  desiredVelocity,
+  corners,
+  laneTargetPoint,
+  laneTargetTangent,
+  laneDesiredSpeed,
+  targetPosition,
+  style
+}) {
+  const desiredSpeed = Number.isFinite(laneDesiredSpeed)
+    ? Math.min(resolveDesiredSpeed(actualSpeed, desiredVelocity), laneDesiredSpeed)
+    : resolveDesiredSpeed(actualSpeed, desiredVelocity);
+  const lookahead = laneTargetPoint
+    ? resolvePositionLike(laneTargetPoint)
+    : selectLookaheadPoint(currentPosition, corners, targetPosition, style.lookaheadDistance);
+  const resolvedYaw = laneTargetTangent
+    ? computeYawFromTangent(laneTargetTangent, fallbackYaw)
+    : lookahead
+      ? computeYawTowards(currentPosition, lookahead, fallbackYaw)
+      : fallbackYaw;
+  const cornerAngle = computeCornerAngle(currentPosition, lookahead, corners, desiredVelocity, laneTargetTangent);
+  const cornerFactor = computeCornerSpeedFactor(cornerAngle, style);
+  const approachFactor = computeApproachSpeedFactor(currentPosition, targetPosition, style.targetApproachRadius);
+  const plannedSpeed = Math.max(
+    0.35,
+    desiredSpeed * Math.min(cornerFactor, approachFactor)
+  );
+
+  return {
+    yaw: resolvedYaw,
+    speed: plannedSpeed
+  };
+}
+
+function resolveDesiredSpeed(actualSpeed, desiredVelocity) {
+  if (Array.isArray(desiredVelocity)) {
+    return Math.max(actualSpeed, Math.hypot(desiredVelocity[0] || 0, desiredVelocity[2] || 0));
+  }
+  if (desiredVelocity?.isVector3) {
+    return Math.max(actualSpeed, Math.hypot(desiredVelocity.x || 0, desiredVelocity.z || 0));
+  }
+  if (desiredVelocity && typeof desiredVelocity === 'object') {
+    return Math.max(actualSpeed, Math.hypot(desiredVelocity.x || 0, desiredVelocity.z || 0));
+  }
+  return actualSpeed;
+}
+
+function selectLookaheadPoint(currentPosition, corners, targetPosition, lookaheadDistance) {
+  if (Array.isArray(corners) && corners.length) {
+    let fallback = null;
+    for (const corner of corners) {
+      const point = resolveCornerPosition(corner);
+      if (!point) {
+        continue;
+      }
+      const distance = point.distanceTo(currentPosition);
+      if (!fallback) {
+        fallback = point.clone();
+      }
+      if (distance >= lookaheadDistance) {
+        return point.clone();
+      }
+    }
+    if (fallback) {
+      return fallback;
+    }
+  }
+
+  return targetPosition ? resolvePositionLike(targetPosition) : null;
+}
+
+function resolveCornerPosition(corner) {
+  if (!corner) {
+    return null;
+  }
+  if (Array.isArray(corner.position)) {
+    return LOOKAHEAD_POINT.set(corner.position[0] || 0, corner.position[1] || 0, corner.position[2] || 0);
+  }
+  if (corner.position?.isVector3) {
+    return LOOKAHEAD_POINT.copy(corner.position);
+  }
+  return null;
+}
+
+function resolvePositionLike(position) {
+  if (position?.isVector3) {
+    return TARGET_POINT.copy(position);
+  }
+  if (Array.isArray(position)) {
+    return TARGET_POINT.set(position[0] || 0, position[1] || 0, position[2] || 0);
+  }
+  if (position && typeof position === 'object') {
+    return TARGET_POINT.set(position.x || 0, position.y || 0, position.z || 0);
+  }
+  return null;
+}
+
+function computeYawTowards(from, to, fallbackYaw) {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  if (Math.hypot(dx, dz) < 1e-3) {
+    return fallbackYaw;
+  }
+  return Math.atan2(dx, dz);
+}
+
+function computeYawFromTangent(tangent, fallbackYaw) {
+  const dir = resolvePositionLike(tangent);
+  if (!dir) {
+    return fallbackYaw;
+  }
+  const dx = dir.x;
+  const dz = dir.z;
+  if (Math.hypot(dx, dz) < 1e-3) {
+    return fallbackYaw;
+  }
+  return Math.atan2(dx, dz);
+}
+
+function computeCornerAngle(currentPosition, lookahead, corners, desiredVelocity, laneTargetTangent) {
+  if (laneTargetTangent) {
+    const tangent = resolvePositionLike(laneTargetTangent);
+    if (lookahead && tangent) {
+      HEADING_VECTOR.subVectors(lookahead, currentPosition).setY(0);
+      TURN_VECTOR.set(tangent.x || 0, 0, tangent.z || 0);
+      return angleBetweenHorizontal(HEADING_VECTOR, TURN_VECTOR);
+    }
+  }
+
+  if (Array.isArray(corners) && corners.length >= 2) {
+    const first = resolvePositionLike(corners[0]?.position);
+    const second = resolvePositionLike(corners[1]?.position) || lookahead;
+    if (first && second) {
+      HEADING_VECTOR.subVectors(first, currentPosition).setY(0);
+      TURN_VECTOR.subVectors(second, first).setY(0);
+      return angleBetweenHorizontal(HEADING_VECTOR, TURN_VECTOR);
+    }
+  }
+
+  if (lookahead && desiredVelocity) {
+    const velocity = resolveHorizontalVector(desiredVelocity, DESIRED_VECTOR);
+    HEADING_VECTOR.subVectors(lookahead, currentPosition).setY(0);
+    return angleBetweenHorizontal(velocity, HEADING_VECTOR);
+  }
+
+  return 0;
+}
+
+function resolveHorizontalVector(input, out) {
+  if (Array.isArray(input)) {
+    return out.set(input[0] || 0, 0, input[2] || 0);
+  }
+  if (input?.isVector3) {
+    return out.set(input.x || 0, 0, input.z || 0);
+  }
+  if (input && typeof input === 'object') {
+    return out.set(input.x || 0, 0, input.z || 0);
+  }
+  return out.set(0, 0, 0);
+}
+
+function angleBetweenHorizontal(a, b) {
+  const aLen = Math.hypot(a.x, a.z);
+  const bLen = Math.hypot(b.x, b.z);
+  if (aLen < 1e-3 || bLen < 1e-3) {
+    return 0;
+  }
+  const dot = THREE.MathUtils.clamp((a.x * b.x + a.z * b.z) / (aLen * bLen), -1, 1);
+  return Math.acos(dot);
+}
+
+function computeCornerSpeedFactor(angle, style) {
+  if (!Number.isFinite(angle) || angle <= style.cornerBrakeAngleStart) {
+    return 1;
+  }
+  const turnT = THREE.MathUtils.clamp(
+    (angle - style.cornerBrakeAngleStart) / Math.max(style.cornerBrakeAngleFull - style.cornerBrakeAngleStart, 1e-3),
+    0,
+    1
+  );
+  return THREE.MathUtils.lerp(1, style.cornerSpeedMinFactor, turnT);
+}
+
+function computeApproachSpeedFactor(currentPosition, targetPosition, approachRadius) {
+  const resolvedTarget = resolvePositionLike(targetPosition);
+  if (!resolvedTarget) {
+    return 1;
+  }
+  const distance = resolvedTarget.distanceTo(currentPosition);
+  if (distance >= approachRadius) {
+    return 1;
+  }
+  return THREE.MathUtils.lerp(0.4, 1, THREE.MathUtils.clamp(distance / Math.max(approachRadius, 1e-3), 0, 1));
 }

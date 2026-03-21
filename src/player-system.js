@@ -362,6 +362,27 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     controller.root.position.copy(controller.position);
   }
 
+  function resolveCharacterVehiclePenetration(context, options = {}) {
+    const controller = context?.characterController;
+    const resolvePenetration = context?.resolvePlayerVehiclePenetration;
+    if (!controller || typeof resolvePenetration !== 'function') {
+      return false;
+    }
+
+    const moved = resolvePenetration(controller.position, {
+      radius: config.character.capsuleRadius,
+      padding: config.character.collisionPadding,
+      maxIterations: options.maxIterations ?? 4,
+      extraPush: options.extraPush ?? 0.04
+    });
+    if (!moved) {
+      return false;
+    }
+
+    controller.root.position.copy(controller.position);
+    return true;
+  }
+
   function attachCharacterToWorld(context) {
     if (!context?.characterController) {
       return;
@@ -653,8 +674,14 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return false;
     }
 
+    const vehicleMetrics = getVehicleLocalMetrics(context);
+    const size = vehicleMetrics?.size || null;
+    const extraDistance = size
+      ? Math.min(0.6, Math.max(size.x, size.z) * 0.12)
+      : 0;
     state.canEnterVehicle =
-      getCharacterDistanceToVehicle(context.characterController, interactionPose.targetPosition) <= config.character.interactionDistance;
+      getCharacterDistanceToVehicle(context.characterController, interactionPose.targetPosition)
+        <= (config.character.interactionDistance + extraDistance);
     return state.canEnterVehicle;
   }
 
@@ -1064,6 +1091,9 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       interaction.exitingTargetYaw
     );
     snapCharacterToGround(context, 2);
+    if (resolveCharacterVehiclePenetration(context, { maxIterations: 5, extraPush: 0.08 })) {
+      snapCharacterToGround(context, 2);
+    }
     playCharacterAction(context.characterController, 'idle');
     advanceCharacterAnimation(context.characterController, 0, {
       consumeRootMotion: false,
@@ -1176,8 +1206,11 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       input: state.characterInput,
       driveBounds: context.stage?.driveBounds,
       sampleGround: context.stage?.sampleGround,
-      sampleCollision: context.stage?.sampleCollision
+      sampleCollision: context.playerSampleCollision || context.stage?.sampleCollision
     });
+    if (resolveCharacterVehiclePenetration(context)) {
+      snapCharacterToGround(context, 1);
+    }
     updateCharacterCamera(
       context.camera,
       context.controls,

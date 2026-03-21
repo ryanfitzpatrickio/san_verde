@@ -398,6 +398,7 @@ export class EngineAudioSystem {
     this.shiftTransient = Math.max(0, this.shiftTransient - deltaSeconds);
     this.torqueNm = sampleTorqueCurve(physics.torqueCurveNm, this.rpm) * throttle;
 
+    const nearStandstill = Math.abs(speedMps) < 0.22;
     const engineBrakingNm =
       gear.ratio !== 0
         ? physics.engineBrakingNm *
@@ -405,7 +406,10 @@ export class EngineAudioSystem {
           (1 - throttle) *
           clutchCoupling
         : 0;
-    const netDriveTorqueNm = this.torqueNm - engineBrakingNm;
+    let netDriveTorqueNm = this.torqueNm - engineBrakingNm;
+    if (nearStandstill && throttle < 0.035 && brake < 0.035) {
+      netDriveTorqueNm = 0;
+    }
     this.wheelForceN =
       gear.ratio !== 0
         ? (netDriveTorqueNm * gear.totalRatio * physics.drivelineEfficiency * clutchCoupling) / Math.max(wheelRadius, 0.12)

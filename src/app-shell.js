@@ -310,7 +310,7 @@ export const MODEL_CONFIG = {
     targetHeight: 1.15,
     cameraPositionLerp: 6.4,
     cameraTargetLerp: 8.8,
-    interactionDistance: 0.6,
+    interactionDistance: 1.35,
     interactionSideOffset: -1.05,
     interactionForwardOffset: -0.15,
     doorOpenLeadSeconds: 0.35,

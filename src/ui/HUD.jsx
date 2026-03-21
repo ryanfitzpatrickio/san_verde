@@ -9,7 +9,7 @@ import {
   loadPct, loadLabel, loadDone,
   minimapLabel, minimapVisible, setMinimapCanvasRef,
   perfFps, perfFrame, perfDraws, perfPeakDraws, perfRenderCalls,
-  perfTriangles, perfPeakTriangles, perfGeometries, perfTextures, perfBreakdown,
+  perfTriangles, perfPeakTriangles, perfGeometries, perfTextures, perfBreakdown, trafficDebug,
 } from './hud-store.js';
 
 function EngineOverlay() {
@@ -67,6 +67,7 @@ function PerformanceOverlay() {
       <div class="performance-chip"><span class="label">Geo</span><span class="value">{perfGeometries()}</span></div>
       <div class="performance-chip"><span class="label">Tex</span><span class="value">{perfTextures()}</span></div>
       <div class="performance-breakdown">{perfBreakdown()}</div>
+      <div class="performance-breakdown">{trafficDebug()}</div>
     </div>
   );
 }

@@ -68,6 +68,8 @@ const BIKE_REAR_POINT_VELOCITY = new THREE.Vector3();
 const KINEMATIC_FORWARD = new THREE.Vector3();
 const KINEMATIC_EULER = new THREE.Euler();
 const KINEMATIC_QUATERNION = new THREE.Quaternion();
+const KINEMATIC_PREVIOUS_POSITION = new THREE.Vector3();
+const KINEMATIC_PREVIOUS_ORIENTATION = new THREE.Quaternion();
 
 function shouldUseColliderMaterial(material) {
   if (!material) {
@@ -285,19 +287,44 @@ function getWheelMountMetrics(wheelMount) {
   };
 }
 
-function resolveBikeSpec(baseSpec, wheelMount) {
+function resolveBikeSpec(baseSpec, wheelMount, bodyMetrics = null) {
   const metrics = getWheelMountMetrics(wheelMount);
-  if (!metrics) {
+  const bodySize = bodyMetrics?.size || null;
+  const bodyCenter = bodyMetrics?.center || null;
+  if (!metrics && !bodySize) {
     return baseSpec;
   }
 
+  const wheelRadius = metrics?.averageRadius ?? baseSpec.wheelRadius;
+  const averageCenterY = metrics?.averageCenterY ?? baseSpec.wheelCenterY;
+  const wheelHalfBase = metrics?.wheelHalfBase ?? baseSpec.wheelHalfBase;
+  const wheelbase = metrics?.wheelbase ?? wheelHalfBase * 2;
+  const derivedWidth = bodySize
+    ? THREE.MathUtils.clamp(bodySize.x * 0.82, 0.42, 0.95)
+    : baseSpec.width;
+  const derivedHeight = bodySize
+    ? THREE.MathUtils.clamp(bodySize.y * 0.62, 0.45, 1.2)
+    : baseSpec.height;
+  const derivedDepth = THREE.MathUtils.clamp(
+    Math.max(wheelbase * 0.82, bodySize ? bodySize.z * 0.74 : 0),
+    1.3,
+    2.4
+  );
+  const derivedRootOffsetY = THREE.MathUtils.clamp(averageCenterY + wheelRadius, 0.38, 0.68);
+  const derivedBodyOffsetY = bodyCenter
+    ? THREE.MathUtils.clamp(bodyCenter.y, 0.12, 0.48)
+    : baseSpec.bodyOffsetY;
+
   return {
     ...baseSpec,
-    wheelRadius: metrics.averageRadius,
-    wheelCenterY: metrics.averageCenterY,
-    wheelHalfBase: metrics.wheelHalfBase,
-    depth: THREE.MathUtils.clamp(metrics.wheelbase * 0.82, 1.02, 1.3),
-    rootOffsetY: THREE.MathUtils.clamp(metrics.averageCenterY + metrics.averageRadius, 0.38, 0.68)
+    width: derivedWidth,
+    height: derivedHeight,
+    depth: derivedDepth,
+    bodyOffsetY: derivedBodyOffsetY,
+    wheelRadius,
+    wheelCenterY: averageCenterY,
+    wheelHalfBase,
+    rootOffsetY: derivedRootOffsetY
   };
 }
 
@@ -481,14 +508,14 @@ export function destroyBounceStagePhysics(bundle) {
   }
 }
 
-export function configureBounceVehicle(bundle, config, vehicleKind, massKg, position, yaw, wheelMount = null) {
+export function configureBounceVehicle(bundle, config, vehicleKind, massKg, position, yaw, wheelMount = null, bodyMetrics = null) {
   if (!bundle?.world) {
     return bundle;
   }
 
   let spec = getVehicleSpec(config, vehicleKind, massKg);
   if (vehicleKind === 'bike') {
-    spec = resolveBikeSpec(spec, wheelMount);
+    spec = resolveBikeSpec(spec, wheelMount, bodyMetrics);
   }
   bundle.vehicleKind = vehicleKind;
   bundle.rootOffsetY = spec.rootOffsetY;
@@ -561,7 +588,7 @@ export function configureBounceVehicle(bundle, config, vehicleKind, massKg, posi
       restitution: 0.02
     });
     bundle.isKinematic = true;
-    bundle.kinematicState = { speed: 0, yaw, pitch: 0, lean: 0 };
+    bundle.kinematicState = { speed: 0, yaw, pitch: 0, lean: 0, verticalVelocity: 0, grounded: true };
   } else {
     bundle.chassisBody = bundle.world.createDynamicBody({
       shape: bundle.chassisShape,
@@ -595,6 +622,8 @@ export function resetBounceVehicle(bundle, position, yaw) {
     bundle.kinematicState.yaw = yaw;
     bundle.kinematicState.pitch = 0;
     bundle.kinematicState.lean = 0;
+    bundle.kinematicState.verticalVelocity = 0;
+    bundle.kinematicState.grounded = true;
   } else {
     bundle.chassisBody.linearVelocity.zero();
     bundle.chassisBody.angularVelocity.zero();
@@ -658,6 +687,13 @@ function stepKinematicBike(bundle, params) {
   const spec = bundle.vehicleSpec || {};
   const state = bundle.kinematicState;
   const dt = Math.max(deltaSeconds, 1 / 120);
+  KINEMATIC_PREVIOUS_POSITION.set(body.position.x, body.position.y, body.position.z);
+  KINEMATIC_PREVIOUS_ORIENTATION.set(
+    body.orientation.x,
+    body.orientation.y,
+    body.orientation.z,
+    body.orientation.w
+  );
 
   // --- Speed integration ---
   const mass = spec.massKg ?? 260;
@@ -665,6 +701,13 @@ function stepKinematicBike(bundle, params) {
   state.speed += (wheelForce / mass) * dt;
   state.speed -= (brakeForce / mass) * brakeSign * dt;
   state.speed -= state.speed * 0.18 * dt; // rolling resistance / drag
+  if (
+    Math.abs(state.speed) < Number(spec.stopHoldSpeedMps ?? 0.22) &&
+    Math.abs(wheelForce) < Number(spec.stopHoldWheelForceEpsilon ?? 1) &&
+    brakeForce > Number(spec.stopHoldBrakeForceThreshold ?? 0)
+  ) {
+    state.speed = 0;
+  }
   state.speed = THREE.MathUtils.clamp(
     state.speed,
     -(reverseSpeedLimitMps ?? 8),
@@ -706,36 +749,135 @@ function stepKinematicBike(bundle, params) {
   const halfBase = spec.wheelHalfBase ?? 0.72;
   const wheelRadius = spec.wheelRadius ?? 0.34;
   const rootOffsetY = spec.rootOffsetY ?? 0.44;
+  const noseProbeExtra = Number(spec.noseProbeExtra ?? 0.42);
+  const frontRiseBias = Number(spec.frontRiseBias ?? 0.78);
   let newY = body.position.y;
   let targetPitch = 0;
+  const wheelCenterInModel = spec.averageCenterY ?? (rootOffsetY - wheelRadius);
+  const contactWindow = Number(spec.airborneContactWindow ?? 0.028);
+  const groundFollowStrength = Number(spec.groundFollowStrength ?? 0.35);
+  const landingFollowStrength = Number(spec.landingFollowStrength ?? 0.65);
+  const gravity = Number(spec.airborneGravity ?? 17.5);
+  const rampLaunchFactor = Number(spec.rampLaunchFactor ?? 0.95);
+  const maxLaunchVelocity = Number(spec.maxLaunchVelocity ?? 13.5);
+  const detachSpeedMps = Number(spec.airborneDetachSpeedMps ?? 7.5);
+  const detachPitchMin = Number(spec.airborneDetachPitchMin ?? 0.06);
+  const detachDropHeight = Number(spec.airborneDetachDropHeight ?? 0.12);
+  let targetBodyY = null;
+  let hasGroundContact = false;
+  let frontHit = null;
+  let rearHit = null;
+  let noseHit = null;
+  let frontTargetBodyY = null;
+  let rearTargetBodyY = null;
+  let noseTargetBodyY = null;
 
   if (sampleGround) {
-    const frontHit = sampleGround(
+    frontHit = sampleGround(
       newX + KINEMATIC_FORWARD.x * halfBase,
       newZ + KINEMATIC_FORWARD.z * halfBase
     );
-    const rearHit = sampleGround(
+    rearHit = sampleGround(
       newX - KINEMATIC_FORWARD.x * halfBase,
       newZ - KINEMATIC_FORWARD.z * halfBase
     );
+    noseHit = sampleGround(
+      newX + KINEMATIC_FORWARD.x * (halfBase + noseProbeExtra),
+      newZ + KINEMATIC_FORWARD.z * (halfBase + noseProbeExtra)
+    );
     if (frontHit && rearHit) {
       const avgGroundY = (frontHit.height + rearHit.height) * 0.5;
-      // body.y = ground + rootOffsetY + wheelRadius - averageCenterY
-      // Since rootOffsetY = averageCenterY + wheelRadius this collapses to ground + 2*wheelRadius,
-      // but use explicit averageCenterY (from resolveBikeSpec) if available for accuracy.
-      const wheelCenterInModel = spec.averageCenterY ?? (rootOffsetY - wheelRadius);
-      const targetBodyY = avgGroundY + rootOffsetY + wheelRadius - wheelCenterInModel;
-      newY = THREE.MathUtils.lerp(body.position.y, targetBodyY, 0.35);
+      frontTargetBodyY = frontHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      rearTargetBodyY = rearHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      if (noseHit) {
+        noseTargetBodyY = noseHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      }
+      targetBodyY = Math.max(
+        avgGroundY + rootOffsetY + wheelRadius - wheelCenterInModel,
+        rearTargetBodyY + (frontTargetBodyY - rearTargetBodyY) * frontRiseBias,
+        frontTargetBodyY,
+        noseTargetBodyY ?? -Infinity
+      );
+      hasGroundContact =
+        Math.abs(body.position.y - frontTargetBodyY) <= contactWindow ||
+        Math.abs(body.position.y - rearTargetBodyY) <= contactWindow ||
+        (noseTargetBodyY != null && Math.abs(body.position.y - noseTargetBodyY) <= contactWindow * 1.5);
       targetPitch = Math.atan2(frontHit.height - rearHit.height, halfBase * 2);
-    } else if (frontHit || rearHit) {
-      const hit = frontHit ?? rearHit;
-      const wheelCenterInModel = spec.averageCenterY ?? (rootOffsetY - wheelRadius);
-      newY = THREE.MathUtils.lerp(body.position.y, hit.height + rootOffsetY + wheelRadius - wheelCenterInModel, 0.35);
+    } else if (frontHit || rearHit || noseHit) {
+      const hit = noseHit ?? frontHit ?? rearHit;
+      targetBodyY = hit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      hasGroundContact = Math.abs(body.position.y - targetBodyY) <= contactWindow;
+      if (frontHit) {
+        frontTargetBodyY = frontHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      }
+      if (rearHit) {
+        rearTargetBodyY = rearHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      }
+      if (noseHit) {
+        noseTargetBodyY = noseHit.height + rootOffsetY + wheelRadius - wheelCenterInModel;
+      }
+      if (frontTargetBodyY != null || noseTargetBodyY != null) {
+        targetBodyY = Math.max(
+          targetBodyY,
+          frontTargetBodyY ?? -Infinity,
+          noseTargetBodyY ?? -Infinity
+        );
+      }
+    }
+  }
+
+  const isLaunchingOffCrest =
+    state.grounded &&
+    Math.abs(state.speed) >= detachSpeedMps &&
+    !frontHit &&
+    !!rearHit &&
+    state.pitch >= detachPitchMin;
+  const isDroppingAwayFromGround =
+    state.grounded &&
+    targetBodyY != null &&
+    body.position.y - targetBodyY > detachDropHeight &&
+    Math.abs(state.speed) >= detachSpeedMps;
+
+  if (isLaunchingOffCrest || isDroppingAwayFromGround) {
+    hasGroundContact = false;
+  }
+
+  if (targetBodyY != null && hasGroundContact) {
+    if (!state.grounded && state.verticalVelocity < 0) {
+      newY = THREE.MathUtils.lerp(body.position.y, targetBodyY, landingFollowStrength);
+    } else {
+      newY = THREE.MathUtils.lerp(body.position.y, targetBodyY, groundFollowStrength);
+    }
+    state.verticalVelocity = 0;
+    state.grounded = true;
+  } else {
+    if (state.grounded) {
+      const launchPitch = Math.max(targetPitch, state.pitch, detachPitchMin);
+      const launchVelocity = Math.max(
+        0,
+        Math.sin(launchPitch) * Math.abs(state.speed) * rampLaunchFactor
+      );
+      state.verticalVelocity = Math.min(
+        Math.max(state.verticalVelocity, launchVelocity),
+        maxLaunchVelocity
+      );
+    }
+    state.grounded = false;
+    state.verticalVelocity -= gravity * dt;
+    newY = body.position.y + state.verticalVelocity * dt;
+    if (targetBodyY != null && newY <= targetBodyY && state.verticalVelocity <= 0) {
+      newY = targetBodyY;
+      state.verticalVelocity = 0;
+      state.grounded = true;
     }
   }
 
   // --- Orientation: pitch from terrain slope, lean already computed in steering ---
-  state.pitch = THREE.MathUtils.lerp(state.pitch, targetPitch, 0.12);
+  state.pitch = THREE.MathUtils.lerp(
+    state.pitch,
+    state.grounded ? targetPitch : state.pitch * 0.985,
+    state.grounded ? 0.12 : 0.04
+  );
 
   KINEMATIC_EULER.set(state.pitch, state.yaw, state.lean, 'YXZ');
   KINEMATIC_QUATERNION.setFromEuler(KINEMATIC_EULER);
@@ -750,6 +892,35 @@ function stepKinematicBike(bundle, params) {
   body.commitChanges();
 
   bundle.world.takeOneStep(dt);
+  if (hasBlockingKinematicContact(bundle, body)) {
+    body.position.set([
+      KINEMATIC_PREVIOUS_POSITION.x,
+      KINEMATIC_PREVIOUS_POSITION.y,
+      KINEMATIC_PREVIOUS_POSITION.z
+    ]);
+    body.orientation.set([
+      KINEMATIC_PREVIOUS_ORIENTATION.x,
+      KINEMATIC_PREVIOUS_ORIENTATION.y,
+      KINEMATIC_PREVIOUS_ORIENTATION.z,
+      KINEMATIC_PREVIOUS_ORIENTATION.w
+    ]);
+    body.commitChanges();
+    bundle.world.takeOneStep(dt);
+    state.speed = 0;
+    state.lean = THREE.MathUtils.lerp(state.lean, 0, 0.45);
+    syncDynamicBodies(bundle);
+    return {
+      position: new THREE.Vector3(
+        KINEMATIC_PREVIOUS_POSITION.x,
+        KINEMATIC_PREVIOUS_POSITION.y - rootOffsetY,
+        KINEMATIC_PREVIOUS_POSITION.z
+      ),
+      quaternion: KINEMATIC_PREVIOUS_ORIENTATION.clone(),
+      yaw: state.yaw,
+      speed: state.speed,
+      yawRate: 0
+    };
+  }
   syncDynamicBodies(bundle);
 
   return {
@@ -759,6 +930,22 @@ function stepKinematicBike(bundle, params) {
     speed: state.speed,
     yawRate
   };
+}
+
+function hasBlockingKinematicContact(bundle, body) {
+  if (!bundle?.world || !body) {
+    return false;
+  }
+
+  for (const manifold of bundle.world.iterateContactManifolds(body)) {
+    const other = manifold.bodyA === body ? manifold.bodyB : manifold.bodyA;
+    if (!other || other === bundle.terrainBody) {
+      continue;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 export function stepBounceVehicle(bundle, params) {

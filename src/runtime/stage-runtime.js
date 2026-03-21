@@ -22,6 +22,7 @@ export function createStageRuntime({
     disposeStageFeedback,
     createStageGroundSampler,
     createStageCollisionSampler,
+    decorateStageCollision,
     createBounceStagePhysics,
     destroyBounceStagePhysics,
     getVehicleMassKg,
@@ -88,6 +89,9 @@ export function createStageRuntime({
       minNormalY: config.suspension.supportMinNormalY
     });
     stage.sampleCollision = stage.sampleCollision || createStageCollisionSampler(collisionRoot);
+    if (typeof decorateStageCollision === 'function') {
+      decorateStageCollision(stage);
+    }
     stage.physics = createBounceStagePhysics(
       stage,
       config,

@@ -60,8 +60,8 @@
       "label": "Sendan",
       "kind": "car",
       "body": {
-        "url": "/models/sedan2-validated-validated-validated.glb",
-        "sourceLabel": "public/models/sedan2-validated-validated-validated.glb"
+        "url": "/models/sedan.glb",
+        "sourceLabel": "public/models/sedan.glb"
       },
       "tires": {
         "front": {
@@ -74,6 +74,7 @@
         }
       },
       "preset": {
+        "engineId": "mustang_390_v8_5mt",
         "exposure": 1.15,
         "environmentIntensity": 1.2,
         "tireScale": 0.93,

@@ -38,3 +38,4 @@ export const [perfPeakTriangles, setPerfPeakTriangles] = createSignal('0');
 export const [perfGeometries, setPerfGeometries] = createSignal('0');
 export const [perfTextures, setPerfTextures] = createSignal('0');
 export const [perfBreakdown, setPerfBreakdown] = createSignal('Top: n/a');
+export const [trafficDebug, setTrafficDebug] = createSignal('Traffic: n/a');

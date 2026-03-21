@@ -17,6 +17,7 @@
     "assets:optimize": "node scripts/optimize-web-assets.mjs",
     "assets:optimize:models": "node scripts/optimize-web-assets.mjs --models-only",
     "assets:optimize:buildings": "node scripts/optimize-web-assets.mjs --buildings-only",
+    "assets:optimize:vehicles": "node scripts/optimize-web-assets.mjs --vehicles-only",
     "buildings:bake-lods": "node scripts/bake-building-lods.mjs",
     "san-verde:bake-preview-glbs": "node scripts/bake-san-verde-preview-glbs.mjs"
   },

@@ -6,7 +6,7 @@ import {
   minimapCanvasEl,
   setLoadPct, setLoadLabel, setLoadDone,
   setPerfFps, setPerfFrame, setPerfDraws, setPerfPeakDraws, setPerfRenderCalls,
-  setPerfTriangles, setPerfPeakTriangles, setPerfGeometries, setPerfTextures, setPerfBreakdown,
+  setPerfTriangles, setPerfPeakTriangles, setPerfGeometries, setPerfTextures, setPerfBreakdown, setTrafficDebug,
 } from './ui/hud-store.js';
 
 import * as THREE from 'three';
@@ -27,7 +27,11 @@ import { createNpcCrowdSystem } from './game/npc-crowd-system.js';
 import { STAGE_OPTIONS, createStage, getStageLabel } from './game/stages.js';
 import { createBounceStagePhysics, destroyBounceStagePhysics } from './game/bounce-physics.js';
 import { disposeStageFeedback, initializeStageFeedback } from './game/stage-feedback.js';
-import { createStageCollisionSampler, createStageGroundSampler } from './game/stage-sampler.js';
+import {
+  createCompositeCollisionSampler,
+  createStageCollisionSampler,
+  createStageGroundSampler
+} from './game/stage-sampler.js';
 import {
   createGarageRuntime,
   ensureGarageAudioReady,
@@ -169,6 +173,17 @@ const BIKE_DEBUG = false;
 const PERF_CATEGORY_OTHER = 'other';
 const RENDERER_MODE_WEBGL = 'webgl';
 const RENDERER_MODE_WEBGPU = 'webgpu';
+const PLAYER_VEHICLE_COLLISION_PADDING = 0.14;
+const VEHICLE_COLLISION_UP = new THREE.Vector3(0, 1, 0);
+const VEHICLE_COLLISION_CENTER = new THREE.Vector3();
+const VEHICLE_COLLISION_LOCAL_ORIGIN = new THREE.Vector3();
+const VEHICLE_COLLISION_LOCAL_DIRECTION = new THREE.Vector3();
+const VEHICLE_COLLISION_HIT_POINT = new THREE.Vector3();
+const VEHICLE_COLLISION_HIT_NORMAL = new THREE.Vector3();
+const VEHICLE_COLLISION_QUATERNION = new THREE.Quaternion();
+const VEHICLE_COLLISION_INVERSE_QUATERNION = new THREE.Quaternion();
+const VEHICLE_PENETRATION_LOCAL_POSITION = new THREE.Vector3();
+const VEHICLE_PENETRATION_WORLD_OFFSET = new THREE.Vector3();
 
 function getStageBehaviorId(stageId) {
   if (stageId === 'bloomville_glb') {
@@ -227,6 +242,250 @@ function describeRendererBackend(renderer, requestedRendererMode) {
   }
 
   return 'Renderer ready';
+}
+
+function samplePlayerVehicleCollision(origin, direction, far) {
+  if (!appContext || far <= 0) {
+    return null;
+  }
+
+  let nearestHit = sampleVehicleCollisionEntry({
+    position: state.vehiclePosition,
+    yaw: state.vehicleYaw,
+    metrics: state.carMetrics,
+    chassisHeight: state.chassisHeight
+  }, origin, direction, far);
+
+  for (const proxy of Object.values(state.parkedVehicleProxies || {})) {
+    const hit = sampleVehicleCollisionEntry({
+      position: proxy?.drivePosition,
+      yaw: proxy?.yaw,
+      metrics: proxy?.bodyMetrics,
+      chassisHeight: proxy?.group?.position?.y - (proxy?.drivePosition?.y || 0)
+    }, origin, direction, far);
+    if (!hit) {
+      continue;
+    }
+    if (!nearestHit || hit.distance < nearestHit.distance) {
+      nearestHit = hit;
+    }
+  }
+
+  return nearestHit;
+}
+
+function sampleParkedVehicleCollision(origin, direction, far) {
+  if (!appContext || far <= 0) {
+    return null;
+  }
+
+  let nearestHit = null;
+  for (const proxy of Object.values(state.parkedVehicleProxies || {})) {
+    const hit = sampleVehicleCollisionEntry({
+      position: proxy?.drivePosition,
+      yaw: proxy?.yaw,
+      metrics: proxy?.bodyMetrics,
+      chassisHeight: proxy?.group?.position?.y - (proxy?.drivePosition?.y || 0)
+    }, origin, direction, far);
+    if (!hit) {
+      continue;
+    }
+    if (!nearestHit || hit.distance < nearestHit.distance) {
+      nearestHit = hit;
+    }
+  }
+
+  return nearestHit;
+}
+
+function resolvePlayerVehiclePenetration(position, options = {}) {
+  if (!appContext || !position) {
+    return false;
+  }
+
+  const radius = Math.max(0.05, Number(options.radius ?? MODEL_CONFIG.character?.capsuleRadius ?? 0.34));
+  const padding = Math.max(0, Number(options.padding ?? PLAYER_VEHICLE_COLLISION_PADDING));
+  const extraPush = Math.max(0, Number(options.extraPush ?? 0.03));
+  const maxIterations = Math.max(1, Math.min(6, Number(options.maxIterations ?? 4)));
+
+  let moved = false;
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    let bestResolution = resolveVehiclePenetrationEntry({
+      position: state.vehiclePosition,
+      yaw: state.vehicleYaw,
+      metrics: state.carMetrics,
+      chassisHeight: state.chassisHeight
+    }, position, radius, padding, extraPush);
+
+    for (const proxy of Object.values(state.parkedVehicleProxies || {})) {
+      const resolution = resolveVehiclePenetrationEntry({
+        position: proxy?.drivePosition,
+        yaw: proxy?.yaw,
+        metrics: proxy?.bodyMetrics,
+        chassisHeight: proxy?.group?.position?.y - (proxy?.drivePosition?.y || 0)
+      }, position, radius, padding, extraPush);
+      if (!resolution) {
+        continue;
+      }
+      if (!bestResolution || resolution.depth > bestResolution.depth) {
+        bestResolution = resolution;
+      }
+    }
+
+    if (!bestResolution) {
+      break;
+    }
+
+    VEHICLE_PENETRATION_WORLD_OFFSET.copy(bestResolution.offset)
+      .applyQuaternion(bestResolution.quaternion);
+    position.add(VEHICLE_PENETRATION_WORLD_OFFSET);
+    moved = true;
+  }
+
+  return moved;
+}
+
+function sampleVehicleCollisionEntry(entry, origin, direction, far) {
+  if (!entry?.position || !entry?.metrics?.size || !entry?.metrics?.center) {
+    return null;
+  }
+
+  const size = entry.metrics.size;
+  const center = entry.metrics.center;
+  const halfX = Math.max(0.18, size.x * 0.5 + PLAYER_VEHICLE_COLLISION_PADDING);
+  const halfY = Math.max(0.18, size.y * 0.5 + PLAYER_VEHICLE_COLLISION_PADDING);
+  const halfZ = Math.max(0.18, size.z * 0.5 + PLAYER_VEHICLE_COLLISION_PADDING);
+  VEHICLE_COLLISION_CENTER.set(
+    entry.position.x + center.x,
+    entry.position.y + (Number.isFinite(entry.chassisHeight) ? entry.chassisHeight : 0) + center.y,
+    entry.position.z + center.z
+  );
+  VEHICLE_COLLISION_QUATERNION.setFromAxisAngle(VEHICLE_COLLISION_UP, Number(entry.yaw || 0));
+  VEHICLE_COLLISION_INVERSE_QUATERNION.copy(VEHICLE_COLLISION_QUATERNION).invert();
+  VEHICLE_COLLISION_LOCAL_ORIGIN.copy(origin)
+    .sub(VEHICLE_COLLISION_CENTER)
+    .applyQuaternion(VEHICLE_COLLISION_INVERSE_QUATERNION);
+  VEHICLE_COLLISION_LOCAL_DIRECTION.copy(direction)
+    .applyQuaternion(VEHICLE_COLLISION_INVERSE_QUATERNION);
+
+  let tMin = -Infinity;
+  let tMax = Infinity;
+  let hitAxis = null;
+  let hitAxisSign = 1;
+
+  for (const axis of ['x', 'y', 'z']) {
+    const originValue = VEHICLE_COLLISION_LOCAL_ORIGIN[axis];
+    const directionValue = VEHICLE_COLLISION_LOCAL_DIRECTION[axis];
+    const halfExtent = axis === 'x' ? halfX : axis === 'y' ? halfY : halfZ;
+
+    if (Math.abs(directionValue) <= 1e-8) {
+      if (originValue < -halfExtent || originValue > halfExtent) {
+        return null;
+      }
+      continue;
+    }
+
+    let t1 = (-halfExtent - originValue) / directionValue;
+    let t2 = (halfExtent - originValue) / directionValue;
+    let nearSign = -1;
+    if (t1 > t2) {
+      const swap = t1;
+      t1 = t2;
+      t2 = swap;
+      nearSign = 1;
+    }
+
+    if (t1 > tMin) {
+      tMin = t1;
+      hitAxis = axis;
+      hitAxisSign = nearSign;
+    }
+    tMax = Math.min(tMax, t2);
+    if (tMin > tMax) {
+      return null;
+    }
+  }
+
+  const hitDistance = tMin >= 0 ? tMin : (tMax >= 0 ? 0 : null);
+  if (!Number.isFinite(hitDistance) || hitDistance > far) {
+    return null;
+  }
+
+  VEHICLE_COLLISION_HIT_POINT.copy(direction).multiplyScalar(hitDistance).add(origin);
+  VEHICLE_COLLISION_HIT_NORMAL.set(0, 0, 0);
+  if (hitAxis) {
+    VEHICLE_COLLISION_HIT_NORMAL[hitAxis] = hitAxisSign;
+    VEHICLE_COLLISION_HIT_NORMAL.applyQuaternion(VEHICLE_COLLISION_QUATERNION).normalize();
+  }
+
+  return {
+    point: VEHICLE_COLLISION_HIT_POINT.clone(),
+    normal: hitAxis ? VEHICLE_COLLISION_HIT_NORMAL.clone() : null,
+    distance: hitDistance
+  };
+}
+
+function resolveVehiclePenetrationEntry(entry, position, radius, padding, extraPush) {
+  if (!entry?.position || !entry?.metrics?.size || !entry?.metrics?.center) {
+    return null;
+  }
+
+  const size = entry.metrics.size;
+  const center = entry.metrics.center;
+  const halfX = Math.max(0.18, size.x * 0.5 + padding + radius);
+  const halfY = Math.max(0.18, size.y * 0.5 + padding + radius * 0.5);
+  const halfZ = Math.max(0.18, size.z * 0.5 + padding + radius);
+  VEHICLE_COLLISION_CENTER.set(
+    entry.position.x + center.x,
+    entry.position.y + (Number.isFinite(entry.chassisHeight) ? entry.chassisHeight : 0) + center.y,
+    entry.position.z + center.z
+  );
+  VEHICLE_COLLISION_QUATERNION.setFromAxisAngle(VEHICLE_COLLISION_UP, Number(entry.yaw || 0));
+  VEHICLE_COLLISION_INVERSE_QUATERNION.copy(VEHICLE_COLLISION_QUATERNION).invert();
+  VEHICLE_PENETRATION_LOCAL_POSITION.copy(position)
+    .sub(VEHICLE_COLLISION_CENTER)
+    .applyQuaternion(VEHICLE_COLLISION_INVERSE_QUATERNION);
+
+  if (
+    Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.x) > halfX ||
+    Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.y) > halfY ||
+    Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.z) > halfZ
+  ) {
+    return null;
+  }
+
+  const pushX = halfX - Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.x);
+  const pushZ = halfZ - Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.z);
+  if (pushX <= 0 || pushZ <= 0) {
+    return null;
+  }
+
+  const offset = new THREE.Vector3();
+  if (pushX <= pushZ) {
+    const sign = Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.x) > 1e-4
+      ? Math.sign(VEHICLE_PENETRATION_LOCAL_POSITION.x)
+      : (Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.z) > 1e-4
+        ? -Math.sign(VEHICLE_PENETRATION_LOCAL_POSITION.z)
+        : 1);
+    offset.set(sign * (pushX + extraPush), 0, 0);
+    return {
+      offset,
+      quaternion: VEHICLE_COLLISION_QUATERNION.clone(),
+      depth: pushX
+    };
+  }
+
+  const sign = Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.z) > 1e-4
+    ? Math.sign(VEHICLE_PENETRATION_LOCAL_POSITION.z)
+    : (Math.abs(VEHICLE_PENETRATION_LOCAL_POSITION.x) > 1e-4
+      ? -Math.sign(VEHICLE_PENETRATION_LOCAL_POSITION.x)
+      : 1);
+  offset.set(0, 0, sign * (pushZ + extraPush));
+  return {
+    offset,
+    quaternion: VEHICLE_COLLISION_QUATERNION.clone(),
+    depth: pushZ
+  };
 }
 
 function setPerfCategory(object, category) {
@@ -403,6 +662,7 @@ const garageVehicleRuntime = createGarageVehicleRuntime({
     setChassisHeight: (runtime, chassisHeight) => setChassisHeight(runtime, chassisHeight),
     setSuspensionOverrides: (runtime, overrides) => setSuspensionOverrides(runtime, overrides),
     setWheelRadius: (runtime, wheelRadius) => setWheelRadius(runtime, wheelRadius),
+    setEngineType: (runtime, engineTypeId) => setEngineType(runtime, engineTypeId),
     getEffectiveExposure: () => getEffectiveExposure(),
     setEngineName: (value) => setEngineName(value),
     setEngineGear: (value) => setEngineGear(value),
@@ -463,6 +723,10 @@ const stageRuntime = createStageRuntime({
     disposeStageFeedback,
     createStageGroundSampler,
     createStageCollisionSampler,
+    decorateStageCollision: (stage) => {
+      stage.driveSampleCollision = drivingCollisionSampler;
+      stage.dynamicDriveSampleCollision = dynamicDrivingCollisionSampler;
+    },
     createBounceStagePhysics,
     destroyBounceStagePhysics,
     getVehicleMassKg: () => engineAudio.getDefinition().physics.massKg,
@@ -529,6 +793,20 @@ const agentSystem = createNpcCrowdSystem({
 });
 let gameRuntime = null;
 let appContext = null;
+const playerCollisionSampler = createCompositeCollisionSampler(() => [
+  (origin, direction, far) => appContext?.stage?.sampleCollision?.(origin, direction, far) || null,
+  samplePlayerVehicleCollision,
+  (origin, direction, far) => appContext?.agentSystem?.sampleCollision?.(origin, direction, far) || null
+]);
+const drivingCollisionSampler = createCompositeCollisionSampler(() => [
+  (origin, direction, far) => getCurrentStage()?.sampleCollision?.(origin, direction, far) || null,
+  sampleParkedVehicleCollision,
+  (origin, direction, far) => appContext?.agentSystem?.sampleCollision?.(origin, direction, far) || null
+]);
+const dynamicDrivingCollisionSampler = createCompositeCollisionSampler(() => [
+  sampleParkedVehicleCollision,
+  (origin, direction, far) => appContext?.agentSystem?.sampleCollision?.(origin, direction, far) || null
+]);
 
 initializeBuiltInCarOptions();
 initializeEngineOptions();
@@ -648,7 +926,8 @@ async function bootstrap() {
     carMount,
     wheelMount,
     sampleGround: stage.sampleGround,
-    sampleCollision: stage.sampleCollision,
+    sampleCollision: stage.driveSampleCollision || drivingCollisionSampler,
+    dynamicSampleCollision: stage.dynamicDriveSampleCollision || dynamicDrivingCollisionSampler,
     physics: stage.physics,
     camera,
     controls,
@@ -686,6 +965,8 @@ async function bootstrap() {
     focusStage,
     shouldUseStageOverview
   });
+  context.playerSampleCollision = playerCollisionSampler;
+  context.resolvePlayerVehiclePenetration = resolvePlayerVehiclePenetration;
   syncStageRenderingMode(context);
   appContext = context;
   playerSystem = createPlayerSystem({
@@ -801,7 +1082,7 @@ async function bootstrap() {
     } else {
       renderPipeline.render();
     }
-    updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution, currentStage);
+    updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution, currentStage, agentSystem);
   });
 }
 
@@ -876,7 +1157,7 @@ async function unlockEngineAudio(runtime) {
   }
 }
 
-function updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution, stage = null) {
+function updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution, stage = null, agentSystem = null) {
   const perf = state.performance;
   perf.frameAccumulator += deltaSeconds;
   perf.frameCount += 1;
@@ -911,6 +1192,7 @@ function updatePerformanceOverlay(renderer, deltaSeconds, performanceAttribution
   setPerfGeometries(`${memoryInfo.geometries.toLocaleString()}`);
   setPerfTextures(`${memoryInfo.textures.toLocaleString()}`);
   setPerfBreakdown(perf.drawCategorySummary);
+  setTrafficDebug(agentSystem?.getDebugSummary?.() || 'Traffic: n/a');
 }
 
 function syncOverlayVisibility() {

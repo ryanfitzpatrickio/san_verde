@@ -95,13 +95,34 @@ export function createNpcActor({ archetype, crowdKind, index = 0 }) {
     subtype: resolvedArchetype.subtype || crowdKind,
     archetype: resolvedArchetype,
     root,
-    updatePresentation({ position, yaw = 0, speed = 0, timeSeconds = 0, deltaSeconds = 0, velocity = null }) {
+    updatePresentation({
+      position,
+      yaw = 0,
+      speed = 0,
+      timeSeconds = 0,
+      deltaSeconds = 0,
+      velocity = null,
+      desiredVelocity = null,
+      corners = null,
+      laneTargetPoint = null,
+      laneTargetTangent = null,
+      laneDesiredSpeed = null,
+      targetPosition = null,
+      targetState = null
+    }) {
       if (trafficVehicle) {
         trafficVehicle.update({
           position,
           yaw,
           speed,
           velocity,
+          desiredVelocity,
+          corners,
+          laneTargetPoint,
+          laneTargetTangent,
+          laneDesiredSpeed,
+          targetPosition,
+          targetState,
           deltaSeconds
         });
         return;

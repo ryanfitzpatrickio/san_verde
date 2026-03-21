@@ -10,6 +10,7 @@
  *   npm run assets:optimize              # models + textures
  *   npm run assets:optimize:models       # GLBs only (faster)
  *   npm run assets:optimize:buildings    # San Verde building GLBs only
+ *   npm run assets:optimize:vehicles     # Built-in car/tire GLBs only
  *
  * Output folder: web-assets/
  * Upload web-assets/ to your storage bucket as a drop-in replacement.
@@ -20,8 +21,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions';
-import { draco, dedup, resample } from '@gltf-transform/functions';
+import { draco, dedup, prune, resample, simplify, textureCompress } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
+import { MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,7 +32,29 @@ const PUBLIC = path.join(ROOT, 'public');
 const OUT = path.join(ROOT, 'web-assets');
 const MODELS_ONLY = process.argv.includes('--models-only');
 const BUILDINGS_ONLY = process.argv.includes('--buildings-only');
-const SHOULD_PROCESS_TEXTURES = !MODELS_ONLY && !BUILDINGS_ONLY;
+const VEHICLES_ONLY = process.argv.includes('--vehicles-only');
+const SHOULD_PROCESS_TEXTURES = !MODELS_ONLY && !BUILDINGS_ONLY && !VEHICLES_ONLY;
+const BUILT_IN_VEHICLES_DIR = path.join(ROOT, 'src', 'assets', 'built-in-vehicles');
+
+const VEHICLE_BODY_OPTIMIZATION = Object.freeze({
+  ratio: 0.82,
+  error: 0.0008,
+  textures: {
+    color: { resize: [2048, 2048], format: 'webp', quality: 86, effort: 6 },
+    normal: { resize: [2048, 2048], format: 'webp', quality: 82, effort: 6, lossless: false },
+    data: { resize: [2048, 2048], format: 'webp', quality: 82, effort: 6 }
+  }
+});
+
+const VEHICLE_TIRE_OPTIMIZATION = Object.freeze({
+  ratio: 0.92,
+  error: 0.0005,
+  textures: {
+    color: { resize: [1024, 1024], format: 'webp', quality: 82, effort: 6 },
+    normal: { resize: [1024, 1024], format: 'webp', quality: 78, effort: 6, lossless: false },
+    data: { resize: [1024, 1024], format: 'webp', quality: 78, effort: 6 }
+  }
+});
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +109,49 @@ async function optimizeGlb(inputPath, outputPath) {
   await io.write(outputPath, doc);
 }
 
+async function optimizeVehicleGlb(inputPath, outputPath, config) {
+  await MeshoptSimplifier.ready;
+  const io = await getIO();
+  const doc = await io.read(inputPath);
+  await doc.transform(
+    dedup(),
+    resample(),
+    simplify({
+      simplifier: MeshoptSimplifier,
+      ratio: config.ratio,
+      error: config.error
+    }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.color.format,
+      resize: config.textures.color.resize,
+      quality: config.textures.color.quality,
+      effort: config.textures.color.effort,
+      slots: /(baseColorTexture|emissiveTexture)$/i
+    }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.normal.format,
+      resize: config.textures.normal.resize,
+      quality: config.textures.normal.quality,
+      effort: config.textures.normal.effort,
+      lossless: config.textures.normal.lossless,
+      slots: /normalTexture/i
+    }),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: config.textures.data.format,
+      resize: config.textures.data.resize,
+      quality: config.textures.data.quality,
+      effort: config.textures.data.effort,
+      slots: /(metallicRoughnessTexture|occlusionTexture)$/i
+    }),
+    prune(),
+    draco({ quantizationVolume: 'scene' })
+  );
+  await io.write(outputPath, doc);
+}
+
 // ─── texture optimization ─────────────────────────────────────────────────────
 
 async function optimizePng(inputPath, outputPath) {
@@ -117,11 +184,20 @@ async function processDir(inputDir, outputDir) {
     }
 
     const ext = path.extname(entry.name).toLowerCase();
+    const relPath = path.relative(PUBLIC, inPath).split(path.sep).join('/');
 
     if (ext === '.glb') {
+      if (VEHICLES_ONLY && !VEHICLE_GLB_PATHS.has(relPath)) {
+        continue;
+      }
       process.stdout.write(`  Compressing ${entry.name}...`);
       try {
-        await optimizeGlb(inPath, outPath);
+        if (VEHICLE_GLB_PATHS.has(relPath)) {
+          const config = relPath.includes('tire') ? VEHICLE_TIRE_OPTIMIZATION : VEHICLE_BODY_OPTIMIZATION;
+          await optimizeVehicleGlb(inPath, outPath, config);
+        } else {
+          await optimizeGlb(inPath, outPath);
+        }
         process.stdout.write('\r');
         await report(entry.name, inPath, outPath);
       } catch (err) {
@@ -143,9 +219,40 @@ async function processDir(inputDir, outputDir) {
   }
 }
 
+async function loadBuiltInVehicleGlbPaths() {
+  let entries = [];
+  try {
+    entries = await fs.readdir(BUILT_IN_VEHICLES_DIR, { withFileTypes: true });
+  } catch {
+    return new Set();
+  }
+
+  const paths = new Set();
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) {
+      continue;
+    }
+    const manifestPath = path.join(BUILT_IN_VEHICLES_DIR, entry.name);
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    addVehicleModelPath(paths, manifest?.body?.url);
+    addVehicleModelPath(paths, manifest?.tires?.front?.url);
+    addVehicleModelPath(paths, manifest?.tires?.rear?.url);
+  }
+
+  return paths;
+}
+
+function addVehicleModelPath(paths, assetUrl) {
+  if (typeof assetUrl !== 'string' || !assetUrl.startsWith('/models/') || !assetUrl.endsWith('.glb')) {
+    return;
+  }
+  paths.add(assetUrl.slice(1));
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 console.log(`\nOptimizing assets → web-assets/\n`);
+const VEHICLE_GLB_PATHS = await loadBuiltInVehicleGlbPaths();
 
 // Models
 console.log('── Models ────────────────────────────────────────────────────────');

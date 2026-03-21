@@ -24,6 +24,7 @@ export function createGarageVehicleRuntime({
     setChassisHeight,
     setSuspensionOverrides,
     setWheelRadius,
+    setEngineType,
     getEffectiveExposure,
     setEngineName,
     setEngineGear,
@@ -430,6 +431,11 @@ export function createGarageVehicleRuntime({
   function applyBuiltInCarPreset(preset, context) {
     if (!preset) {
       return;
+    }
+
+    const runtime = getGameRuntime();
+    if (preset.engineId && runtime) {
+      applyGarageSnapshot(setEngineType(runtime, preset.engineId));
     }
 
     state.exposure = preset.exposure;

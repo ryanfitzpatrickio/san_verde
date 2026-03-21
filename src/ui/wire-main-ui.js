@@ -357,6 +357,13 @@ export function wireMainUi(options) {
     return false;
   };
 
+  const clearDriveInputs = () => {
+    setDriveInput(context.gameRuntime, 'forward', false);
+    setDriveInput(context.gameRuntime, 'reverse', false);
+    setDriveInput(context.gameRuntime, 'left', false);
+    setDriveInput(context.gameRuntime, 'right', false);
+  };
+
   window.addEventListener('keydown', (event) => {
     unlockEngineAudio(context.gameRuntime);
 
@@ -437,6 +444,16 @@ export function wireMainUi(options) {
   window.addEventListener('keyup', (event) => {
     if (setDriveKey(event.code, false)) {
       event.preventDefault();
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    clearDriveInputs();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearDriveInputs();
     }
   });
 

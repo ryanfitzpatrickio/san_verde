@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { getBuiltInVehicleById } from '../assets/vehicle-registry.js';
 import { primeCarWheelRuntimeState } from './car-rig-helpers.js';
 import { attachMountedCarRig, buildMountedCarRig, resolveActiveCarTireAssets } from './car-rig.js';
-import { createMountedCarController } from './mounted-car-controller.js';
 
 export function createVehicleManager({
   config,
@@ -247,7 +246,15 @@ export function createVehicleManager({
       child.castShadow = false;
       child.receiveShadow = false;
     });
-    return { kind, group, body, wheels, yaw, drivePosition: drivePosition.clone() };
+    return {
+      kind,
+      group,
+      body,
+      wheels,
+      yaw,
+      drivePosition: drivePosition.clone(),
+      bodyMetrics: measureObjectBounds(body)
+    };
   }
 
   function createMountedCarProxy(
@@ -416,12 +423,23 @@ export function createVehicleManager({
         continue;
       }
       const distance = context.characterController.position.distanceTo(proxy.group.position);
-      if (distance < 1.5 && distance < closestDistance) {
+      const interactionDistance = getVehicleProxyInteractionDistance(proxy);
+      if (distance < interactionDistance && distance < closestDistance) {
         closest = proxy;
         closestDistance = distance;
       }
     }
     return closest;
+  }
+
+  function getVehicleProxyInteractionDistance(proxy) {
+    const size = proxy?.bodyMetrics?.size;
+    if (!size) {
+      return 1.5;
+    }
+
+    const horizontalHalfSpan = Math.max(size.x, size.z) * 0.5;
+    return Math.max(1.5, horizontalHalfSpan + 0.85);
   }
 
   function mountActiveVehicleFromState(context, kind) {

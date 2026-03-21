@@ -9,7 +9,7 @@ import { buildMountedCarRig } from '../vehicles/car-rig.js';
 import {
   collectEmbeddedWheelAssets
 } from '../vehicles/car-rig-helpers.js';
-import { createMountedCarController } from '../vehicles/mounted-car-controller.js';
+import { createMountedCarRuntime } from '../vehicles/car-runtime.js';
 import { inferVehicleForwardYawDegrees } from '../vehicles/vehicle-orientation.js';
 
 const loader = new GLTFLoader();
@@ -130,7 +130,7 @@ export function VehiclePreviewDialog(props) {
   }
 
   function applyPose({ steer, spin, suspension }) {
-    mountedVehicle?.controller?.applyPose({
+    mountedVehicle?.runtime?.setState({
       steerAngle: steer,
       wheelSpin: spin,
       suspensionOffset: suspension
@@ -238,7 +238,7 @@ export function VehiclePreviewDialog(props) {
         vehicleGroup,
         bodyMount,
         wheelMount,
-        controller: createMountedCarController({
+        runtime: createMountedCarRuntime({
           bodyMount,
           wheelMount,
           steeringWheelRig: presentation.steeringWheelRig,

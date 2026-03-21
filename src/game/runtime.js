@@ -7,10 +7,9 @@ import { emitSkidMark } from './skid-mark-system.js';
 import { resolveDriveCommandInputs, updateVehicleEngineSnapshot } from '../vehicles/car-drive-controller.js';
 import { updateSteerAngleFromInput } from '../vehicles/car-steering-controller.js';
 import {
-  applyMountedCarRuntimeTransform,
-  applyMountedCarRuntimeWheelAnimation,
-  ensureMountedCarRuntimeBase
-} from '../vehicles/mounted-car-controller.js';
+  applyCarRenderRigRuntimeState,
+  applyCarRenderRigWheelState
+} from '../vehicles/car-runtime.js';
 
 const COMPONENTS = {
   cameraRig: 'cameraRig',
@@ -25,8 +24,6 @@ const COMPONENTS = {
 };
 
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
-const RIGHT_AXIS = new THREE.Vector3(1, 0, 0);
-const FORWARD_AXIS = new THREE.Vector3(0, 0, 1);
 const ROOT_POSITION = new THREE.Vector3();
 const DRIVE_FORWARD = new THREE.Vector3();
 const DRIVE_UP = new THREE.Vector3();
@@ -45,18 +42,17 @@ const DESIRED_TARGET = new THREE.Vector3();
 const DESIRED_POSITION = new THREE.Vector3();
 const STEER_QUATERNION = new THREE.Quaternion();
 const YAW_QUATERNION = new THREE.Quaternion();
-const TILT_QUATERNION = new THREE.Quaternion();
-const PITCH_QUATERNION = new THREE.Quaternion();
-const ROLL_QUATERNION = new THREE.Quaternion();
 const BODY_QUATERNION = new THREE.Quaternion();
-const BASE_RIGHT_AXIS = new THREE.Vector3();
-const BASE_FORWARD_AXIS = new THREE.Vector3();
 const PHYSICS_FORWARD = new THREE.Vector3();
 const FEEDBACK_FORWARD = new THREE.Vector3();
 const SKID_WORLD = new THREE.Vector3();
 const SKID_FORWARD = new THREE.Vector3();
 const SKID_MARK_POSITION = new THREE.Vector3();
 const SKID_LAST = new THREE.Vector3();
+const KINEMATIC_PRE_STEP_POSITION = new THREE.Vector3();
+const MOUNTED_BODY_BOX = new THREE.Box3();
+const MOUNTED_BODY_SIZE = new THREE.Vector3();
+const MOUNTED_BODY_CENTER = new THREE.Vector3();
 
 function getSuspensionConfig(runtime, vehicleKind) {
   const baseConfig = runtime.config.suspension;
@@ -133,6 +129,23 @@ function getWheelLayoutMetrics(wheelMount) {
       frontWheel && rearWheel
         ? Math.max(Math.abs(frontWheel.position.z - rearWheel.position.z), 0.9)
         : null
+  };
+}
+
+function getMountedBodyMetrics(carMount) {
+  if (!carMount) {
+    return null;
+  }
+
+  carMount.updateMatrixWorld(true);
+  MOUNTED_BODY_BOX.setFromObject(carMount);
+  if (MOUNTED_BODY_BOX.isEmpty()) {
+    return null;
+  }
+
+  return {
+    size: MOUNTED_BODY_BOX.getSize(MOUNTED_BODY_SIZE).clone(),
+    center: MOUNTED_BODY_BOX.getCenter(MOUNTED_BODY_CENTER).clone()
   };
 }
 
@@ -216,11 +229,6 @@ function syncTransformFromBounceBody(transform, bundle) {
   transform.useBodyQuaternion = true;
 }
 
-function inferBaseAxisSign(baseQuaternion, axis, scratch) {
-  const projection = scratch.copy(axis).applyQuaternion(baseQuaternion).dot(axis);
-  return projection < 0 ? -1 : 1;
-}
-
 export function createGarageRuntime(options) {
   const world = createWorld();
   const vehicle = createEntity(world);
@@ -280,6 +288,7 @@ export function createGarageRuntime(options) {
     navigation: options.stage.navigation || null,
     sampleGround: options.sampleGround || options.stage.sampleGround || null,
     sampleCollision: options.sampleCollision || options.stage.sampleCollision || null,
+    dynamicSampleCollision: options.dynamicSampleCollision || options.stage.dynamicSampleCollision || null,
     physics: options.physics || options.stage.physics || null,
     skidMarks: options.stage.skidMarks || null
   });
@@ -490,7 +499,8 @@ export function setGarageStage(runtime, stageDefinition) {
   stage.driveBounds = stageDefinition.driveBounds;
   stage.navigation = stageDefinition.navigation || null;
   stage.sampleGround = stageDefinition.sampleGround || null;
-  stage.sampleCollision = stageDefinition.sampleCollision || null;
+  stage.sampleCollision = stageDefinition.driveSampleCollision || stageDefinition.sampleCollision || null;
+  stage.dynamicSampleCollision = stageDefinition.dynamicDriveSampleCollision || null;
   stage.physics = stageDefinition.physics || null;
   stage.skidMarks = stageDefinition.skidMarks || null;
   physics.bundle = stage.physics;
@@ -506,7 +516,8 @@ export function refreshGarageStagePhysics(runtime, stageDefinition) {
   const engine = getVehicleComponent(runtime, COMPONENTS.engine);
 
   stage.sampleGround = stageDefinition.sampleGround || null;
-  stage.sampleCollision = stageDefinition.sampleCollision || null;
+  stage.sampleCollision = stageDefinition.driveSampleCollision || stageDefinition.sampleCollision || null;
+  stage.dynamicSampleCollision = stageDefinition.dynamicDriveSampleCollision || null;
   stage.navigation = stageDefinition.navigation || null;
   stage.physics = stageDefinition.physics || null;
   stage.skidMarks = stageDefinition.skidMarks || null;
@@ -526,7 +537,8 @@ export function refreshGarageStagePhysics(runtime, stageDefinition) {
       vehiclePhysics.massKg,
       transform.position,
       transform.yaw,
-      renderRig?.wheelMount
+      renderRig?.wheelMount,
+      getMountedBodyMetrics(renderRig?.carMount)
     );
     if (physics.vehicleKind === 'bike' && physics.bundle?.vehicleSpec?.wheelRadius) {
       controller.wheelRadius = physics.bundle.vehicleSpec.wheelRadius;
@@ -582,7 +594,8 @@ export function setGarageVehicleKind(runtime, vehicleKind) {
       vehiclePhysics.massKg,
       transform.position,
       transform.yaw,
-      renderRig?.wheelMount
+      renderRig?.wheelMount,
+      getMountedBodyMetrics(renderRig?.carMount)
     );
     if (vehicleKind === 'bike' && physics.bundle?.vehicleSpec?.wheelRadius) {
       controller.wheelRadius = physics.bundle.vehicleSpec.wheelRadius;
@@ -717,6 +730,7 @@ function updateDriveSystem(runtime, deltaSeconds) {
   for (const entity of queryEntities(runtime.world, [
     COMPONENTS.transform,
     COMPONENTS.vehicleController,
+    COMPONENTS.driveInput,
     COMPONENTS.engine,
     COMPONENTS.cameraRig,
     COMPONENTS.stageBounds,
@@ -725,6 +739,7 @@ function updateDriveSystem(runtime, deltaSeconds) {
   ])) {
     const transform = getComponent(runtime.world, entity, COMPONENTS.transform);
     const controller = getComponent(runtime.world, entity, COMPONENTS.vehicleController);
+    const driveInput = getComponent(runtime.world, entity, COMPONENTS.driveInput);
     const engine = getComponent(runtime.world, entity, COMPONENTS.engine);
     const cameraRig = getComponent(runtime.world, entity, COMPONENTS.cameraRig);
     const stage = getComponent(runtime.world, entity, COMPONENTS.stageBounds);
@@ -784,8 +799,15 @@ function updateDriveSystem(runtime, deltaSeconds) {
       }
 
       if (controller.driveMode) {
+        KINEMATIC_PRE_STEP_POSITION.copy(transform.position);
         const tractionCoefficient =
           vehiclePhysics.tractionCoefficient * (drivingStyle.tractionCoefficientMultiplier ?? 1);
+        const hasDriveIntent =
+          Number(driveInput?.forward || 0) > 0.02 ||
+          Number(driveInput?.reverse || 0) > 0.02 ||
+          Number(engine.snapshot?.engineThrottle || 0) > 0.02;
+        const stopHoldSpeed = drivingStyle.stopHoldSpeedMps ?? 0.32;
+        const stopHoldBrakeForce = vehiclePhysics.massKg * 9.81 * (drivingStyle.stopHoldForceCoeff ?? 0.22);
         const lowSpeedBlend = THREE.MathUtils.clamp(
           1 - Math.abs(controller.speed) / Math.max(drivingStyle.lowSpeedDriveForceBlendSpeedMps ?? 10, 0.001),
           0,
@@ -796,14 +818,18 @@ function updateDriveSystem(runtime, deltaSeconds) {
           drivingStyle.lowSpeedDriveForceMultiplier ?? (drivingStyle.driveForceMultiplier ?? 1),
           lowSpeedBlend
         ) * (physics.vehicleKind === 'bike' ? Number(physics.bundle?.vehicleSpec?.driveForceMultiplier ?? 1) : 1);
-        const wheelForce = clamp(
+        let wheelForce = clamp(
           engine.snapshot.engineWheelForceN * driveForceMultiplier,
           -vehiclePhysics.massKg * 9.81 * tractionCoefficient,
           vehiclePhysics.massKg * 9.81 * tractionCoefficient
         );
         const tractionForceLimit = vehiclePhysics.massKg * 9.81 * tractionCoefficient;
-        const brakeForce =
+        let brakeForce =
           Math.max(engine.snapshot.engineBrakeForceN, 0) * (drivingStyle.brakeForceMultiplier ?? 1);
+        if (!hasDriveIntent && Math.abs(controller.speed) < stopHoldSpeed) {
+          wheelForce = 0;
+          brakeForce = Math.max(brakeForce, stopHoldBrakeForce);
+        }
         const stepped = stepBounceVehicle(physics.bundle, {
           deltaSeconds,
           wheelForce,
@@ -833,11 +859,50 @@ function updateDriveSystem(runtime, deltaSeconds) {
         });
 
         if (stepped) {
-          transform.position.copy(stepped.position);
+          const nextSteppedSpeed = (!hasDriveIntent && Math.abs(stepped.speed) < 0.06) ? 0 : stepped.speed;
+          if (physics.vehicleKind === 'bike' && (stage.dynamicSampleCollision || stage.sampleCollision)) {
+            TRAVEL_DELTA.copy(stepped.position).sub(KINEMATIC_PRE_STEP_POSITION);
+            transform.position.copy(KINEMATIC_PRE_STEP_POSITION);
+            resolveForwardCollision(runtime, transform, controller, stage, TRAVEL_DELTA, {
+              sampleCollision: stage.dynamicSampleCollision || stage.sampleCollision
+            });
+            transform.position.add(TRAVEL_DELTA);
+            if (physics.bundle?.chassisBody) {
+              physics.bundle.chassisBody.position.set([
+                transform.position.x,
+                transform.position.y + physics.bundle.rootOffsetY,
+                transform.position.z
+              ]);
+              physics.bundle.chassisBody.orientation.set([
+                stepped.quaternion.x,
+                stepped.quaternion.y,
+                stepped.quaternion.z,
+                stepped.quaternion.w
+              ]);
+              physics.bundle.chassisBody.commitChanges();
+              if (physics.bundle.kinematicState) {
+                physics.bundle.kinematicState.speed = nextSteppedSpeed;
+                physics.bundle.kinematicState.yaw = stepped.yaw;
+              }
+            }
+          } else {
+            transform.position.copy(stepped.position);
+          }
+          if (
+            physics.vehicleKind === 'bike' &&
+            !hasDriveIntent &&
+            Math.abs(stepped.speed) < 0.18 &&
+            physics.bundle?.chassisBody
+          ) {
+            physics.bundle.chassisBody.linearVelocity.x = 0;
+            physics.bundle.chassisBody.linearVelocity.z = 0;
+            physics.bundle.chassisBody.angularVelocity.y *= 0.35;
+            physics.bundle.chassisBody.commitChanges();
+          }
           transform.bodyQuaternion.copy(stepped.quaternion);
           transform.yaw = stepped.yaw;
           transform.useBodyQuaternion = true;
-          controller.speed = stepped.speed;
+          controller.speed = nextSteppedSpeed;
           controller.yawRate = stepped.yawRate;
           controller.wheelSpin += (controller.speed * deltaSeconds) / Math.max(controller.wheelRadius, 0.12);
         }
@@ -881,6 +946,9 @@ function updateDriveSystem(runtime, deltaSeconds) {
       const speed = controller.speed;
       const speedAbs = Math.abs(speed);
       const speedSign = Math.sign(speed) || 1;
+      const hasDriveIntent = throttleInput > 0.02 || brakeInput > 0.02;
+      const stopHoldSpeed = drivingStyle.stopHoldSpeedMps ?? 0.32;
+      const stopHoldForce = vehiclePhysics.massKg * 9.81 * (drivingStyle.stopHoldForceCoeff ?? 0.22);
       const airDensity = 1.225;
       const aeroDragForce =
         0.5 * airDensity * vehiclePhysics.dragCoefficient * vehiclePhysics.frontalAreaM2 * speedAbs * speedAbs * speedSign;
@@ -909,11 +977,25 @@ function updateDriveSystem(runtime, deltaSeconds) {
         -vehiclePhysics.massKg * 9.81 * tractionCoefficient,
         vehiclePhysics.massKg * 9.81 * tractionCoefficient
       );
-      const netForce = wheelForce - aeroDragForce - rollingResistanceForce - brakeForce;
+      let netForce = wheelForce - aeroDragForce - rollingResistanceForce - brakeForce;
+      if (!hasDriveIntent && speedAbs < stopHoldSpeed) {
+        const holdForce = speedAbs > 0.001
+          ? -Math.sign(controller.speed) * stopHoldForce
+          : 0;
+        if (Math.abs(netForce) < stopHoldForce * 1.15) {
+          netForce = holdForce;
+        }
+      }
       const acceleration = netForce / vehiclePhysics.massKg;
       controller.speed += acceleration * deltaSeconds;
 
-      if (Math.abs(controller.speed) < 0.05 && engine.snapshot.engineBrakeForceN > 0 && Math.abs(wheelForce) < 160) {
+      if (
+        Math.abs(controller.speed) < 0.05 &&
+        (
+          (!hasDriveIntent && Math.abs(wheelForce) < 220) ||
+          (engine.snapshot.engineBrakeForceN > 0 && Math.abs(wheelForce) < 160)
+        )
+      ) {
         controller.speed = 0;
       }
 
@@ -1018,8 +1100,8 @@ function updateDriveSystem(runtime, deltaSeconds) {
   }
 }
 
-function resolveForwardCollision(runtime, transform, controller, stage, travelDelta) {
-  const sampleCollision = stage.sampleCollision;
+function resolveForwardCollision(runtime, transform, controller, stage, travelDelta, options = {}) {
+  const sampleCollision = options.sampleCollision || stage.sampleCollision;
   if (!sampleCollision) {
     return;
   }
@@ -1555,39 +1637,19 @@ function applyVehicleTransformSystem(runtime) {
     const rootVisualOffsetY = Number(renderRig.carMount.userData.rootVisualOffsetY || 0);
     const rootChassisHeight = chassisHeightMode === 'root' ? transform.chassisHeight + rootVisualOffsetY : rootVisualOffsetY;
     const bodyChassisHeight = chassisHeightMode === 'body' ? transform.chassisHeight : 0;
-
-    renderRig.vehicleRoot.position.copy(transform.position);
-    renderRig.vehicleRoot.position.y += rootChassisHeight;
-    if (transform.useBodyQuaternion) {
-      renderRig.vehicleRoot.quaternion.copy(transform.bodyQuaternion);
-    } else {
-      renderRig.vehicleRoot.quaternion.setFromAxisAngle(UP_AXIS, transform.yaw);
-    }
-
-    const base = ensureMountedCarRuntimeBase(renderRig);
-    const carMountBaseQuaternion = base?.carMountBaseQuaternion || renderRig.carMount.quaternion;
-
-    const pitchAxisSign = inferBaseAxisSign(carMountBaseQuaternion, RIGHT_AXIS, BASE_RIGHT_AXIS);
-    const rollAxisSign = inferBaseAxisSign(carMountBaseQuaternion, FORWARD_AXIS, BASE_FORWARD_AXIS);
-
-    PITCH_QUATERNION.setFromAxisAngle(RIGHT_AXIS, suspension.pitch * pitchAxisSign);
     const isBike = renderRig.carMount.userData.vehicleKind === 'bike';
-    const bikeLean = isBike ? controller.bikeLeanAngle || 0 : 0;
-    const totalRoll = suspension.roll + bikeLean;
-    ROLL_QUATERNION.setFromAxisAngle(FORWARD_AXIS, totalRoll * rollAxisSign);
-    TILT_QUATERNION.copy(PITCH_QUATERNION).multiply(ROLL_QUATERNION);
-
-    if (isBike) {
-      renderRig.wheelMount.quaternion.multiply(ROLL_QUATERNION);
-    }
-
-    applyMountedCarRuntimeTransform({
+    applyCarRenderRigRuntimeState({
       renderRig,
-      vehiclePosition: renderRig.vehicleRoot.position,
-      vehicleQuaternion: renderRig.vehicleRoot.quaternion,
+      runtimeState: controller,
+      transformPosition: transform.position,
+      transformYaw: transform.yaw,
+      transformQuaternion: transform.bodyQuaternion,
+      useBodyQuaternion: transform.useBodyQuaternion,
+      rootChassisHeight,
       bodyChassisHeight,
-      bodyTiltQuaternion: TILT_QUATERNION,
-      wheelTiltQuaternion: isBike ? ROLL_QUATERNION : null
+      suspensionPitch: suspension.pitch,
+      suspensionRoll: suspension.roll,
+      upAxis: UP_AXIS
     });
   }
 }
@@ -1596,20 +1658,9 @@ function updateWheelAnimationSystem(runtime) {
   for (const entity of queryEntities(runtime.world, [COMPONENTS.vehicleController, COMPONENTS.renderRig])) {
     const controller = getComponent(runtime.world, entity, COMPONENTS.vehicleController);
     const renderRig = getComponent(runtime.world, entity, COMPONENTS.renderRig);
-    const wheelSpinDirection = Number(
-      renderRig.carMount.userData.wheelSpinDirection ?? 1
-    );
-    const steerDirection = Number(
-      renderRig.carMount.userData.steerDirection ??
-        (renderRig.carMount.userData.vehicleKind === 'bike' ? 1 : -1)
-    );
-
-    applyMountedCarRuntimeWheelAnimation({
+    applyCarRenderRigWheelState({
       renderRig,
-      steerAngle: controller.steerAngle,
-      wheelSpin: controller.wheelSpin,
-      wheelSpinDirection,
-      steerDirection,
+      runtimeState: controller,
       upAxis: UP_AXIS
     });
   }
