@@ -37,7 +37,8 @@ export function wireMainUi(options) {
     triggerDownload,
     slugifyFilename,
     stripFileExtension,
-    applyUploadedTexture
+    applyUploadedTexture,
+    exportCarAsset
   } = options;
 
   ui.builtInCar.addEventListener('change', async () => {
@@ -59,11 +60,8 @@ export function wireMainUi(options) {
   ui.driveStyle.addEventListener('change', () => {
     state.drivingStyle = ui.driveStyle.value;
     applyGarageSnapshot(setDrivingStyle(context.gameRuntime, state.drivingStyle));
-    setStatus(
-      state.drivingStyle === 'arcade'
-        ? 'Arcade mode enabled'
-        : 'Sim mode enabled'
-    );
+    const style = context.gameRuntime?.config?.drivingStyles?.[state.drivingStyle];
+    setStatus(`${style?.label || 'Driving'} mode enabled`);
   });
 
   ui.stageType.addEventListener('change', async () => {
@@ -409,7 +407,8 @@ export function wireMainUi(options) {
       return;
     }
 
-    if (state.drivingStyle === 'arcade') {
+    const transmissionMode = context.gameRuntime?.config?.drivingStyles?.[state.drivingStyle]?.transmissionMode;
+    if (transmissionMode === 'automatic') {
       return;
     }
 
@@ -551,26 +550,13 @@ export function wireMainUi(options) {
   });
 
   ui.exportCar.addEventListener('click', async () => {
-    if (!state.carAsset) {
-      setStatus('Load a car GLB before exporting');
-      return;
-    }
-
     try {
       setStatus('Exporting updated car GLB');
-      const binary = await context.gltfExporter.parseAsync(state.carAsset, {
-        binary: true,
-        onlyVisible: false,
-        maxTextureSize: 8192
-      });
-      triggerDownload(
-        new Blob([binary], { type: 'model/gltf-binary' }),
-        `${slugifyFilename(stripFileExtension(state.carSource || 'car'))}-retouched.glb`
-      );
+      await exportCarAsset();
       setStatus('Updated car GLB exported');
     } catch (error) {
       console.error(error);
-      setStatus('GLB export failed');
+      setStatus(error?.message === 'Load a car GLB before exporting' ? error.message : 'GLB export failed');
     }
   });
 

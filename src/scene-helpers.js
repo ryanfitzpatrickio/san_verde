@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import { ssgi } from 'three/addons/tsl/display/SSGINode.js';
 import { mrt, normalView, output, pass, renderOutput } from 'three/tsl';
+import { normalizeWheelAnchorName } from './vehicles/vehicle-orientation.js';
 
 export function createSceneHelpers({ state, ui, config }) {
   function mountSteeringWheelAttachment(rootObject) {
@@ -223,20 +224,6 @@ export function createSceneHelpers({ state, ui, config }) {
     }));
   }
 
-  function normalizeWheelAnchorName(name) {
-    const lower = name.toLowerCase();
-    const isFront = /front|frt/.test(lower);
-    const isRear = /rear|back|rr/.test(lower);
-    const isLeft = /left|_l\b|\.l\b|-l\b/.test(lower);
-    const isRight = /right|_r\b|\.r\b|-r\b/.test(lower);
-
-    if ((isFront || isRear) && (isLeft || isRight)) {
-      return `${isFront ? 'front' : 'rear'}-${isLeft ? 'left' : 'right'}`;
-    }
-
-    return null;
-  }
-
   function collectTireSocketPosition(rootObject) {
     let socket = null;
     rootObject.traverse((child) => {
@@ -311,6 +298,12 @@ export function createSceneHelpers({ state, ui, config }) {
         return;
       }
 
+      if (isInteriorCollisionExclusion(child)) {
+        child.userData.noCollision = true;
+        child.userData.noSuspension = true;
+        child.userData.noGround = true;
+      }
+
       if (isWindowMesh(child) && !child.userData.windowGlassPrepared) {
         child.material = cloneMaterialSet(child.material);
         child.userData.windowGlassPrepared = true;
@@ -381,6 +374,10 @@ export function createSceneHelpers({ state, ui, config }) {
 
   function isWindowMesh(mesh) {
     return Boolean(mesh?.name) && /windshield|window(_driver|_passenger|_top)?|glass/i.test(mesh.name);
+  }
+
+  function isInteriorCollisionExclusion(mesh) {
+    return Boolean(mesh?.name) && /^interior$/i.test(String(mesh.name).trim());
   }
 
   function cloneMaterialSet(material) {

@@ -1,13 +1,17 @@
 import * as THREE from 'three';
 
 import { BaseVehicle } from './base-vehicle.js';
+import { normalizeWheelAnchorName } from './vehicle-orientation.js';
 
 export class CarVehicle extends BaseVehicle {
-  mountAsset({ rawAsset }) {
+  mountAsset({ rawAsset, stripEmbeddedWheels = false }) {
     const { body } = this.createBodyWrapper(rawAsset, {
       wrapperName: 'car-wrapper',
-      targetSpan: this.config.targetSpan
+      targetSpan: this.config.targetSpan,
+      prepareAsset: stripEmbeddedWheels ? (asset) => this.stripEmbeddedWheelVisuals(asset) : null
     });
+    const anchors = this.helpers.collectWheelAnchors(body);
+    const embeddedWheels = stripEmbeddedWheels ? null : this.helpers.collectEmbeddedWheelAssets(body);
     const doorRig = this.helpers.createDoorRig(body);
     const steeringWheelRig =
       this.helpers.collectSteeringWheelRig(body) || this.helpers.mountSteeringWheelAttachment(body);
@@ -17,12 +21,57 @@ export class CarVehicle extends BaseVehicle {
       doorRig,
       steeringWheelRig,
       metrics: this.helpers.measureObjectBounds(body),
-      anchors: this.helpers.collectWheelAnchors(body)
+      anchors,
+      embeddedWheels
     };
   }
 
-  remountWheels({ wheelMount, activeTireAssets, carMetrics, carWheelAnchors }) {
+  stripEmbeddedWheelVisuals(rootObject) {
+    const wheelVisuals = [];
+    rootObject.traverse((child) => {
+      if (child === rootObject || !child?.name || /steering/i.test(child.name)) {
+        return;
+      }
+
+      const anchorName = normalizeWheelAnchorName(child.name);
+      if (!anchorName || (!child.isMesh && child.children.length === 0)) {
+        return;
+      }
+
+      wheelVisuals.push(child);
+    });
+
+    for (const child of wheelVisuals) {
+      child.parent?.remove(child);
+    }
+  }
+
+  remountWheels({ wheelMount, activeTireAssets, carMetrics, carWheelAnchors, embeddedWheelAssets = null }) {
     this.helpers.clearGroup(wheelMount);
+
+    if ((!activeTireAssets.front && !activeTireAssets.rear) && embeddedWheelAssets?.length === 4) {
+      let radiusSum = 0;
+      let radiusCount = 0;
+      const anchorMap = new Map((carWheelAnchors || []).map((anchor) => [anchor.name, anchor.position]));
+      for (const embedded of embeddedWheelAssets) {
+        const tireProfile = this.helpers.measureTireProfile(embedded.asset);
+        if (!tireProfile) {
+          continue;
+        }
+        const wheel = this.createEmbeddedWheel(embedded.asset, tireProfile, { name: embedded.name });
+        const position = anchorMap.get(embedded.name);
+        if (position) {
+          wheel.position.set(...position);
+        }
+        this.helpers.prepareRenderable(wheel);
+        wheelMount.add(wheel);
+        radiusSum += tireProfile.diameter * 0.5;
+        radiusCount += 1;
+      }
+
+      this.state.wheelRadius = radiusCount ? radiusSum / radiusCount : 0.42;
+      return this.state.wheelRadius;
+    }
 
     if (!activeTireAssets.front && !activeTireAssets.rear) {
       this.state.wheelRadius = 0.42;
@@ -73,6 +122,24 @@ export class CarVehicle extends BaseVehicle {
     }
 
     return this.state.wheelRadius;
+  }
+
+  createEmbeddedWheel(rawAsset, tireProfile, anchor) {
+    const { wheel, spinPivot } = this.createMountedWheelShell(
+      rawAsset,
+      tireProfile,
+      1,
+      anchor.name,
+      anchor.name.includes('left') ? -1 : 1
+    );
+
+    // Embedded wheels are already authored with the correct facing/orientation.
+    // The generic loose-tire alignment path over-rotates them.
+    wheel.userData.baseQuaternion = wheel.quaternion.clone();
+    wheel.userData.canSteer = anchor.name.includes('front');
+    wheel.userData.steerSign = anchor.name.includes('right') ? -1 : 1;
+    spinPivot.userData.spinSign = anchor.name.includes('left') ? -1 : 1;
+    return wheel;
   }
 
   deriveWheelLayout(carMetrics, tireProfile, carWheelAnchors) {
@@ -131,7 +198,7 @@ export class CarVehicle extends BaseVehicle {
   }
 
   createMountedWheel(rawAsset, tireProfile, scale, anchor) {
-    const { wheel, spinPivot } = this.createMountedWheelShell(
+    const { wheel, spinPivot, asset } = this.createMountedWheelShell(
       rawAsset,
       tireProfile,
       scale,
@@ -144,8 +211,22 @@ export class CarVehicle extends BaseVehicle {
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...this.state.tireRotation))
     );
 
+    if (anchor.name.includes('left')) {
+      wheel.quaternion.multiply(
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(...this.state.leftSideTireRotation))
+      );
+      if (this.state.leftSideTireMirror) {
+        this.applyMirroredWheelMaterialState(asset, tireProfile);
+      }
+    }
+
     if (anchor.name.includes('right')) {
-      wheel.rotateX(Math.PI);
+      wheel.quaternion.multiply(
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(...this.state.rightSideTireRotation))
+      );
+      if (this.state.rightSideTireMirror) {
+        this.applyMirroredWheelMaterialState(asset, tireProfile);
+      }
     }
 
     wheel.userData.baseQuaternion = wheel.quaternion.clone();
@@ -153,5 +234,30 @@ export class CarVehicle extends BaseVehicle {
     wheel.userData.steerSign = anchor.name.includes('right') ? -1 : 1;
     spinPivot.userData.spinSign = anchor.name.includes('left') ? -1 : 1;
     return wheel;
+  }
+
+  applyMirroredWheelMaterialState(asset, tireProfile) {
+    const mirrorAxis = this.helpers.axisToRotationProperty(tireProfile.widthAxis);
+    asset.scale[mirrorAxis] *= -1;
+    asset.traverse((child) => {
+      if (!child?.isMesh) {
+        return;
+      }
+      child.material = Array.isArray(child.material)
+        ? child.material.map((entry) => {
+            const clone = entry?.clone?.() || entry;
+            if (clone && 'side' in clone) {
+              clone.side = THREE.DoubleSide;
+            }
+            return clone;
+          })
+        : (() => {
+            const clone = child.material?.clone?.() || child.material;
+            if (clone && 'side' in clone) {
+              clone.side = THREE.DoubleSide;
+            }
+            return clone;
+          })();
+    });
   }
 }

@@ -210,6 +210,7 @@ function createPortalObject(label, color) {
     })
   );
   labelMesh.position.y = centerY + RADIUS + 0.9;
+  labelMesh.rotation.y = Math.PI;
   group.add(labelMesh);
 
   return group;

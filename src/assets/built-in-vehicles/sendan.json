@@ -1,0 +1,49 @@
+{
+  "id": "sendan",
+  "order": 999,
+  "label": "Sendan",
+  "kind": "car",
+  "body": {
+    "url": "/models/sedan2-validated-validated-validated.glb",
+    "sourceLabel": "public/models/sedan2-validated-validated-validated.glb"
+  },
+  "tires": {
+    "front": {
+      "url": "/models/fronttire.glb",
+      "sourceLabel": "public/models/fronttire.glb"
+    },
+    "rear": {
+      "url": "/models/fronttire.glb",
+      "sourceLabel": "public/models/fronttire.glb"
+    }
+  },
+  "preset": {
+    "exposure": 1.15,
+    "environmentIntensity": 1.2,
+    "tireScale": 0.93,
+    "parkedWheelOffsetY": 0,
+    "frontAxleRatio": 0.18,
+    "rearAxleRatio": 0.245,
+    "rideHeight": 0.115,
+    "chassisHeight": 0.115,
+    "bodyVisualOffsetY": -0.165,
+    "sideInset": 0.07,
+    "tireRotation": [
+      0,
+      -3.141592653589793,
+      0
+    ],
+    "leftSideTireRotation": [
+      0,
+      0,
+      0
+    ],
+    "leftSideTireMirror": true,
+    "rightSideTireRotation": [
+      3.141592653589793,
+      0,
+      0
+    ],
+    "rightSideTireMirror": true
+  }
+}

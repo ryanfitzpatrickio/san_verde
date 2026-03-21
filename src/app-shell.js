@@ -7,7 +7,7 @@ import { mountHUD } from './ui/HUD.jsx';
 export const MODEL_CONFIG = {
   defaultCarId: 'mustang',
   defaultStageId: 'test_course',
-  defaultDrivingStyle: 'arcade',
+  defaultDrivingStyle: 'hero',
   defaultCarUrl: resolveModelUrl('/models/mustang.glb'),
   defaultTireUrl: resolveModelUrl('/models/tire_s.glb'),
   defaultSteeringWheelUrl: resolveModelUrl('/models/steering_wheel.glb'),
@@ -29,6 +29,12 @@ export const MODEL_CONFIG = {
   bikeSpawnYaw: -Math.PI * 0.5,
   valkyrieSpawnPosition: new THREE.Vector3(-12, 0, 18),
   valkyrieSpawnYaw: Math.PI * 0.5,
+  sendanSpawnPosition: new THREE.Vector3(24, 0, 18),
+  sendanSpawnYaw: Math.PI,
+  leftSideTireRotation: [0, 0, 0],
+  leftSideTireMirror: false,
+  rightSideTireRotation: [Math.PI, 0, 0],
+  rightSideTireMirror: false,
   referenceWheelDiameter: 0.84,
   driveAcceleration: 12,
   reverseAcceleration: 8,
@@ -100,6 +106,28 @@ export const MODEL_CONFIG = {
       autoUpshiftRpmMultiplier: 1.08,
       autoDownshiftRpmMultiplier: 1.1,
       autoDirectionShiftSpeedMps: 0.95
+    },
+    hero: {
+      id: 'hero',
+      label: 'Hero',
+      description: 'Automatic transmission / extreme acceleration / heavy brakes / aggressive drift assist',
+      transmissionMode: 'automatic',
+      maxSteerAngleMultiplier: 1.48,
+      steeringResponseMultiplier: 2.2,
+      steeringReturnMultiplier: 2.05,
+      highSpeedSteerFactorMultiplier: 1.92,
+      throttleCurveExponent: 0.42,
+      driveForceMultiplier: 2.15,
+      lowSpeedDriveForceMultiplier: 3.1,
+      lowSpeedDriveForceBlendSpeedMps: 22,
+      tractionCoefficientMultiplier: 1.12,
+      brakeForceMultiplier: 1.95,
+      corneringDragMultiplier: 0.16,
+      rwdYawGainBoost: 1.42,
+      rwdGripLossBoost: 0.42,
+      autoUpshiftRpmMultiplier: 1.18,
+      autoDownshiftRpmMultiplier: 1.24,
+      autoDirectionShiftSpeedMps: 1.05
     }
   },
   suspension: {
@@ -540,8 +568,14 @@ export function createInitialState(ui) {
     bikeWheelAsset: null,
     valkyrieAsset: null,
     valkyrieTireAsset: null,
+    sendanAsset: null,
+    sendanTireAssets: {
+      front: null,
+      rear: null
+    },
     carMetrics: null,
     carWheelAnchors: null,
+    carEmbeddedWheelAssets: null,
     carTextureSlots: [],
     selectedCarTextureSlotId: '',
     selectedBuiltInCarId: MODEL_CONFIG.defaultCarId,
@@ -564,6 +598,10 @@ export function createInitialState(ui) {
       Number(ui.rotateY.value),
       Number(ui.rotateZ.value)
     ],
+    leftSideTireRotation: [...MODEL_CONFIG.leftSideTireRotation],
+    leftSideTireMirror: MODEL_CONFIG.leftSideTireMirror,
+    rightSideTireRotation: [...MODEL_CONFIG.rightSideTireRotation],
+    rightSideTireMirror: MODEL_CONFIG.rightSideTireMirror,
     bikeFrontWheelOffset: MODEL_CONFIG.bikeFrontWheelOffset.clone(),
     bikeRearWheelOffset: MODEL_CONFIG.bikeRearWheelOffset.clone(),
     bikeFrontWheelRotation: [...MODEL_CONFIG.bikeFrontWheelRotation],
@@ -616,7 +654,8 @@ export function createInitialState(ui) {
     parkedVehicleProxies: {
       car: null,
       bike: null,
-      valkyrie: null
+      valkyrie: null,
+      sendan: null
     },
     objectUrls: {
       car: null,

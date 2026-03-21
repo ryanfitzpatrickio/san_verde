@@ -1,4 +1,12 @@
 import * as THREE from 'three';
+import {
+  loadHumanoidActor,
+  resetHumanoidRootMotionSample,
+  stabilizeHumanoidRootMotion,
+  setHumanoidActorAction,
+  setHumanoidActorVisible,
+  updateHumanoidActor
+} from './game/humanoid-actor.js';
 
 const CHARACTER_DEBUG = false;
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
@@ -24,7 +32,6 @@ const SLIDE_MOVE = new THREE.Vector3();
 const GROUND_PROBE_ORIGIN = new THREE.Vector3();
 const GROUND_OFFSET = new THREE.Vector3();
 const PROBE_HEIGHTS = [0.35, 0.95, 1.55];
-const METRIC_WORLD = new THREE.Vector3();
 
 function logCharacter(event, payload) {
   if (!CHARACTER_DEBUG) {
@@ -34,70 +41,21 @@ function logCharacter(event, payload) {
 }
 
 export async function loadCharacterController({ fbxLoader, modelUrl, animationUrls, config }) {
-  const model = await fbxLoader.loadAsync(modelUrl);
-  prepareCharacterModel(model);
-
-  model.updateMatrixWorld(true);
-  CHARACTER_BOX.setFromObject(model);
-  const size = CHARACTER_BOX.getSize(CHARACTER_SIZE);
-  logCharacter('load:source-bounds', {
+  const actor = await loadHumanoidActor({
+    fbxLoader,
     modelUrl,
-    minY: CHARACTER_BOX.min.y,
-    maxY: CHARACTER_BOX.max.y,
-    height: size.y
+    animationUrls,
+    config
   });
-  if (!CHARACTER_BOX.isEmpty() && size.y > 0.01) {
-    const scale = config.height / size.y;
-    model.scale.setScalar(scale);
-    logCharacter('load:scale-applied', {
-      targetHeight: config.height,
-      sourceHeight: size.y,
-      scale
-    });
-  }
-
-  model.updateMatrixWorld(true);
-  CHARACTER_BOX.setFromObject(model);
-  const centeredBox = CHARACTER_BOX.getSize(CHARACTER_SIZE);
-  if (!CHARACTER_BOX.isEmpty()) {
-    model.position.y -= CHARACTER_BOX.min.y;
-    model.position.x -= (CHARACTER_BOX.min.x + centeredBox.x * 0.5);
-    model.position.z -= (CHARACTER_BOX.min.z + centeredBox.z * 0.5);
-  }
-  model.updateMatrixWorld(true);
-  CHARACTER_BOX.setFromObject(model);
-  logCharacter('load:normalized-bounds', {
-    minY: CHARACTER_BOX.min.y,
-    maxY: CHARACTER_BOX.max.y,
-    modelLocalY: model.position.y
-  });
-  const metrics = measureCharacterMetrics(model);
+  const metrics = actor.metrics;
   console.log('[character] metrics', {
     modelUrl,
     height: metrics.height,
     hipHeight: metrics.hipHeight
   });
 
-  const root = new THREE.Group();
-  root.add(model);
-
-  const mixer = new THREE.AnimationMixer(model);
-  const actions = new Map();
-  const clips = await loadAnimationClips(fbxLoader, animationUrls, model);
-  for (const [name, clip] of clips.entries()) {
-    const action = mixer.clipAction(clip);
-    action.enabled = true;
-    actions.set(name, action);
-  }
-  const rootMotion = detectRootMotionSource(model, clips);
-
   const controller = {
-    root,
-    model,
-    mixer,
-    actions,
-    rootMotion,
-    currentAction: '',
+    ...actor,
     position: new THREE.Vector3(),
     yaw: Math.PI,
     moveSpeed: 0,
@@ -109,15 +67,13 @@ export async function loadCharacterController({ fbxLoader, modelUrl, animationUr
   };
 
   logCharacter('load:actions', {
-    actions: Array.from(actions.keys()),
-    rootMotionNode: rootMotion?.node?.name || null,
-    rootMotionNeutralY: rootMotion?.neutralLocalPosition?.y ?? null
+    actions: Array.from(controller.actions.keys()),
+    rootMotionNode: controller.rootMotion?.node?.name || null,
+    rootMotionNeutralY: controller.rootMotion?.neutralLocalPosition?.y ?? null
   });
 
-  setCharacterAction(controller, actions.has('idle') ? 'idle' : actions.keys().next().value || '');
   syncCharacterTransform(controller);
-  controller.mixer.update(0);
-  stabilizeRootMotion(controller, { stabilizeVertical: true });
+  stabilizeHumanoidRootMotion(controller, { stabilizeVertical: true });
   logControllerState(controller, 'load:post-init');
   return controller;
 }
@@ -201,8 +157,8 @@ export function updateCharacterController(controller, options) {
   }
 
   syncCharacterTransform(controller);
-  controller.mixer.update(deltaSeconds);
-  stabilizeRootMotion(controller, { stabilizeVertical: true });
+  updateHumanoidActor(controller, deltaSeconds);
+  stabilizeHumanoidRootMotion(controller, { stabilizeVertical: true });
   if (moving && controller.moveSpeed > 0.01) {
     DESIRED_MOVE.copy(MOVE_DIRECTION).multiplyScalar(controller.moveSpeed * deltaSeconds);
     moveCharacterWithCollision(controller, DESIRED_MOVE, sampleCollision, config);
@@ -305,7 +261,7 @@ export function placeCharacterNearVehicle(
   resetRootMotionSample(controller);
   syncCharacterTransform(controller);
   controller.mixer.update(0);
-  stabilizeRootMotion(controller, { stabilizeVertical: true });
+  stabilizeHumanoidRootMotion(controller, { stabilizeVertical: true });
   logControllerState(controller, 'place:near-vehicle', {
     sideOffset,
     forwardOffset,
@@ -314,10 +270,7 @@ export function placeCharacterNearVehicle(
 }
 
 export function setCharacterVisible(controller, visible) {
-  if (!controller) {
-    return;
-  }
-  controller.root.visible = visible;
+  setHumanoidActorVisible(controller, visible);
 }
 
 export function getCharacterDistanceToVehicle(controller, vehiclePosition) {
@@ -340,7 +293,7 @@ export function setCharacterPlacement(controller, position, yaw) {
   resetRootMotionSample(controller);
   syncCharacterTransform(controller);
   controller.mixer.update(0);
-  stabilizeRootMotion(controller, { stabilizeVertical: true });
+  stabilizeHumanoidRootMotion(controller, { stabilizeVertical: true });
   logControllerState(controller, 'place:set-placement');
 }
 
@@ -353,7 +306,7 @@ export function advanceCharacterAnimation(controller, deltaSeconds, options = {}
     return false;
   }
 
-  controller.mixer.update(deltaSeconds);
+  updateHumanoidActor(controller, deltaSeconds);
   if (options.consumeRootMotion) {
     const moved = applyRootMotion(controller, {
       moving: Boolean(options.moving),
@@ -365,216 +318,26 @@ export function advanceCharacterAnimation(controller, deltaSeconds, options = {}
     return moved;
   }
 
-  stabilizeRootMotion(controller, {
+  stabilizeHumanoidRootMotion(controller, {
     stabilizeVertical: Boolean(options.stabilizeVertical)
   });
   return false;
 }
 
-function loadAnimationClips(fbxLoader, animationUrls, model) {
-  const entries = Object.entries(animationUrls || {}).map(async ([name, url]) => {
-    try {
-      const asset = await fbxLoader.loadAsync(url);
-      const clip = normalizeClipTracks(asset.animations?.[0], model);
-      return clip ? [name, clip] : null;
-    } catch {
-      return null;
-    }
-  });
-
-  return Promise.all(entries).then((results) => {
-    const clips = new Map();
-    for (const entry of results) {
-      if (entry) {
-        clips.set(entry[0], entry[1]);
-      }
-    }
-    return clips;
-  });
-}
-
 function setCharacterAction(controller, actionName) {
-  if (!actionName || controller.currentAction === actionName) {
-    return;
+  const previous = controller?.actions?.get(controller?.currentAction);
+  setHumanoidActorAction(controller, actionName);
+  if (controller?.currentAction === actionName) {
+    logCharacter('action:change', {
+      actionName,
+      previous: previous ? previous.getClip().name : null
+    });
   }
-
-  const next = controller.actions.get(actionName);
-  if (!next) {
-    return;
-  }
-
-  const previous = controller.actions.get(controller.currentAction);
-  next.reset();
-  next.fadeIn(previous ? 0.22 : 0);
-  next.play();
-  if (previous && previous !== next) {
-    previous.fadeOut(0.22);
-  }
-  controller.currentAction = actionName;
-  resetRootMotionSample(controller);
-  logCharacter('action:change', {
-    actionName,
-    previous: previous ? previous.getClip().name : null
-  });
-}
-
-function prepareCharacterModel(model) {
-  model.traverse((child) => {
-    if (child.isBone && typeof child.name === 'string') {
-      child.name = normalizeMixamoNodeName(child.name);
-    }
-    if (!child.isMesh) {
-      return;
-    }
-    child.castShadow = true;
-    child.receiveShadow = true;
-    if (child.material) {
-      child.material.side = THREE.FrontSide;
-    }
-  });
-}
-
-function normalizeClipTracks(originalClip, model) {
-  if (!originalClip) {
-    return null;
-  }
-
-  const availableNodes = model ? collectAnimationTargetNames(model) : null;
-  const tracks = originalClip.tracks
-    .map((track) => {
-      const clone = track.clone();
-      clone.name = normalizeMixamoTrackName(clone.name);
-      return clone;
-    })
-    .filter((track) => !availableNodes || availableNodes.has(getTrackTargetName(track.name)));
-  if (!tracks.length) {
-    return null;
-  }
-
-  return new THREE.AnimationClip(
-    originalClip.name,
-    originalClip.duration,
-    tracks
-  );
-}
-
-function collectAnimationTargetNames(model) {
-  const names = new Set();
-  model.traverse((child) => {
-    if (child?.name) {
-      names.add(normalizeMixamoNodeName(child.name));
-    }
-  });
-  return names;
-}
-
-function getTrackTargetName(trackName) {
-  const value = String(trackName || '');
-  const separatorIndex = value.indexOf('.');
-  if (separatorIndex <= 0) {
-    return normalizeMixamoNodeName(value);
-  }
-  return normalizeMixamoNodeName(value.slice(0, separatorIndex));
-}
-
-function normalizeMixamoNodeName(name) {
-  return String(name || '')
-    .replace(/^mixamorig\d*:/i, 'mixamorig')
-    .replace(/^mixamorig\d*/i, 'mixamorig')
-    .replace(/:/g, '');
-}
-
-function normalizeMixamoTrackName(name) {
-  const value = String(name || '');
-  const parts = value.split('.');
-  if (!parts.length) {
-    return value;
-  }
-  parts[0] = normalizeMixamoNodeName(parts[0]);
-  return parts.join('.');
-}
-
-function measureCharacterMetrics(model) {
-  model.updateMatrixWorld(true);
-  CHARACTER_BOX.setFromObject(model);
-  const size = CHARACTER_BOX.getSize(CHARACTER_SIZE);
-  const metrics = {
-    height: Number.isFinite(size.y) ? size.y : 0,
-    hipHeight: 0
-  };
-
-  let hipBone = null;
-  model.traverse((child) => {
-    if (hipBone || !child.isBone || !child.name) {
-      return;
-    }
-    if (/hip|hips|pelvis/i.test(child.name)) {
-      hipBone = child;
-    }
-  });
-
-  if (hipBone) {
-    hipBone.getWorldPosition(METRIC_WORLD);
-    metrics.hipHeight = METRIC_WORLD.y;
-  } else {
-    metrics.hipHeight = metrics.height * 0.53;
-  }
-
-  return metrics;
 }
 
 function syncCharacterTransform(controller) {
   controller.root.position.copy(controller.position);
   controller.root.quaternion.setFromAxisAngle(UP_AXIS, controller.yaw);
-}
-
-function detectRootMotionSource(model, clips) {
-  let best = null;
-
-  for (const [clipName, clip] of clips.entries()) {
-    for (const track of clip.tracks) {
-      if (!track?.name?.endsWith('.position') || !track.values || track.values.length < 6) {
-        continue;
-      }
-
-      const parsed = THREE.PropertyBinding.parseTrackName(track.name);
-      const nodeName = parsed?.nodeName || parsed?.nodePath;
-      if (!nodeName) {
-        continue;
-      }
-
-      const node = THREE.PropertyBinding.findNode(model, nodeName);
-      if (!node) {
-        continue;
-      }
-
-      const values = track.values;
-      const startX = values[0];
-      const startZ = values[2];
-      const endX = values[values.length - 3];
-      const endZ = values[values.length - 1];
-      const horizontalDistance = Math.hypot(endX - startX, endZ - startZ);
-      if (horizontalDistance < 0.05) {
-        continue;
-      }
-
-      const nameBonus = /hip|hips|pelvis|root/i.test(node.name) ? 0.25 : 0;
-      const clipBonus = clipName === 'run' ? 0.1 : clipName === 'walk' ? 0.06 : 0;
-      const score = horizontalDistance + nameBonus + clipBonus;
-      if (!best || score > best.score) {
-        best = {
-          score,
-          node,
-          neutralLocalPosition: node.position.clone(),
-          previousLocalPosition: node.position.clone(),
-          sampled: false,
-          resetPending: true
-        };
-      }
-    }
-  }
-
-  return best;
 }
 
 function getCharacterFocusPosition(controller, target) {
@@ -766,28 +529,7 @@ function applyRootMotion(controller, options) {
 }
 
 function resetRootMotionSample(controller) {
-  if (!controller?.rootMotion) {
-    return;
-  }
-
-  controller.rootMotion.resetPending = true;
-}
-
-function stabilizeRootMotion(controller, options = {}) {
-  const rootMotion = controller.rootMotion;
-  if (!rootMotion?.node) {
-    return;
-  }
-
-  const localPosition = rootMotion.node.position;
-  rootMotion.previousLocalPosition.copy(localPosition);
-  rootMotion.sampled = true;
-  rootMotion.resetPending = false;
-  localPosition.x = rootMotion.neutralLocalPosition.x;
-  localPosition.z = rootMotion.neutralLocalPosition.z;
-  if (options.stabilizeVertical) {
-    localPosition.y = rootMotion.neutralLocalPosition.y;
-  }
+  resetHumanoidRootMotionSample(controller);
 }
 
 function logControllerState(controller, event, extra = null) {

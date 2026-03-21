@@ -1,0 +1,21 @@
+{
+  "id": "traffic_sendan",
+  "order": 10,
+  "label": "Traffic Sendan",
+  "kind": "npc",
+  "crowdKind": "vehicle",
+  "subtype": "traffic_vehicle",
+  "behaviorClass": "traffic",
+  "movementMode": "crowd_nav",
+  "collisionProxy": {
+    "shape": "box",
+    "size": [1.86, 1.54, 4.12]
+  },
+  "presentation": {
+    "driver": "traffic_vehicle_runtime",
+    "vehicleId": "sendan",
+    "modelUrl": "/models/sedan2-validated-validated.glb",
+    "targetSpan": 5.4,
+    "yawDegrees": 0
+  }
+}

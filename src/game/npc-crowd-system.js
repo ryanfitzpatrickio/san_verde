@@ -8,18 +8,9 @@ import {
 } from 'navcat';
 import { crowd } from 'navcat/blocks';
 import { createNavMeshHelper } from 'navcat/three';
+import { getBuiltInNpcArchetypesForCrowdKind } from '../assets/npc-registry.js';
+import { createNpcActor } from './npc-actor.js';
 
-const UP_AXIS = new THREE.Vector3(0, 1, 0);
-const ORIENT_QUAT = new THREE.Quaternion();
-const VEHICLE_COLORS = ['#f25f5c', '#247ba0', '#f4d35e', '#70c1b3', '#9b5de5', '#ef476f'];
-const PEDESTRIAN_COLORS = ['#f2b880', '#8ecae6', '#a7c957', '#e5989b', '#ffb703', '#cdb4db'];
-const SHARED_GEOMETRIES = {
-  vehicleBody: new THREE.BoxGeometry(1.86, 0.56, 4.12),
-  vehicleCabin: new THREE.BoxGeometry(1.28, 0.42, 1.84),
-  pedestrianBody: new THREE.CapsuleGeometry(0.18, 0.72, 4, 8),
-  pedestrianHead: new THREE.SphereGeometry(0.16, 10, 8)
-};
-const MATERIAL_CACHE = new Map();
 const NEAREST_RESULT = createFindNearestPolyResult();
 const DEFAULT_SEARCH_HALF_EXTENTS = [18, 6, 18];
 
@@ -160,7 +151,7 @@ export function createNpcCrowdSystem({ config, state }) {
 function mountRuntime(runtime) {
   if (!runtime) return;
   for (const agent of runtime.agents) {
-    runtime.agentRoot.add(agent.mesh);
+    runtime.agentRoot.add(agent.actor.root);
   }
   if (runtime.debugHelper) {
     runtime.debugRoot.add(runtime.debugHelper.object);
@@ -169,6 +160,9 @@ function mountRuntime(runtime) {
 
 function disposeRuntime(runtime) {
   if (!runtime) return;
+  for (const agent of runtime.agents || []) {
+    agent.actor?.dispose?.();
+  }
   runtime.debugHelper?.dispose();
 }
 
@@ -178,6 +172,7 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
   const baseParams = kind === 'vehicle' ? VEHICLE_AGENT_PARAMS : PEDESTRIAN_AGENT_PARAMS;
   const crowdState = crowd.create(baseParams.radius);
   const agents = [];
+  const archetypes = getBuiltInNpcArchetypesForCrowdKind(kind);
 
   for (let i = 0; i < count; i++) {
     const spawn = findSpawnPoint(navMesh, queryFilter, focusPosition, config.agentTraffic.spawnRadius);
@@ -190,15 +185,26 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
       queryFilter
     };
     const agentId = crowd.addAgent(crowdState, navMesh, spawn.position, agentParams);
-    const mesh = kind === 'vehicle' ? createVehicleVisual(i) : createPedestrianVisual(i);
-    mesh.position.set(spawn.position[0], spawn.position[1], spawn.position[2]);
+    const archetype = archetypes.length ? archetypes[i % archetypes.length] : null;
+    const actor = createNpcActor({
+      archetype,
+      crowdKind: kind,
+      index: i
+    });
+    actor.updatePresentation({
+      position: spawn.position,
+      yaw: 0,
+      speed: 0,
+      timeSeconds: 0
+    });
 
     agents.push({
       kind,
       agentId,
-      mesh,
+      actor,
       agentParams,
-      idleFrames: 0
+      idleFrames: 0,
+      yaw: 0
     });
 
     assignRandomTarget(crowdState, navMesh, queryFilter, agentId);
@@ -213,6 +219,7 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
     crowd: crowdState,
     queryFilter,
     agents,
+    elapsedTime: 0,
     agentRoot: roots.agentRoot,
     debugRoot: roots.debugRoot,
     debugHelper
@@ -220,31 +227,32 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
 }
 
 function updateCrowdRuntime(runtime, focusPos, playerVelocity, despawnDist, deltaSeconds) {
+  runtime.elapsedTime += deltaSeconds;
   crowd.update(runtime.crowd, runtime.navMesh, deltaSeconds);
 
   for (const agent of runtime.agents) {
-    tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist);
+    tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaSeconds);
   }
 }
 
-function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist) {
+function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist, deltaSeconds) {
   const crowdAgent = runtime.crowd.agents[agent.agentId];
   if (!crowdAgent) return;
 
   const pos = crowdAgent.position;
-  agent.mesh.position.set(pos[0], pos[1], pos[2]);
-
   const vel = crowdAgent.velocity;
   const horizSpeed = Math.hypot(vel[0], vel[2]);
   if (horizSpeed > 0.1) {
-    const yaw = Math.atan2(vel[0], vel[2]);
-    ORIENT_QUAT.setFromAxisAngle(UP_AXIS, yaw);
-    agent.mesh.quaternion.copy(ORIENT_QUAT);
+    agent.yaw = Math.atan2(vel[0], vel[2]);
   }
-
-  if (agent.kind === 'pedestrian' && horizSpeed > 0.05) {
-    agent.mesh.position.y += Math.sin(Date.now() * 0.01) * 0.03;
-  }
+  agent.actor.updatePresentation({
+    position: pos,
+    yaw: agent.yaw,
+    speed: horizSpeed,
+    velocity: vel,
+    timeSeconds: runtime.elapsedTime,
+    deltaSeconds
+  });
 
   const dx = pos[0] - focusPos.x;
   const dz = pos[2] - focusPos.z;
@@ -287,7 +295,13 @@ function tickAgent(runtime, agent, focusPos, playerVelocity, despawnDist) {
 function respawnAgent(runtime, agent, spawn) {
   crowd.removeAgent(runtime.crowd, agent.agentId);
   agent.agentId = crowd.addAgent(runtime.crowd, runtime.navMesh, spawn.position, agent.agentParams);
-  agent.mesh.position.set(spawn.position[0], spawn.position[1], spawn.position[2]);
+  agent.actor.updatePresentation({
+    position: spawn.position,
+    yaw: agent.yaw,
+    speed: 0,
+    timeSeconds: runtime.elapsedTime,
+    deltaSeconds: 0
+  });
   agent.idleFrames = 0;
   assignRandomTarget(runtime.crowd, runtime.navMesh, runtime.queryFilter, agent.agentId);
 }
@@ -359,71 +373,6 @@ function getStageTrafficSettings(agentTraffic, stageId) {
     vehicleCount: override.vehicleCount ?? agentTraffic.defaultVehicleCount,
     pedestrianCount: override.pedestrianCount ?? agentTraffic.defaultPedestrianCount
   };
-}
-
-function createVehicleVisual(index) {
-  const group = new THREE.Group();
-  const body = new THREE.Mesh(
-    SHARED_GEOMETRIES.vehicleBody,
-    getCachedMaterial(`vehicle-body:${index % VEHICLE_COLORS.length}`, () =>
-      new THREE.MeshStandardMaterial({
-        color: VEHICLE_COLORS[index % VEHICLE_COLORS.length],
-        roughness: 0.68,
-        metalness: 0.18
-      })
-    )
-  );
-  body.position.y = 0.38;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  const cabin = new THREE.Mesh(
-    SHARED_GEOMETRIES.vehicleCabin,
-    getCachedMaterial('vehicle-cabin', () =>
-      new THREE.MeshStandardMaterial({ color: '#a9b5c4', roughness: 0.28, metalness: 0.04 })
-    )
-  );
-  cabin.position.y = 0.72;
-  cabin.castShadow = true;
-  cabin.receiveShadow = true;
-  group.add(cabin);
-  return group;
-}
-
-function createPedestrianVisual(index) {
-  const group = new THREE.Group();
-  const body = new THREE.Mesh(
-    SHARED_GEOMETRIES.pedestrianBody,
-    getCachedMaterial(`pedestrian-body:${index % PEDESTRIAN_COLORS.length}`, () =>
-      new THREE.MeshStandardMaterial({
-        color: PEDESTRIAN_COLORS[index % PEDESTRIAN_COLORS.length],
-        roughness: 0.92,
-        metalness: 0.02
-      })
-    )
-  );
-  body.position.y = 0.58;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  const head = new THREE.Mesh(
-    SHARED_GEOMETRIES.pedestrianHead,
-    getCachedMaterial('pedestrian-head', () =>
-      new THREE.MeshStandardMaterial({ color: '#f0c39b', roughness: 0.9, metalness: 0.01 })
-    )
-  );
-  head.position.y = 1.16;
-  head.castShadow = true;
-  head.receiveShadow = true;
-  group.add(head);
-  return group;
-}
-
-function getCachedMaterial(key, factory) {
-  if (!MATERIAL_CACHE.has(key)) MATERIAL_CACHE.set(key, factory());
-  return MATERIAL_CACHE.get(key);
 }
 
 function randomRange(min, max) {

@@ -1,4 +1,5 @@
 import { getBuiltInVehicleById } from './vehicle-registry.js';
+import { inferVehicleForwardYawDegrees } from '../vehicles/vehicle-orientation.js';
 
 export function createGarageAssetLoader(options) {
   const {
@@ -31,6 +32,7 @@ export function createGarageAssetLoader(options) {
     }
 
     await loadValkyrieAssets(context);
+    await loadSendanAsset(context);
 
     const selectedBuiltInCar = getSelectedBuiltInCar();
     const carExists = await assetExists(selectedBuiltInCar?.body?.url || config.defaultCarUrl);
@@ -97,6 +99,40 @@ export function createGarageAssetLoader(options) {
     }
   }
 
+  async function loadSendanAsset(context) {
+    try {
+      const sendan = getBuiltInVehicleById('sendan');
+      const bodyUrl = sendan?.body?.url || '';
+      const frontTireUrl = sendan?.tires?.front?.url || '';
+      const rearTireUrl = sendan?.tires?.rear?.url || frontTireUrl;
+      if (!bodyUrl || !await assetExists(bodyUrl)) {
+        return;
+      }
+      setStatus('Loading Sendan asset');
+      const [bodyGltf, frontTireGltf, rearTireGltf] = await Promise.all([
+        context.gltfLoader.loadAsync(bodyUrl),
+        frontTireUrl && assetExists(frontTireUrl).then((ok) => ok ? context.gltfLoader.loadAsync(frontTireUrl) : null),
+        rearTireUrl && rearTireUrl !== frontTireUrl
+          ? assetExists(rearTireUrl).then((ok) => ok ? context.gltfLoader.loadAsync(rearTireUrl) : null)
+          : null
+      ]);
+      state.sendanAsset = bodyGltf.scene || bodyGltf.scenes[0];
+      const frontTireScene = frontTireGltf ? (frontTireGltf.scene || frontTireGltf.scenes[0]) : null;
+      const rearTireScene = rearTireGltf
+        ? (rearTireGltf.scene || rearTireGltf.scenes[0])
+        : frontTireScene;
+      state.sendanTireAssets = {
+        front: frontTireScene,
+        rear: rearTireScene
+      };
+      vehicleManager.syncParkedVehicleProxies(context);
+    } catch (error) {
+      console.error(error);
+      state.sendanAsset = null;
+      state.sendanTireAssets = { front: null, rear: null };
+    }
+  }
+
   async function loadBikeAssets(context) {
     try {
       setStatus('Loading motorcycle assets');
@@ -154,7 +190,12 @@ export function createGarageAssetLoader(options) {
       selectedBuiltInCar.body.url,
       'car',
       selectedBuiltInCar.body.sourceLabel,
-      context
+      context,
+      {
+        bodyRotationYDeg: Number(selectedBuiltInCar.body.rotationYDeg || 0),
+        hasBodyRotation: Object.hasOwn(selectedBuiltInCar.body, 'rotationYDeg'),
+        stripEmbeddedWheels: Boolean(selectedBuiltInCar?.tires?.front && selectedBuiltInCar?.tires?.rear)
+      }
     );
 
     if (loaded) {
@@ -163,7 +204,7 @@ export function createGarageAssetLoader(options) {
     }
   }
 
-  async function loadAssetFromUrl(url, kind, label, context) {
+  async function loadAssetFromUrl(url, kind, label, context, options = {}) {
     setStatus(`Loading ${kind} asset`);
     setProgress(16);
 
@@ -176,7 +217,13 @@ export function createGarageAssetLoader(options) {
       }
 
       if (kind === 'car') {
-        vehicleManager.mountCarAsset(context.carMount, context.wheelMount, scene, { isFallback: false });
+        scene.userData.assetBodyRotationYDeg = options.hasBodyRotation
+          ? Number(options.bodyRotationYDeg || 0)
+          : inferVehicleForwardYawDegrees(scene);
+        vehicleManager.mountCarAsset(context.carMount, context.wheelMount, scene, {
+          isFallback: false,
+          stripEmbeddedWheels: Boolean(options.stripEmbeddedWheels)
+        });
         state.carSource = label;
         ui.carName.textContent = label;
         refreshCarTextureSlots();
@@ -190,7 +237,7 @@ export function createGarageAssetLoader(options) {
         state.tireAssetsByAxle.rear = scene;
         state.tireSource = label;
         ui.tireName.textContent = label;
-        remountTires(context.wheelMount);
+        remountTires(context.wheelMount, context);
       }
 
       applySceneMaterialState(context.carMount, context.wheelMount);
@@ -226,13 +273,24 @@ export function createGarageAssetLoader(options) {
         state.tireSource =
           `Front: ${selectedBuiltInCar.tires.front.sourceLabel} · Rear: ${selectedBuiltInCar.tires.rear.sourceLabel}`;
         ui.tireName.textContent = state.tireSource;
-        remountTires(context.wheelMount);
+        remountTires(context.wheelMount, context);
         applySceneMaterialState(context.carMount, context.wheelMount);
         return;
       } catch (error) {
         console.error(error);
         setStatus('Failed to load built-in tire set');
       }
+    }
+
+    if (state.carEmbeddedWheelAssets?.length === 4) {
+      state.tireAsset = null;
+      state.tireAssetsByAxle.front = null;
+      state.tireAssetsByAxle.rear = null;
+      state.tireSource = 'Using embedded wheels';
+      ui.tireName.textContent = state.tireSource;
+      remountTires(context.wheelMount, context);
+      applySceneMaterialState(context.carMount, context.wheelMount);
+      return;
     }
 
     if (await assetExists(config.defaultTireUrl)) {
@@ -243,7 +301,7 @@ export function createGarageAssetLoader(options) {
       state.tireAssetsByAxle.rear = null;
       state.tireSource = 'Using built-in fallback';
       ui.tireName.textContent = state.tireSource;
-      remountTires(context.wheelMount);
+      remountTires(context.wheelMount, context);
     }
   }
 

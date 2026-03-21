@@ -13,6 +13,13 @@ import {
   publicVehicleRegistryPath,
   writeJsonFile
 } from './scripts/vehicle-manifest-utils.mjs';
+import {
+  createTireLibraryPayload,
+  loadTireLibrary,
+  normalizeTireRecord,
+  tireLibraryPublicPath,
+  writeTireLibrary
+} from './scripts/tire-library-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +53,26 @@ function readJsonBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function readBinaryBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on('end', () => {
+      resolve(Buffer.concat(chunks));
+    });
+    req.on('error', reject);
+  });
+}
+
+function getEditorFilename(req, fallback = '') {
+  const url = new URL(req.url || '/', 'http://127.0.0.1');
+  const queryFilename = url.searchParams.get('filename');
+  const headerFilename = req.headers['x-asset-filename'];
+  return String(queryFilename || headerFilename || fallback || '');
 }
 
 function attachSanVerdeMapRoute(middlewares) {
@@ -96,6 +123,12 @@ async function rebuildVehicleRegistry() {
   return registry;
 }
 
+async function rebuildTireLibrary() {
+  const payload = createTireLibraryPayload();
+  writeJsonFile(tireLibraryPublicPath, payload);
+  return payload;
+}
+
 async function saveVehicleManifest(payload) {
   const previousId = typeof payload.previousId === 'string' ? payload.previousId.trim() : '';
   const manifest = normalizeVehicleManifest(payload.manifest);
@@ -131,6 +164,28 @@ async function deleteVehicleManifest(payload) {
   await fs.unlink(targetPath);
   const registry = await rebuildVehicleRegistry();
   return registry;
+}
+
+async function saveTireRecord(payload) {
+  const previousId = typeof payload.previousId === 'string' ? payload.previousId.trim() : '';
+  const record = normalizeTireRecord(payload.record);
+  const tires = loadTireLibrary().filter((entry) => entry.id !== previousId && entry.id !== record.id);
+  tires.push(record);
+  const library = writeTireLibrary(tires);
+  return {
+    record,
+    library
+  };
+}
+
+async function deleteTireRecord(payload) {
+  const id = typeof payload.id === 'string' ? payload.id.trim() : '';
+  if (!id) {
+    throw new Error('Tire id is required.');
+  }
+
+  const tires = loadTireLibrary().filter((entry) => entry.id !== id);
+  return writeTireLibrary(tires);
 }
 
 function attachVehicleAssetRoutes(middlewares) {
@@ -206,6 +261,79 @@ function attachVehicleAssetRoutes(middlewares) {
   });
 }
 
+function attachTireAssetRoutes(middlewares) {
+  middlewares.use('/__editor/tires', async (req, res, next) => {
+    if (req.method === 'GET') {
+      try {
+        jsonResponse(res, 200, {
+          tires: loadTireLibrary(),
+          libraryPath: 'public/data/tire-library.json'
+        });
+      } catch (error) {
+        jsonResponse(res, 500, {
+          error: 'Failed to read tire library.',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return;
+    }
+
+    if (req.method !== 'POST') {
+      next();
+      return;
+    }
+
+    try {
+      const payload = await readJsonBody(req);
+      const action = typeof payload.action === 'string' ? payload.action.trim() : '';
+
+      if (action === 'save') {
+        const result = await saveTireRecord(payload);
+        jsonResponse(res, 200, {
+          ok: true,
+          tire: result.record,
+          tires: loadTireLibrary(),
+          libraryPath: 'public/data/tire-library.json',
+          library: result.library
+        });
+        return;
+      }
+
+      if (action === 'delete') {
+        const library = await deleteTireRecord(payload);
+        jsonResponse(res, 200, {
+          ok: true,
+          tires: loadTireLibrary(),
+          libraryPath: 'public/data/tire-library.json',
+          library
+        });
+        return;
+      }
+
+      if (action === 'rebuild') {
+        const library = await rebuildTireLibrary();
+        jsonResponse(res, 200, {
+          ok: true,
+          tires: loadTireLibrary(),
+          libraryPath: 'public/data/tire-library.json',
+          library
+        });
+        return;
+      }
+
+      jsonResponse(res, 400, {
+        error: 'Unknown tire action.',
+        action
+      });
+    } catch (error) {
+      jsonResponse(res, 500, {
+        error: 'Failed to process tire asset request.',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+}
+
 function sanitizeModelFilename(filename) {
   const trimmed = typeof filename === 'string' ? filename.trim() : '';
   const base = path.basename(trimmed);
@@ -225,15 +353,27 @@ function attachVehicleModelRoutes(middlewares) {
     }
 
     try {
-      const payload = await readJsonBody(req);
-      const filename = sanitizeModelFilename(payload.filename);
-      const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+      let filename = '';
+      let buffer = null;
+      const contentType = String(req.headers['content-type'] || '');
 
-      if (!glbBase64) {
+      if (contentType.includes('application/octet-stream')) {
+        filename = sanitizeModelFilename(getEditorFilename(req));
+        buffer = await readBinaryBody(req);
+      } else {
+        const payload = await readJsonBody(req);
+        filename = sanitizeModelFilename(payload.filename);
+        const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+        if (!glbBase64) {
+          throw new Error('GLB payload is required.');
+        }
+        buffer = Buffer.from(glbBase64, 'base64');
+      }
+
+      if (!buffer?.length) {
         throw new Error('GLB payload is required.');
       }
 
-      const buffer = Buffer.from(glbBase64, 'base64');
       const outputPath = path.join(PUBLIC_MODELS_PATH, filename);
       await fs.mkdir(PUBLIC_MODELS_PATH, { recursive: true });
       await fs.writeFile(outputPath, buffer);
@@ -246,6 +386,53 @@ function attachVehicleModelRoutes(middlewares) {
     } catch (error) {
       jsonResponse(res, 500, {
         error: 'Failed to save validated vehicle GLB.',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+}
+
+function attachTireModelRoutes(middlewares) {
+  middlewares.use('/__editor/tire-models', async (req, res, next) => {
+    if (req.method !== 'POST') {
+      next();
+      return;
+    }
+
+    try {
+      let filename = '';
+      let buffer = null;
+      const contentType = String(req.headers['content-type'] || '');
+
+      if (contentType.includes('application/octet-stream')) {
+        filename = sanitizeModelFilename(getEditorFilename(req));
+        buffer = await readBinaryBody(req);
+      } else {
+        const payload = await readJsonBody(req);
+        filename = sanitizeModelFilename(payload.filename);
+        const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+        if (!glbBase64) {
+          throw new Error('GLB payload is required.');
+        }
+        buffer = Buffer.from(glbBase64, 'base64');
+      }
+
+      if (!buffer?.length) {
+        throw new Error('GLB payload is required.');
+      }
+
+      const outputPath = path.join(PUBLIC_MODELS_PATH, filename);
+      await fs.mkdir(PUBLIC_MODELS_PATH, { recursive: true });
+      await fs.writeFile(outputPath, buffer);
+
+      jsonResponse(res, 200, {
+        ok: true,
+        url: `/models/${filename}`,
+        sourceLabel: `public/models/${filename}`
+      });
+    } catch (error) {
+      jsonResponse(res, 500, {
+        error: 'Failed to save tire GLB.',
         message: error instanceof Error ? error.message : String(error)
       });
     }
@@ -292,6 +479,46 @@ async function runVehicleAutoLocator({ filename, glbBase64 }) {
   };
 }
 
+async function runVehicleAutoLocatorFromBuffer({ filename, buffer }) {
+  const safeFilename = sanitizeModelFilename(filename);
+  const outputFilename = safeFilename.replace(/\.glb$/i, '-validated.glb');
+  const workId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const workDir = path.join(TMP_ROOT, workId);
+  const inputPath = path.join(workDir, safeFilename);
+  const outputPath = path.join(PUBLIC_MODELS_PATH, outputFilename);
+  const reportPath = path.join(workDir, 'report.json');
+
+  await fs.mkdir(workDir, { recursive: true });
+  await fs.mkdir(PUBLIC_MODELS_PATH, { recursive: true });
+  await fs.writeFile(inputPath, buffer);
+
+  const args = [
+    AUTO_LOCATOR_SCRIPT_PATH,
+    '--reference',
+    MUSTANG_REFERENCE_PATH,
+    '--input',
+    inputPath,
+    '--output',
+    outputPath,
+    '--report',
+    reportPath
+  ];
+
+  const result = await execFileAsync('python3', args, {
+    cwd: __dirname,
+    maxBuffer: 20 * 1024 * 1024
+  });
+
+  const report = JSON.parse(await fs.readFile(reportPath, 'utf8'));
+  return {
+    url: `/models/${outputFilename}`,
+    sourceLabel: `public/models/${outputFilename}`,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    report
+  };
+}
+
 function attachVehicleAutoLocatorRoutes(middlewares) {
   middlewares.use('/__editor/vehicle-auto-locate', async (req, res, next) => {
     if (req.method !== 'POST') {
@@ -300,18 +527,33 @@ function attachVehicleAutoLocatorRoutes(middlewares) {
     }
 
     try {
-      const payload = await readJsonBody(req);
-      const filename = sanitizeModelFilename(payload.filename);
-      const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+      let result = null;
+      const contentType = String(req.headers['content-type'] || '');
 
-      if (!glbBase64) {
-        throw new Error('GLB payload is required.');
+      if (contentType.includes('application/octet-stream')) {
+        const filename = sanitizeModelFilename(getEditorFilename(req));
+        const buffer = await readBinaryBody(req);
+        if (!buffer?.length) {
+          throw new Error('GLB payload is required.');
+        }
+        result = await runVehicleAutoLocatorFromBuffer({
+          filename,
+          buffer
+        });
+      } else {
+        const payload = await readJsonBody(req);
+        const filename = sanitizeModelFilename(payload.filename);
+        const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+
+        if (!glbBase64) {
+          throw new Error('GLB payload is required.');
+        }
+
+        result = await runVehicleAutoLocator({
+          filename,
+          glbBase64
+        });
       }
-
-      const result = await runVehicleAutoLocator({
-        filename,
-        glbBase64
-      });
 
       jsonResponse(res, 200, {
         ok: true,
@@ -334,13 +576,17 @@ function editorPlugin() {
     configureServer(server) {
       attachSanVerdeMapRoute(server.middlewares);
       attachVehicleAssetRoutes(server.middlewares);
+      attachTireAssetRoutes(server.middlewares);
       attachVehicleModelRoutes(server.middlewares);
+      attachTireModelRoutes(server.middlewares);
       attachVehicleAutoLocatorRoutes(server.middlewares);
     },
     configurePreviewServer(server) {
       attachSanVerdeMapRoute(server.middlewares);
       attachVehicleAssetRoutes(server.middlewares);
+      attachTireAssetRoutes(server.middlewares);
       attachVehicleModelRoutes(server.middlewares);
+      attachTireModelRoutes(server.middlewares);
       attachVehicleAutoLocatorRoutes(server.middlewares);
     }
   };

@@ -1,0 +1,26 @@
+{
+  "id": "pedestrian_female",
+  "order": 10,
+  "label": "Pedestrian Female",
+  "kind": "npc",
+  "crowdKind": "pedestrian",
+  "subtype": "pedestrian",
+  "behaviorClass": "ambient",
+  "movementMode": "crowd_nav",
+  "collisionProxy": {
+    "shape": "capsule",
+    "radius": 0.35,
+    "height": 1.75
+  },
+  "presentation": {
+    "driver": "humanoid_fbx",
+    "modelUrl": "/models/pedestrian_female.fbx",
+    "height": 1.75,
+    "offsetY": -0.32,
+    "animationUrls": {
+      "idle": "/models/Locomotion Pack/idle.fbx",
+      "walk": "/models/Locomotion Pack/walking.fbx",
+      "run": "/models/Locomotion Pack/running.fbx"
+    }
+  }
+}

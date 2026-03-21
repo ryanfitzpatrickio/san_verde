@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { getBuiltInVehicleById } from '../assets/vehicle-registry.js';
+import { primeCarWheelRuntimeState } from './car-rig-helpers.js';
+import { attachMountedCarRig, buildMountedCarRig, resolveActiveCarTireAssets } from './car-rig.js';
+import { createMountedCarController } from './mounted-car-controller.js';
 
 export function createVehicleManager({
   config,
@@ -37,6 +40,13 @@ export function createVehicleManager({
   const valkyrieManifest = getBuiltInVehicleById('valkyrie');
   const valkyriePreset = valkyrieManifest?.preset || null;
   const valkyrieSuspensionOverrides = valkyriePreset?.suspension || null;
+  const sendanManifest = getBuiltInVehicleById('sendan');
+  const sendanPreset = sendanManifest?.preset || null;
+  const sendanSuspensionOverrides = sendanPreset?.suspension || null;
+
+  function getBodyVisualOffsetY(preset) {
+    return Number.isFinite(preset?.bodyVisualOffsetY) ? preset.bodyVisualOffsetY : 0;
+  }
 
   function cloneSuspensionOverrides(overrides) {
     return overrides ? { ...overrides } : null;
@@ -51,7 +61,11 @@ export function createVehicleManager({
       wheelDropRatio: state.wheelDropRatio,
       chassisHeight: state.chassisHeight,
       sideInset: state.sideInset,
-      tireRotation: [...state.tireRotation]
+      tireRotation: [...state.tireRotation],
+      leftSideTireRotation: [...state.leftSideTireRotation],
+      leftSideTireMirror: Boolean(state.leftSideTireMirror),
+      rightSideTireRotation: [...state.rightSideTireRotation],
+      rightSideTireMirror: Boolean(state.rightSideTireMirror)
     };
   }
 
@@ -67,6 +81,14 @@ export function createVehicleManager({
     state.chassisHeight = preset.chassisHeight;
     state.sideInset = preset.sideInset;
     state.tireRotation = [...preset.tireRotation];
+    state.leftSideTireRotation = Array.isArray(preset.leftSideTireRotation) && preset.leftSideTireRotation.length === 3
+      ? [...preset.leftSideTireRotation]
+      : [0, 0, 0];
+    state.leftSideTireMirror = Boolean(preset.leftSideTireMirror);
+    state.rightSideTireRotation = Array.isArray(preset.rightSideTireRotation) && preset.rightSideTireRotation.length === 3
+      ? [...preset.rightSideTireRotation]
+      : [Math.PI, 0, 0];
+    state.rightSideTireMirror = Boolean(preset.rightSideTireMirror);
   }
 
   function withTemporaryPreset(preset, task) {
@@ -87,6 +109,10 @@ export function createVehicleManager({
       return valkyriePreset.chassisHeight;
     }
     return state.chassisHeight;
+  }
+
+  function getParkedWheelOffsetY(preset) {
+    return Number.isFinite(preset?.parkedWheelOffsetY) ? preset.parkedWheelOffsetY : 0;
   }
 
   function applyEffectiveSuspensionOverrides(runtime, overrides) {
@@ -116,20 +142,29 @@ export function createVehicleManager({
     ui.toggleDoor.textContent = 'Door: Closed';
     ui.toggleDoor.disabled = true;
 
-    const display = carVehicle.mountAsset({ rawAsset });
-    state.doorRig = display.doorRig;
+    const presentation = buildMountedCarRig({
+      carVehicle,
+      rawAsset,
+      activeTireAssets: resolveActiveCarTireAssets(state),
+      stripEmbeddedWheels: Boolean(options.stripEmbeddedWheels),
+      bodyVisualOffsetY: Number(options.bodyVisualOffsetY || 0)
+    });
+    state.doorRig = presentation.doorRig;
     ui.toggleDoor.disabled = !state.doorRig;
-    state.steeringWheelRig = display.steeringWheelRig;
-    carMount.add(display.body);
+    state.steeringWheelRig = presentation.steeringWheelRig;
+    attachMountedCarRig({ carMount, wheelMount, clearGroup, presentation });
     if (callbacks.getGameRuntime()) {
       applyGarageSnapshot(syncGarageScene(callbacks.getGameRuntime()));
     }
-    state.carMetrics = display.metrics;
-    state.carWheelAnchors = display.anchors;
+    state.carMetrics = presentation.metrics;
+    state.carWheelAnchors = presentation.anchors;
+    state.carEmbeddedWheelAssets = presentation.embeddedWheels || null;
+    state.wheelRadius = presentation.wheelRadius;
 
     if (options.isFallback) {
       state.carAsset = null;
       state.carWheelAnchors = null;
+      state.carEmbeddedWheelAssets = null;
       state.carTextureSlots = [];
       state.selectedCarTextureSlotId = '';
       ui.carName.textContent = state.carSource;
@@ -142,7 +177,6 @@ export function createVehicleManager({
       applyGarageSnapshot(setGarageVehicleKind(callbacks.getGameRuntime(), 'car'));
       applyGarageSnapshot(setChassisHeight(callbacks.getGameRuntime(), state.chassisHeight));
     }
-    remountTires(wheelMount);
     applySteeringWheelState();
     syncTextureEditorUi();
   }
@@ -216,6 +250,56 @@ export function createVehicleManager({
     return { kind, group, body, wheels, yaw, drivePosition: drivePosition.clone() };
   }
 
+  function createMountedCarProxy(
+    kind,
+    presentation,
+    drivePosition,
+    yaw,
+    {
+      chassisHeight = state.chassisHeight,
+      suspensionOffset = 0
+    } = {}
+  ) {
+    const proxy = createVehicleProxy(
+      kind,
+      presentation.body,
+      presentation.wheelMount,
+      drivePosition,
+      yaw,
+      chassisHeight
+    );
+
+    if (Number.isFinite(suspensionOffset) && suspensionOffset !== 0) {
+      offsetProxyWheelsY(proxy, suspensionOffset);
+    }
+
+    return proxy;
+  }
+
+  function offsetProxyWheelsY(proxy, offsetY) {
+    if (!proxy?.wheels || !Number.isFinite(offsetY) || offsetY === 0) {
+      return proxy;
+    }
+
+    if (proxy.controller) {
+      proxy.controller.applyPose({
+        position: new THREE.Vector3(proxy.drivePosition.x, proxy.group.position.y, proxy.drivePosition.z),
+        yaw: proxy.yaw,
+        suspensionOffset: offsetY
+      });
+      return proxy;
+    }
+
+    for (const wheel of proxy.wheels.children) {
+      if (!wheel?.isObject3D) {
+        continue;
+      }
+      wheel.position.y += offsetY;
+    }
+
+    return proxy;
+  }
+
   function placeOrReplaceVehicleProxy(context, kind, proxy) {
     const previous = state.parkedVehicleProxies[kind];
     if (previous?.group?.parent) {
@@ -244,6 +328,7 @@ export function createVehicleManager({
     state.parkedVehicleProxies.car = existingCarProxy;
     state.parkedVehicleProxies.bike = null;
     state.parkedVehicleProxies.valkyrie = null;
+    state.parkedVehicleProxies.sendan = null;
 
     if (state.selectedStageId !== 'test_course' || !state.bikeAsset || !state.bikeWheelAsset) {
       return;
@@ -268,28 +353,53 @@ export function createVehicleManager({
 
     if (state.valkyrieAsset) {
       const valkyrieProxy = withTemporaryPreset(valkyriePreset, () => {
-        const valkyrieDisplay = carVehicle.mountAsset({ rawAsset: state.valkyrieAsset });
-        const tempWheelMount = new THREE.Group();
-        carVehicle.remountWheels({
-          wheelMount: tempWheelMount,
+        const presentation = buildMountedCarRig({
+          carVehicle,
+          rawAsset: state.valkyrieAsset,
           activeTireAssets: state.valkyrieTireAsset
             ? { front: state.valkyrieTireAsset, rear: state.valkyrieTireAsset }
-            : state.tireAssetsByAxle,
-          carMetrics: valkyrieDisplay.metrics,
-          carWheelAnchors: valkyrieDisplay.anchors
+            : resolveActiveCarTireAssets(state),
+          bodyVisualOffsetY: getBodyVisualOffsetY(valkyriePreset)
         });
-        return createVehicleProxy(
-          'valkyrie',
-          valkyrieDisplay.body,
-          tempWheelMount,
-          config.valkyrieSpawnPosition.clone(),
-          config.valkyrieSpawnYaw,
-          getProxyChassisHeight('valkyrie')
+        return offsetProxyWheelsY(
+          createMountedCarProxy(
+            'valkyrie',
+            presentation,
+            config.valkyrieSpawnPosition.clone(),
+            config.valkyrieSpawnYaw,
+            { chassisHeight: getProxyChassisHeight('valkyrie') }
+          ),
+          getParkedWheelOffsetY(valkyriePreset)
         );
       });
       state.parkedVehicleProxies.valkyrie = valkyrieProxy;
       if (state.activeVehicleKind !== 'valkyrie') {
         context.auxVehicleMount.add(valkyrieProxy.group);
+      }
+    }
+
+    if (state.sendanAsset) {
+      const sendanProxy = withTemporaryPreset(sendanPreset, () => {
+        const presentation = buildMountedCarRig({
+          carVehicle,
+          rawAsset: state.sendanAsset,
+          activeTireAssets: state.sendanTireAssets,
+          stripEmbeddedWheels: true,
+          bodyVisualOffsetY: getBodyVisualOffsetY(sendanPreset)
+        });
+        return offsetProxyWheelsY(
+          createMountedCarProxy(
+            'sendan',
+            presentation,
+            config.sendanSpawnPosition.clone(),
+            config.sendanSpawnYaw
+          ),
+          getParkedWheelOffsetY(sendanPreset)
+        );
+      });
+      state.parkedVehicleProxies.sendan = sendanProxy;
+      if (state.activeVehicleKind !== 'sendan') {
+        context.auxVehicleMount.add(sendanProxy.group);
       }
     }
   }
@@ -347,6 +457,7 @@ export function createVehicleManager({
       withTemporaryPreset(valkyriePreset, () => {
         mountCarAsset(context.carMount, context.wheelMount, state.valkyrieAsset, {
           isFallback: false,
+          stripEmbeddedWheels: true,
           chassisHeightMode: 'root',
           rootVisualOffsetY: Number(valkyriePreset?.activeRootOffsetY || 0)
         });
@@ -361,33 +472,35 @@ export function createVehicleManager({
       return true;
     }
 
+    if (kind === 'sendan') {
+      if (!state.sendanAsset) {
+        return false;
+      }
+
+      const savedCarAsset = state.carAsset;
+      const savedTireAssets = { ...state.tireAssetsByAxle };
+      state.tireAssetsByAxle = {
+        front: state.sendanTireAssets.front,
+        rear: state.sendanTireAssets.rear
+      };
+      withTemporaryPreset(sendanPreset, () => {
+        mountCarAsset(context.carMount, context.wheelMount, state.sendanAsset, {
+          isFallback: false,
+          stripEmbeddedWheels: true,
+          bodyVisualOffsetY: getBodyVisualOffsetY(sendanPreset)
+        });
+      });
+      state.tireAssetsByAxle = savedTireAssets;
+      state.carAsset = savedCarAsset;
+      state.activeVehicleKind = 'sendan';
+      if (callbacks.getGameRuntime()) {
+        applyGarageSnapshot(setGarageVehicleKind(callbacks.getGameRuntime(), 'car'));
+      }
+      applyEffectiveSuspensionOverrides(callbacks.getGameRuntime(), sendanSuspensionOverrides);
+      return true;
+    }
+
     return false;
-  }
-
-  function refreshWheelMountRuntimeState(wheelMount) {
-    if (!wheelMount) {
-      return;
-    }
-
-    for (const wheel of wheelMount.children) {
-      if (!wheel?.isObject3D) {
-        continue;
-      }
-
-      wheel.userData.baseQuaternion = wheel.quaternion.clone();
-      wheel.userData.restPosition = wheel.position.clone();
-      wheel.userData.restContactHeight = undefined;
-      wheel.userData.suspensionOffset = 0;
-
-      const spinPivot = wheel.children[0];
-      if (spinPivot?.isObject3D) {
-        const axis = spinPivot.userData.spinAxis || 'x';
-        spinPivot.rotation.x = 0;
-        spinPivot.rotation.y = 0;
-        spinPivot.rotation.z = 0;
-        spinPivot.rotation[axis] = 0;
-      }
-    }
   }
 
   function restoreActiveVehicleFromProxy(context, proxy) {
@@ -405,15 +518,16 @@ export function createVehicleManager({
     context.wheelMount.add(wheels);
     prepareRenderable(body);
     prepareRenderable(wheels);
-    refreshWheelMountRuntimeState(wheels);
+    primeCarWheelRuntimeState(wheels);
     if (proxy.kind === 'bike') {
       bikeVehicle.applyRuntimeWheelMetadata(wheels);
     }
     state.carMetrics = measureObjectBounds(body);
     state.carWheelAnchors = proxy.kind === 'bike' ? bikeVehicle.collectWheelAnchors(body) : collectWheelAnchors(body);
-    state.doorRig = proxy.kind === 'car' ? createDoorRig(body) : null;
-    ui.toggleDoor.disabled = proxy.kind !== 'car' || !state.doorRig;
-    state.steeringWheelRig = proxy.kind === 'car' ? collectSteeringWheelRig(body) || mountSteeringWheelAttachment(body) : null;
+    const isCarLikeProxy = proxy.kind === 'car' || proxy.kind === 'valkyrie' || proxy.kind === 'sendan';
+    state.doorRig = isCarLikeProxy ? createDoorRig(body) : null;
+    ui.toggleDoor.disabled = !isCarLikeProxy || !state.doorRig;
+    state.steeringWheelRig = isCarLikeProxy ? collectSteeringWheelRig(body) || mountSteeringWheelAttachment(body) : null;
     state.activeVehicleKind = proxy.kind;
     context.carMount.userData.vehicleKind = proxy.kind;
     context.carMount.userData.wheelSpinDirection = 1;
@@ -449,6 +563,10 @@ export function createVehicleManager({
     } else if (proxy.kind === 'valkyrie') {
       playerSystem.directMountVehicle(context);
       setStatus('In Valkyrie');
+    } else if (proxy.kind === 'sendan') {
+      if (!playerSystem.tryEnterVehicle(context)) {
+        setStatus('Move closer to the driver door to enter the Sendan');
+      }
     } else if (!playerSystem.tryEnterVehicle(context)) {
       setStatus('Move closer to the driver door to enter the car');
     }

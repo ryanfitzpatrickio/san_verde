@@ -10,42 +10,41 @@ import {
   ensureLocatorHelpers,
   stripEditorHelpers
 } from './vehicle-validator.js';
+import { inferVehicleForwardYawRadians } from '../vehicles/vehicle-orientation.js';
 
 const loader = new GLTFLoader();
 const exporter = new GLTFExporter();
+const WHEEL_LOCATOR_NAMES = [
+  'Locator_Front_Left',
+  'Locator_Front_Right',
+  'Locator_Rear_Left',
+  'Locator_Rear_Right'
+];
+const TEMP_WHEEL_WORLD = new THREE.Vector3();
+const TEMP_WHEEL_LOCAL = new THREE.Vector3();
+const TEMP_TARGET_WORLD = new THREE.Vector3();
 
 function cloneValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function arrayBufferToBase64(buffer) {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    const chunk = bytes.subarray(index, index + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-
-  return btoa(binary);
-}
-
 function exportSceneToGlb(root) {
-  const exportRoot = root.clone(true);
-  stripEditorHelpers(exportRoot);
-
   return new Promise((resolve, reject) => {
+    stripEditorHelpers(root);
     exporter.parse(
-      exportRoot,
+      root,
       (result) => {
+        ensureLocatorHelpers(root);
         if (result instanceof ArrayBuffer) {
           resolve(result);
           return;
         }
         reject(new Error('Expected binary GLB export.'));
       },
-      reject,
+      (error) => {
+        ensureLocatorHelpers(root);
+        reject(error);
+      },
       { binary: true, onlyVisible: false }
     );
   });
@@ -108,7 +107,6 @@ export function VehicleValidationDialog(props) {
   let activeModelRoot = null;
   let pendingFile = null;
   let sourceFile = null;
-  let sourceFileBase64 = '';
 
   const [status, setStatus] = createSignal('Load a GLB to begin validation.');
   const [validation, setValidation] = createSignal(null);
@@ -117,6 +115,7 @@ export function VehicleValidationDialog(props) {
   const [savedModel, setSavedModel] = createSignal(null);
   const [busy, setBusy] = createSignal(false);
   const [nudgeStep, setNudgeStep] = createSignal(0.02);
+  const [modelReady, setModelReady] = createSignal(false);
 
   const approved = createMemo(() => Boolean(validation()?.approved));
 
@@ -199,11 +198,13 @@ export function VehicleValidationDialog(props) {
   function refreshValidation(options = {}) {
     if (!activeModelRoot) {
       setValidation(null);
+      setModelReady(false);
       return;
     }
 
     ensureLocatorHelpers(activeModelRoot);
     setValidation(analyzeVehicleScene(activeModelRoot));
+    setModelReady(true);
     if (options.reattach === true) {
       attachSelectedLocator();
     }
@@ -211,6 +212,15 @@ export function VehicleValidationDialog(props) {
 
   function getSelectedLocator() {
     return activeModelRoot?.getObjectByName(selectedLocatorName()) || null;
+  }
+
+  function getWheelLocators() {
+    if (!activeModelRoot) {
+      return null;
+    }
+
+    const locators = WHEEL_LOCATOR_NAMES.map((name) => activeModelRoot.getObjectByName(name));
+    return locators.every(Boolean) ? locators : null;
   }
 
   function updateSelectedLocatorAxis(axis, value) {
@@ -237,6 +247,84 @@ export function VehicleValidationDialog(props) {
     refreshValidation();
   }
 
+  function balanceWheelLocators() {
+    const locators = getWheelLocators();
+    if (!locators || !activeModelRoot) {
+      setStatus('All four wheel locators are required before balancing.');
+      return;
+    }
+
+    const localPositions = locators.map((locator) => {
+      locator.updateMatrixWorld(true);
+      locator.getWorldPosition(TEMP_WHEEL_WORLD);
+      return activeModelRoot.worldToLocal(TEMP_WHEEL_WORLD.clone());
+    });
+
+    const frontLeft = localPositions[0];
+    const frontRight = localPositions[1];
+    const rearLeft = localPositions[2];
+    const rearRight = localPositions[3];
+
+    const leftX = (frontLeft.x + rearLeft.x) * 0.5;
+    const rightX = (frontRight.x + rearRight.x) * 0.5;
+    const frontZ = (frontLeft.z + frontRight.z) * 0.5;
+    const rearZ = (rearLeft.z + rearRight.z) * 0.5;
+    const y =
+      (frontLeft.y + frontRight.y + rearLeft.y + rearRight.y) /
+      4;
+
+    const balanced = [
+      new THREE.Vector3(leftX, y, frontZ),
+      new THREE.Vector3(rightX, y, frontZ),
+      new THREE.Vector3(leftX, y, rearZ),
+      new THREE.Vector3(rightX, y, rearZ)
+    ];
+
+    for (let index = 0; index < locators.length; index += 1) {
+      const locator = locators[index];
+      const parent = locator.parent;
+      if (!parent) {
+        continue;
+      }
+      activeModelRoot.localToWorld(TEMP_TARGET_WORLD.copy(balanced[index]));
+      TEMP_WHEEL_LOCAL.copy(TEMP_TARGET_WORLD);
+      parent.worldToLocal(TEMP_WHEEL_LOCAL);
+      locator.position.copy(TEMP_WHEEL_LOCAL);
+      locator.updateMatrixWorld(true);
+    }
+
+    setSavedModel(null);
+    refreshValidation({ reattach: true });
+    setStatus('Balanced wheel locators to a clean rectangular layout.');
+  }
+
+  function rotateActiveModel(radians, label = 'Rotated model.') {
+    if (!activeModelRoot || !previewRoot) {
+      return;
+    }
+
+    activeModelRoot.rotateY(radians);
+    activeModelRoot.updateMatrixWorld(true);
+    fitPreviewRoot(previewRoot, activeModelRoot);
+    setSavedModel(null);
+    refreshValidation({ reattach: true });
+    setStatus(label);
+  }
+
+  function alignModelToMustangConvention() {
+    if (!activeModelRoot) {
+      return;
+    }
+
+    const correction = inferVehicleForwardYawRadians(activeModelRoot);
+    if (Math.abs(correction) <= 1e-4) {
+      setStatus('Model already matches the Mustang forward convention.');
+      return;
+    }
+
+    rotateActiveModel(correction, 'Aligned model to Mustang forward convention.');
+  }
+
   async function loadModelFromUrl(url, label = url) {
     if (!previewRoot) {
       setStatus(`Preparing preview for ${label}...`);
@@ -260,6 +348,7 @@ export function VehicleValidationDialog(props) {
       fitPreviewRoot(previewRoot, activeModelRoot);
       ensureLocatorHelpers(activeModelRoot);
       setSavedModel(null);
+      setModelReady(true);
       setStatus(`Loaded ${label}`);
       refreshValidation({ reattach: true });
       frameActiveModel();
@@ -282,7 +371,6 @@ export function VehicleValidationDialog(props) {
 
     try {
       sourceFile = file;
-      sourceFileBase64 = arrayBufferToBase64(await fileToArrayBuffer(file));
       setSaveFilename(file.name.replace(/\.glb$/i, '-validated.glb'));
       await loadModelFromUrl(objectUrl, file.name);
     } catch (error) {
@@ -294,20 +382,24 @@ export function VehicleValidationDialog(props) {
   }
 
   async function autoPlaceLocators() {
-    if (!sourceFile || !sourceFileBase64) {
+    if (!sourceFile) {
       setStatus('Load a GLB first.');
       return;
     }
 
     setBusy(true);
     try {
-      const payload = await requestJson('/__editor/vehicle-auto-locate', {
+      const payloadResponse = await fetch(`/__editor/vehicle-auto-locate?filename=${encodeURIComponent(saveFilename())}`, {
         method: 'POST',
-        body: JSON.stringify({
-          filename: saveFilename(),
-          glbBase64: sourceFileBase64
-        })
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: await fileToArrayBuffer(sourceFile)
       });
+      const payload = await payloadResponse.json();
+      if (!payloadResponse.ok) {
+        throw new Error(payload.message || payload.error || 'Request failed');
+      }
 
       await loadModelFromUrl(`${payload.url}?t=${Date.now()}`, payload.sourceLabel);
       setSavedModel({
@@ -350,13 +442,17 @@ export function VehicleValidationDialog(props) {
     setBusy(true);
     try {
       const glb = await exportSceneToGlb(activeModelRoot);
-      const payload = await requestJson('/__editor/vehicle-models', {
+      const payloadResponse = await fetch(`/__editor/vehicle-models?filename=${encodeURIComponent(saveFilename())}`, {
         method: 'POST',
-        body: JSON.stringify({
-          filename: saveFilename(),
-          glbBase64: arrayBufferToBase64(glb)
-        })
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: glb
       });
+      const payload = await payloadResponse.json();
+      if (!payloadResponse.ok) {
+        throw new Error(payload.message || payload.error || 'Request failed');
+      }
 
       const model = {
         url: payload.url,
@@ -365,8 +461,8 @@ export function VehicleValidationDialog(props) {
 
       setSavedModel(model);
       sourceFile = null;
-      sourceFileBase64 = '';
       setStatus(`Saved ${payload.sourceLabel}`);
+      refreshValidation({ reattach: true });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     } finally {
@@ -524,6 +620,27 @@ export function VehicleValidationDialog(props) {
               </div>
 
               <section class="validator-section">
+                <h3>Orientation</h3>
+                <div class="preview-footnote">
+                  Canonical forward matches the Mustang vehicle convention.
+                </div>
+                <div class="asset-inline-actions locator-actions">
+                  <button type="button" class="ghost-button" onClick={alignModelToMustangConvention} disabled={!modelReady()}>
+                    Match Mustang Convention
+                  </button>
+                  <button type="button" class="ghost-button" onClick={() => rotateActiveModel(Math.PI * 0.5, 'Rotated model +90°')} disabled={!modelReady()}>
+                    Rotate +90
+                  </button>
+                  <button type="button" class="ghost-button" onClick={() => rotateActiveModel(-Math.PI * 0.5, 'Rotated model -90°')} disabled={!modelReady()}>
+                    Rotate -90
+                  </button>
+                  <button type="button" class="ghost-button" onClick={() => rotateActiveModel(Math.PI, 'Rotated model 180°')} disabled={!modelReady()}>
+                    Rotate 180
+                  </button>
+                </div>
+              </section>
+
+              <section class="validator-section">
                 <h3>Required Locators</h3>
                 <div class="preview-footnote">
                   Selected: <code>{selectedLocatorName()}</code>
@@ -545,8 +662,16 @@ export function VehicleValidationDialog(props) {
                   <button type="button" class="ghost-button" onClick={() => focusLocator(getSelectedLocator())} disabled={!getSelectedLocator()}>
                     Frame Locator
                   </button>
-                  <button type="button" class="ghost-button" onClick={frameActiveModel} disabled={!activeModelRoot}>
+                  <button type="button" class="ghost-button" onClick={frameActiveModel} disabled={!modelReady()}>
                     Frame Model
+                  </button>
+                  <button
+                    type="button"
+                    class="ghost-button"
+                    onClick={balanceWheelLocators}
+                    disabled={!getWheelLocators()}
+                  >
+                    Balance Tires
                   </button>
                 </div>
                 <Show when={getSelectedLocator()}>

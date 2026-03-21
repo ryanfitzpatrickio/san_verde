@@ -229,16 +229,17 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     if (
       options.preferDoorwayLocator !== false &&
       interaction.usesDoorwayLocator &&
-      interaction.doorwayLocalPosition &&
-      interaction.doorwayLocalQuaternion
+      interaction.doorwayLocalPosition
     ) {
       const targetPosition = context.vehicleRoot.localToWorld(
         interaction.doorwayLocalPosition.clone()
       );
       targetPosition.y = state.vehiclePosition?.y ?? targetPosition.y;
-      context.vehicleRoot.getWorldQuaternion(WORLD_QUATERNION);
-      LOCAL_QUATERNION.copy(WORLD_QUATERNION).multiply(interaction.doorwayLocalQuaternion);
-      VEHICLE_FORWARD.copy(FORWARD).applyQuaternion(LOCAL_QUATERNION);
+      const hingeWorld = interaction.hingeLocalPosition
+        ? context.vehicleRoot.localToWorld(interaction.hingeLocalPosition.clone())
+        : null;
+      const facingTarget = hingeWorld || context.vehicleRoot.getWorldPosition(WORLD_POSITION);
+      VEHICLE_FORWARD.subVectors(facingTarget, targetPosition);
       VEHICLE_FORWARD.y = 0;
       if (VEHICLE_FORWARD.lengthSq() <= 1e-6) {
         VEHICLE_FORWARD.set(Math.sin(state.vehicleYaw), 0, Math.cos(state.vehicleYaw));
@@ -247,9 +248,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       }
 
       return {
-        hingeWorld: interaction.hingeLocalPosition
-          ? context.vehicleRoot.localToWorld(interaction.hingeLocalPosition.clone())
-          : null,
+        hingeWorld,
         targetPosition,
         targetYaw: Math.atan2(VEHICLE_FORWARD.x, VEHICLE_FORWARD.z),
         source: 'doorwayLocator'
@@ -662,8 +661,9 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
   function syncOverlay(context) {
     const hasCharacter = Boolean(context?.characterController) && state.characterLoaded;
     ui.toggleLap.textContent = `Drive mode: ${state.driveMode ? 'On' : 'Off'}`;
+    const transmissionMode = config.drivingStyles?.[state.drivingStyle]?.transmissionMode || 'manual';
     const driveHint =
-      state.drivingStyle === 'arcade'
+      transmissionMode === 'automatic'
         ? 'WASD drive, automatic shifting, F exit car'
         : 'WASD drive, Q/E shift, N neutral, F exit car';
 

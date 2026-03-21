@@ -79,10 +79,16 @@ function normalizeAssetReference(reference, fieldName, sourcePath) {
     ? object.sourceLabel.trim()
     : `public${url}`;
 
-  return {
+  const normalized = {
     url,
     sourceLabel
   };
+
+  if (Number.isFinite(object.rotationYDeg)) {
+    normalized.rotationYDeg = Number(object.rotationYDeg);
+  }
+
+  return normalized;
 }
 
 function normalizeTireRotation(preset, sourcePath) {
@@ -106,6 +112,17 @@ function normalizePreset(preset, sourcePath) {
 
   const normalized = { ...object };
   normalized.tireRotation = normalizeTireRotation(normalized, sourcePath);
+  if (Array.isArray(normalized.rightSideTireRotation) && normalized.rightSideTireRotation.length === 3) {
+    normalized.rightSideTireRotation = normalized.rightSideTireRotation.map((value, index) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        throw createError(`Expected numeric right-side tire rotation at index ${index}`, sourcePath);
+      }
+      return value;
+    });
+  }
+  if ('rightSideTireMirror' in normalized) {
+    normalized.rightSideTireMirror = Boolean(normalized.rightSideTireMirror);
+  }
   return normalized;
 }
 

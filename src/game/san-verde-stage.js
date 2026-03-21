@@ -726,7 +726,6 @@ function createZone(zone, rivers = []) {
   const points = (zone.points || []).map(normalizePoint).filter(Boolean);
   if (points.length < 3) return new THREE.Group();
 
-  const style = DISTRICT_STYLE[zone.type] || DISTRICT_STYLE.residential_mid;
   const shape = new THREE.Shape();
   shape.moveTo(points[0].x, points[0].z);
   for (let i = 1; i < points.length; i++) {
@@ -745,9 +744,8 @@ function createZone(zone, rivers = []) {
   geometry.clearGroups();
   geometry.rotateX(Math.PI / 2);
   geometry.translate(0, topY, 0);
-  const mesh = new THREE.Mesh(geometry, MATERIALS.ground.clone());
-  mesh.material.color.set(style.ground);
-  mesh.material.shadowSide = THREE.DoubleSide;
+  applyWorldXZUvProjection(geometry, 18);
+  const mesh = new THREE.Mesh(geometry, MATERIALS.ground);
   mesh.receiveShadow = true;
   return applyRiverCutsToGround(mesh, rivers, {
     bounds: getPolygonBounds(points),
@@ -2895,6 +2893,23 @@ function getPlaneGeometry(width, height) {
     PLANE_GEOMETRY_CACHE.set(key, markSharedGeometry(new THREE.PlaneGeometry(width, height)));
   }
   return PLANE_GEOMETRY_CACHE.get(key);
+}
+
+function applyWorldXZUvProjection(geometry, tileSize = 18) {
+  const position = geometry?.attributes?.position;
+  if (!position) {
+    return geometry;
+  }
+
+  const scale = Math.max(1, tileSize);
+  const uv = new Float32Array(position.count * 2);
+  for (let i = 0; i < position.count; i += 1) {
+    uv[i * 2] = position.getX(i) / scale;
+    uv[i * 2 + 1] = position.getZ(i) / scale;
+  }
+
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return geometry;
 }
 
 function markSharedGeometry(geometry) {

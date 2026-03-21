@@ -1,0 +1,21 @@
+{
+  "id": "pedestrian_placeholder",
+  "order": 10,
+  "label": "Pedestrian Placeholder",
+  "kind": "npc",
+  "crowdKind": "pedestrian",
+  "role": "fallback",
+  "subtype": "pedestrian",
+  "behaviorClass": "ambient",
+  "movementMode": "crowd_nav",
+  "collisionProxy": {
+    "shape": "capsule",
+    "radius": 0.35,
+    "height": 1.8
+  },
+  "presentation": {
+    "driver": "primitive",
+    "primitive": "pedestrian",
+    "palette": "pedestrian"
+  }
+}

@@ -7,8 +7,15 @@ export class BaseVehicle {
     this.helpers = helpers;
   }
 
-  createBodyWrapper(rawAsset, { wrapperName, targetSpan }) {
+  createBodyWrapper(rawAsset, { wrapperName, targetSpan, prepareAsset = null }) {
     const asset = rawAsset.clone(true);
+    const rotationYDeg = Number(rawAsset?.userData?.assetBodyRotationYDeg || 0);
+    if (rotationYDeg) {
+      asset.rotation.y += THREE.MathUtils.degToRad(rotationYDeg);
+    }
+    if (typeof prepareAsset === 'function') {
+      prepareAsset(asset);
+    }
     const body = new THREE.Group();
     body.name = wrapperName;
     body.add(asset);
@@ -32,7 +39,7 @@ export class BaseVehicle {
     wheel.scale.setScalar(scale);
     wheel.userData.anchorName = anchorName;
     wheel.userData.wheelRadius = tireProfile.diameter * scale * 0.5;
-    return { wheel, spinPivot };
+    return { wheel, spinPivot, asset };
   }
 
   applyRuntimeWheelMetadata() {}

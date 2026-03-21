@@ -23,6 +23,11 @@ input {
   font: inherit;
 }
 
+select,
+textarea {
+  font: inherit;
+}
+
 code,
 pre {
   font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
@@ -82,6 +87,31 @@ pre {
   background: rgba(255, 252, 246, 0.74);
   color: #48514b;
   backdrop-filter: blur(20px);
+}
+
+.asset-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid rgba(38, 48, 40, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.74);
+  backdrop-filter: blur(20px);
+}
+
+.asset-tab {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #48514b;
+  cursor: pointer;
+}
+
+.asset-tab.is-active {
+  background: rgba(46, 79, 64, 0.92);
+  color: #f2f4eb;
 }
 
 .asset-grid {
@@ -196,6 +226,31 @@ pre {
   color: #1d231d;
 }
 
+.field-select,
+.field-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(38, 48, 40, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d231d;
+}
+
+.field-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.field-checkbox {
+  align-content: end;
+}
+
+.field-checkbox input {
+  width: 20px;
+  height: 20px;
+  justify-self: start;
+}
+
 .field-wide {
   grid-column: 1 / -1;
 }
@@ -223,6 +278,44 @@ pre {
 .preview-footnote {
   margin-top: 12px;
   color: #4a524d;
+}
+
+.tire-usage-list {
+  display: grid;
+  gap: 12px;
+}
+
+.tire-usage-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(38, 48, 40, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.tire-usage-title {
+  font-weight: 700;
+}
+
+.tire-usage-meta {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: #5d645f;
+}
+
+.tire-usage-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #48514b;
+  font-size: 0.9rem;
+}
+
+.tire-usage-settings span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(242, 239, 231, 0.92);
 }
 
 .modal-backdrop {
@@ -258,6 +351,12 @@ pre {
   gap: 18px;
 }
 
+.tire-preview-layout {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+}
+
 .validator-sidebar {
   display: grid;
   gap: 14px;
@@ -286,6 +385,13 @@ pre {
 
 .validator-viewport {
   min-height: 680px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #edf0ee 0%, #cbd1ce 100%);
+}
+
+.tire-preview-viewport {
+  min-height: 560px;
   border-radius: 24px;
   overflow: hidden;
   background: linear-gradient(180deg, #edf0ee 0%, #cbd1ce 100%);
@@ -396,6 +502,10 @@ pre {
   transform: none;
 }
 
+.hidden-file-input {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   .asset-grid {
     grid-template-columns: 1fr;
@@ -409,8 +519,16 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .tire-preview-layout {
+    grid-template-columns: 1fr;
+  }
+
   .validator-viewport {
     min-height: 460px;
+  }
+
+  .tire-preview-viewport {
+    min-height: 420px;
   }
 }
 

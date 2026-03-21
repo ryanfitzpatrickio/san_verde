@@ -4,6 +4,13 @@ import { computeAutopilotInputs, createAutopilotState } from './autopilot.js';
 import { addComponent, createEntity, createWorld, getComponent, queryEntities } from '../ecs/world.js';
 import { configureBounceVehicle, resetBounceVehicle, settleBounceVehicle, stepBounceVehicle } from './bounce-physics.js';
 import { emitSkidMark } from './skid-mark-system.js';
+import { resolveDriveCommandInputs, updateVehicleEngineSnapshot } from '../vehicles/car-drive-controller.js';
+import { updateSteerAngleFromInput } from '../vehicles/car-steering-controller.js';
+import {
+  applyMountedCarRuntimeTransform,
+  applyMountedCarRuntimeWheelAnimation,
+  ensureMountedCarRuntimeBase
+} from '../vehicles/mounted-car-controller.js';
 
 const COMPONENTS = {
   cameraRig: 'cameraRig',
@@ -761,18 +768,19 @@ function updateDriveSystem(runtime, deltaSeconds) {
           deltaSeconds
         );
       } else {
-        const targetSteer = controller.steerInput * maxSteerAngle;
-        controller.steerAngle = dampTowards(
-          controller.steerAngle,
-          targetSteer,
-          controller.steerInput === 0
-            ? (vehiclePhysics.steeringReturnRate ?? runtime.config.steerReturnRate) *
-                (drivingStyle.steeringReturnMultiplier ?? 1)
-            : (vehiclePhysics.steeringResponse ?? runtime.config.steeringRate) *
-                (drivingStyle.steeringResponseMultiplier ?? 1) *
-                bikeSteerResponseMultiplier,
+        controller.steerAngle = updateSteerAngleFromInput({
+          currentSteerAngle: controller.steerAngle,
+          steerInput: controller.steerInput,
+          maxSteerAngle,
+          steerResponse:
+            (vehiclePhysics.steeringResponse ?? runtime.config.steeringRate) *
+            (drivingStyle.steeringResponseMultiplier ?? 1) *
+            bikeSteerResponseMultiplier,
+          steerReturn:
+            (vehiclePhysics.steeringReturnRate ?? runtime.config.steerReturnRate) *
+            (drivingStyle.steeringReturnMultiplier ?? 1),
           deltaSeconds
-        );
+        });
       }
 
       if (controller.driveMode) {
@@ -934,17 +942,18 @@ function updateDriveSystem(runtime, deltaSeconds) {
           deltaSeconds
         );
       } else {
-        const targetSteer = controller.steerInput * maxSteerAngle;
-        controller.steerAngle = dampTowards(
-          controller.steerAngle,
-          targetSteer,
-          controller.steerInput === 0
-            ? (vehiclePhysics.steeringReturnRate ?? runtime.config.steerReturnRate) *
-                (drivingStyle.steeringReturnMultiplier ?? 1)
-            : (vehiclePhysics.steeringResponse ?? runtime.config.steeringRate) *
-                (drivingStyle.steeringResponseMultiplier ?? 1),
+        controller.steerAngle = updateSteerAngleFromInput({
+          currentSteerAngle: controller.steerAngle,
+          steerInput: controller.steerInput,
+          maxSteerAngle,
+          steerResponse:
+            (vehiclePhysics.steeringResponse ?? runtime.config.steeringRate) *
+            (drivingStyle.steeringResponseMultiplier ?? 1),
+          steerReturn:
+            (vehiclePhysics.steeringReturnRate ?? runtime.config.steerReturnRate) *
+            (drivingStyle.steeringReturnMultiplier ?? 1),
           deltaSeconds
-        );
+        });
       }
 
       const steerSpeedFactor = clamp(Math.abs(controller.speed) / 28, 0, 1);
@@ -1473,63 +1482,28 @@ function updateEngineSystem(runtime, deltaSeconds) {
       }
     }
 
-    let throttleInput = controller.driveMode ? (gear.ratio < 0 ? reverseInput : forwardInput) : 0;
-    let brakeInput = controller.driveMode ? (gear.ratio < 0 ? forwardInput : reverseInput) : 0;
-    let desiredDirection = controller.automaticDirection || 1;
-
-    if (drivingStyle.transmissionMode === 'automatic') {
-      const shiftThreshold = drivingStyle.autoDirectionShiftSpeedMps ?? 0.9;
-      const movingForward = controller.speed > shiftThreshold;
-      const movingReverse = controller.speed < -shiftThreshold;
-
-      if (controller.autopilotEnabled) {
-        controller.automaticDirection = 1;
-        desiredDirection = 1;
-        throttleInput = forwardInput;
-        brakeInput = reverseInput;
-      } else if (forwardInput > 0 && reverseInput <= 0) {
-        if (!movingReverse) {
-          controller.automaticDirection = 1;
-        }
-        desiredDirection = 1;
-        throttleInput = movingReverse ? 0 : forwardInput;
-        brakeInput = movingReverse ? forwardInput : 0;
-      } else if (reverseInput > 0 && forwardInput <= 0) {
-        if (!movingForward) {
-          controller.automaticDirection = -1;
-        }
-        desiredDirection = controller.automaticDirection;
-        throttleInput = movingForward ? 0 : reverseInput;
-        brakeInput = movingForward ? reverseInput : 0;
-      } else {
-        desiredDirection = controller.automaticDirection;
-        throttleInput = 0;
-        brakeInput = 0;
-        if (Math.abs(controller.speed) < shiftThreshold * 0.45) {
-          controller.automaticDirection = 1;
-          desiredDirection = 1;
-        }
-      }
-    }
-
-    const throttleCurveExponent = drivingStyle.throttleCurveExponent ?? 1;
-    if (throttleInput > 0 && throttleCurveExponent !== 1) {
-      throttleInput = Math.pow(THREE.MathUtils.clamp(throttleInput, 0, 1), throttleCurveExponent);
-    }
+    const {
+      throttleInput,
+      brakeInput,
+      desiredDirection
+    } = resolveDriveCommandInputs({
+      controller,
+      drivingStyle,
+      gearRatio: gear.ratio,
+      forwardInput,
+      reverseInput
+    });
 
     controller.steerInput = steerInput;
 
-    engine.snapshot = engine.audio.update({
+    engine.snapshot = updateVehicleEngineSnapshot({
+      engineAudio: engine.audio,
+      controller,
+      drivingStyle,
       deltaSeconds,
       throttleInput,
       brakeInput,
-      driveSpeed: controller.speed,
-      wheelRadius: controller.wheelRadius,
-      driveEnabled: controller.driveMode,
-      transmissionMode: drivingStyle.transmissionMode,
-      desiredDirection,
-      automaticUpshiftRpmMultiplier: drivingStyle.autoUpshiftRpmMultiplier ?? 1,
-      automaticDownshiftRpmMultiplier: drivingStyle.autoDownshiftRpmMultiplier ?? 1
+      desiredDirection
     });
 
     if (physics.vehicleKind === 'bike') {
@@ -1590,21 +1564,8 @@ function applyVehicleTransformSystem(runtime) {
       renderRig.vehicleRoot.quaternion.setFromAxisAngle(UP_AXIS, transform.yaw);
     }
 
-    const carMountBasePosition = renderRig.carMount.userData.baseLocalPosition || renderRig.carMount.position.clone();
-    const wheelMountBasePosition =
-      renderRig.wheelMount.userData.baseLocalPosition || renderRig.wheelMount.position.clone();
-    const carMountBaseQuaternion =
-      renderRig.carMount.userData.baseLocalQuaternion || renderRig.carMount.quaternion.clone();
-    const wheelMountBaseQuaternion =
-      renderRig.wheelMount.userData.baseLocalQuaternion || renderRig.wheelMount.quaternion.clone();
-
-    renderRig.carMount.userData.baseLocalPosition = carMountBasePosition;
-    renderRig.wheelMount.userData.baseLocalPosition = wheelMountBasePosition;
-    renderRig.carMount.userData.baseLocalQuaternion = carMountBaseQuaternion;
-    renderRig.wheelMount.userData.baseLocalQuaternion = wheelMountBaseQuaternion;
-
-    renderRig.wheelMount.position.copy(wheelMountBasePosition);
-    renderRig.wheelMount.quaternion.copy(wheelMountBaseQuaternion);
+    const base = ensureMountedCarRuntimeBase(renderRig);
+    const carMountBaseQuaternion = base?.carMountBaseQuaternion || renderRig.carMount.quaternion;
 
     const pitchAxisSign = inferBaseAxisSign(carMountBaseQuaternion, RIGHT_AXIS, BASE_RIGHT_AXIS);
     const rollAxisSign = inferBaseAxisSign(carMountBaseQuaternion, FORWARD_AXIS, BASE_FORWARD_AXIS);
@@ -1620,13 +1581,14 @@ function applyVehicleTransformSystem(runtime) {
       renderRig.wheelMount.quaternion.multiply(ROLL_QUATERNION);
     }
 
-    renderRig.carMount.position.set(
-      carMountBasePosition.x,
-      carMountBasePosition.y + bodyChassisHeight,
-      carMountBasePosition.z
-    );
-    renderRig.carMount.quaternion.copy(carMountBaseQuaternion);
-    renderRig.carMount.quaternion.multiply(TILT_QUATERNION);
+    applyMountedCarRuntimeTransform({
+      renderRig,
+      vehiclePosition: renderRig.vehicleRoot.position,
+      vehicleQuaternion: renderRig.vehicleRoot.quaternion,
+      bodyChassisHeight,
+      bodyTiltQuaternion: TILT_QUATERNION,
+      wheelTiltQuaternion: isBike ? ROLL_QUATERNION : null
+    });
   }
 }
 
@@ -1642,55 +1604,14 @@ function updateWheelAnimationSystem(runtime) {
         (renderRig.carMount.userData.vehicleKind === 'bike' ? 1 : -1)
     );
 
-    for (const wheel of renderRig.wheelMount.children) {
-      if (wheel?.userData?.physicsOnly) {
-        continue;
-      }
-      const spinPivot = wheel.children[0];
-      if (!spinPivot) {
-        continue;
-      }
-
-      if (wheel.userData.baseQuaternion) {
-        wheel.quaternion.copy(wheel.userData.baseQuaternion);
-        if (wheel.userData.canSteer) {
-          STEER_QUATERNION.setFromAxisAngle(
-            wheel.userData.steerAxis || UP_AXIS,
-            controller.steerAngle *
-              steerDirection *
-              Number(wheel.userData.steerSign || 1) *
-              Number(wheel.userData.steerScale || 1)
-          );
-          wheel.quaternion.multiply(STEER_QUATERNION);
-        }
-      }
-
-      spinPivot.rotation.x = 0;
-      spinPivot.rotation.y = 0;
-      spinPivot.rotation.z = 0;
-      spinPivot.rotation[spinPivot.userData.spinAxis || 'x'] =
-        controller.wheelSpin *
-        wheelSpinDirection *
-        Number(spinPivot.userData.spinSign || 1);
-    }
-
-    const bikeSteeringRig = renderRig.carMount.userData.bikeSteeringRig;
-    if (bikeSteeringRig?.targets?.length) {
-      STEER_QUATERNION.setFromAxisAngle(
-        bikeSteeringRig.steerAxis || UP_AXIS,
-        controller.steerAngle *
-          steerDirection *
-          Number(bikeSteeringRig.steerSign || 1) *
-          Number(bikeSteeringRig.steerScale || 1)
-      );
-      for (const target of bikeSteeringRig.targets) {
-        if (!target?.object || !target?.baseQuaternion) {
-          continue;
-        }
-        target.object.quaternion.copy(target.baseQuaternion);
-        target.object.quaternion.multiply(STEER_QUATERNION);
-      }
-    }
+    applyMountedCarRuntimeWheelAnimation({
+      renderRig,
+      steerAngle: controller.steerAngle,
+      wheelSpin: controller.wheelSpin,
+      wheelSpinDirection,
+      steerDirection,
+      upAxis: UP_AXIS
+    });
   }
 }
 

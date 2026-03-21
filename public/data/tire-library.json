@@ -1,0 +1,25 @@
+{
+  "tires": [
+    {
+      "id": "fronttire",
+      "label": "Front Tire",
+      "url": "/models/fronttire.glb",
+      "sourceLabel": "public/models/fronttire.glb",
+      "notes": ""
+    },
+    {
+      "id": "valktire",
+      "label": "Valk Tire",
+      "url": "/models/valktire.glb",
+      "sourceLabel": "public/models/valktire.glb",
+      "notes": ""
+    },
+    {
+      "id": "widetire",
+      "label": "Wide Tire",
+      "url": "/models/widetire.glb",
+      "sourceLabel": "public/models/widetire.glb",
+      "notes": ""
+    }
+  ]
+}
