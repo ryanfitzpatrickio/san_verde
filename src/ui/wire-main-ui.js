@@ -211,7 +211,7 @@ export function wireMainUi(options) {
           context.characterController.position, 6
         );
         if (nearbyTraffic) {
-          tryCarjack(nearbyTraffic);
+          void tryCarjack(nearbyTraffic);
         } else {
           setStatus('Move closer to a vehicle to drive');
         }
@@ -371,23 +371,18 @@ export function wireMainUi(options) {
     setDriveInput(context.gameRuntime, 'right', false);
   };
 
-  const tryCarjack = (trafficAgent) => {
-    const result = vehicleManager.mountStolenTrafficVehicle(context, trafficAgent);
-    if (!result) {
-      setStatus('Move closer to a vehicle to drive');
-      return;
-    }
+  const tryCarjack = async (trafficAgent) => {
+    // Grab position/yaw before removing the agent
+    const vehiclePos = trafficAgent.lastPosition.clone();
+    const vehicleYaw = trafficAgent.yaw || 0;
+    const playerPos = context.characterController.position.clone();
 
-    // Spawn fleeing NPC at the driver side, running away from the player
-    const playerPos = context.characterController.position;
-    const vehiclePos = result.position;
-    // Perpendicular to vehicle facing = driver side
-    const sideX = Math.sin(result.yaw + Math.PI * 0.5);
-    const sideZ = Math.cos(result.yaw + Math.PI * 0.5);
+    // Spawn fleeing NPC at the driver side immediately
+    const sideX = Math.sin(vehicleYaw + Math.PI * 0.5);
+    const sideZ = Math.cos(vehicleYaw + Math.PI * 0.5);
     const spawnPos = vehiclePos.clone();
     spawnPos.x += sideX * 1.4;
     spawnPos.z += sideZ * 1.4;
-    // Flee away from player
     const fleeDir = { x: spawnPos.x - playerPos.x, y: 0, z: spawnPos.z - playerPos.z };
     const fleeDirLen = Math.sqrt(fleeDir.x * fleeDir.x + fleeDir.z * fleeDir.z);
     if (fleeDirLen > 0.01) {
@@ -397,9 +392,20 @@ export function wireMainUi(options) {
       fleeDir.x = sideX;
       fleeDir.z = sideZ;
     }
-    context.agentSystem?.spawnFleeingNpc?.(spawnPos, { x: fleeDir.x, y: 0, z: fleeDir.z });
+    context.agentSystem?.spawnFleeingNpc?.(spawnPos, fleeDir);
 
+    // Remove traffic agent from the crowd
     context.agentSystem.removeTrafficAgent(trafficAgent);
+
+    setStatus('Stealing car...');
+
+    // Load and mount the vehicle (async — loads body + tire GLBs)
+    const result = await vehicleManager.mountStolenTrafficVehicle(context, trafficAgent);
+    if (!result) {
+      setStatus('Failed to steal car');
+      return;
+    }
+
     if (!playerSystem.tryEnterVehicle(context)) {
       playerSystem.directMountVehicle(context);
     }
@@ -428,7 +434,7 @@ export function wireMainUi(options) {
             context.characterController.position, 6
           );
           if (nearbyTraffic) {
-            tryCarjack(nearbyTraffic);
+            void tryCarjack(nearbyTraffic);
           } else {
             setStatus('Move closer to a vehicle to drive');
           }

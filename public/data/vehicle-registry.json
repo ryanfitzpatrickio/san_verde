@@ -86,6 +86,46 @@
       }
     },
     {
+      "id": "dominator",
+      "order": 999,
+      "label": "Dominator",
+      "kind": "car",
+      "body": {
+        "url": "/models/car-build--8--validated.glb",
+        "sourceLabel": "public/models/car-build--8--validated.glb"
+      },
+      "tires": null,
+      "preset": {
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 0.93,
+        "parkedWheelOffsetY": 0,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.105,
+        "chassisHeight": 0.11,
+        "bodyVisualOffsetY": -0.16,
+        "sideInset": 0.07,
+        "tireRotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "leftSideTireRotation": [
+          0,
+          0,
+          0
+        ],
+        "leftSideTireMirror": false,
+        "rightSideTireRotation": [
+          3.141592653589793,
+          0,
+          0
+        ],
+        "rightSideTireMirror": false
+      }
+    },
+    {
       "id": "sendan",
       "order": 999,
       "label": "Sendan",

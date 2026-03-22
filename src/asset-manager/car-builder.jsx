@@ -300,7 +300,7 @@ export function CarBuilder(props) {
 
   function attachTransformToSelected() {
     const currentMode = mode();
-    if (currentMode === 'select' || currentMode === 'cut') {
+    if (currentMode === 'select' || currentMode === 'cut' || currentMode === 'slice' || currentMode === 'cylinder') {
       detachTransform();
       highlightSelected();
       return;
@@ -311,6 +311,10 @@ export function CarBuilder(props) {
       detachTransform();
       return;
     }
+
+    // Only pass valid TransformControls modes
+    const gizmoMode = (currentMode === 'translate' || currentMode === 'rotate' || currentMode === 'scale')
+      ? currentMode : 'translate';
 
     if (transformHelper) {
       scene.remove(transformHelper);
@@ -323,7 +327,7 @@ export function CarBuilder(props) {
     }
 
     transformControls = new TransformControls(camera, renderer.domElement);
-    transformControls.setMode(currentMode);
+    transformControls.setMode(gizmoMode);
     transformControls.setSpace('local');
     transformControls.size = 0.9;
     transformControls.addEventListener('dragging-changed', (event) => {
@@ -703,6 +707,7 @@ export function CarBuilder(props) {
 
   function setToolMode(newMode) {
     // Clean up previous mode
+    detachTransform();
     stripSelectionWires();
     if (cutState) { disposeCutVisuals(cutState); cutState = null; }
     if (sliceState) { disposeSlice(sliceState); sliceState = null; setSliceReady(false); setSliceFlip(false); }

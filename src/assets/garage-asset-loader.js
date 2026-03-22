@@ -33,6 +33,7 @@ export function createGarageAssetLoader(options) {
 
     await loadValkyrieAssets(context);
     await loadSendanAsset(context);
+    await loadDominatorAsset(context);
 
     const selectedBuiltInCar = getSelectedBuiltInCar();
     const carExists = await assetExists(selectedBuiltInCar?.body?.url || config.defaultCarUrl);
@@ -130,6 +131,23 @@ export function createGarageAssetLoader(options) {
       console.error(error);
       state.sendanAsset = null;
       state.sendanTireAssets = { front: null, rear: null };
+    }
+  }
+
+  async function loadDominatorAsset(context) {
+    try {
+      const dominator = getBuiltInVehicleById('dominator');
+      const bodyUrl = dominator?.body?.url || '';
+      if (!bodyUrl || !await assetExists(bodyUrl)) {
+        return;
+      }
+      setStatus('Loading Dominator asset');
+      const bodyGltf = await context.gltfLoader.loadAsync(bodyUrl);
+      state.dominatorAsset = bodyGltf.scene || bodyGltf.scenes[0];
+      vehicleManager.syncParkedVehicleProxies(context);
+    } catch (error) {
+      console.error(error);
+      state.dominatorAsset = null;
     }
   }
 

@@ -31,6 +31,8 @@ export const MODEL_CONFIG = {
   valkyrieSpawnYaw: Math.PI * 0.5,
   sendanSpawnPosition: new THREE.Vector3(24, 0, 18),
   sendanSpawnYaw: Math.PI,
+  dominatorSpawnPosition: new THREE.Vector3(-24, 0, 18),
+  dominatorSpawnYaw: Math.PI,
   leftSideTireRotation: [0, 0, 0],
   leftSideTireMirror: false,
   rightSideTireRotation: [Math.PI, 0, 0],
@@ -575,6 +577,7 @@ export function createInitialState(ui) {
       front: null,
       rear: null
     },
+    dominatorAsset: null,
     carMetrics: null,
     carWheelAnchors: null,
     carEmbeddedWheelAssets: null,
@@ -657,7 +660,8 @@ export function createInitialState(ui) {
       car: null,
       bike: null,
       valkyrie: null,
-      sendan: null
+      sendan: null,
+      dominator: null
     },
     objectUrls: {
       car: null,

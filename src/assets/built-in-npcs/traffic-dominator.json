@@ -1,0 +1,21 @@
+{
+  "id": "traffic_dominator",
+  "order": 12,
+  "label": "Traffic Dominator",
+  "kind": "npc",
+  "crowdKind": "vehicle",
+  "subtype": "traffic_vehicle",
+  "behaviorClass": "traffic",
+  "movementMode": "crowd_nav",
+  "collisionProxy": {
+    "shape": "box",
+    "size": [1.86, 1.54, 4.12]
+  },
+  "presentation": {
+    "driver": "traffic_vehicle_runtime",
+    "vehicleId": "dominator",
+    "modelUrl": "/models/car-build--8--validated.glb",
+    "targetSpan": 5.4,
+    "yawDegrees": 0
+  }
+}
