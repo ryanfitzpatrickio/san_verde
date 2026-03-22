@@ -20,6 +20,7 @@ import {
 import {
   createNpcColliderRuntime,
   createNpcCollider,
+  destroyNpcCollider,
   destroyNpcColliderRuntime,
   isNpcColliderTouchingDynamic,
   sampleNpcColliderCollision,
@@ -83,8 +84,13 @@ export function createNpcCrowdSystem({ config, state }) {
   const prevFocusPos = new THREE.Vector3();
   const playerVelocity = new THREE.Vector3();
   let velocityInitialized = false;
+  const fleeingNpcs = [];
 
   function teardown() {
+    for (const npc of fleeingNpcs) {
+      npc.root.removeFromParent();
+    }
+    fleeingNpcs.length = 0;
     disposeRuntime(vehicleRuntime);
     disposeRuntime(pedestrianRuntime);
     vehicleRuntime = null;
@@ -172,6 +178,63 @@ export function createNpcCrowdSystem({ config, state }) {
 
       if (vehicleRuntime) updateCrowdRuntime(vehicleRuntime, focusPos, playerVelocity, despawnDist, dt);
       if (pedestrianRuntime) updateCrowdRuntime(pedestrianRuntime, focusPos, playerVelocity, despawnDist, dt);
+
+      // Update fleeing NPCs
+      for (let i = fleeingNpcs.length - 1; i >= 0; i--) {
+        const npc = fleeingNpcs[i];
+        npc.elapsed += dt;
+        if (npc.elapsed > npc.lifetime) {
+          npc.root.removeFromParent();
+          fleeingNpcs.splice(i, 1);
+          continue;
+        }
+        // Run in flee direction
+        const speed = npc.elapsed < 0.3 ? npc.speed * (npc.elapsed / 0.3) : npc.speed;
+        npc.root.position.x += npc.direction.x * speed * dt;
+        npc.root.position.z += npc.direction.z * speed * dt;
+        // Bob animation
+        const bob = Math.sin(npc.elapsed * 10) * 0.03;
+        npc.root.position.y = npc.baseY + bob;
+      }
+    },
+
+    spawnFleeingNpc(position, fleeDirection) {
+      const group = new THREE.Group();
+      group.name = 'fleeing-npc';
+
+      const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.72, 4, 8);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: '#8B7355', roughness: 0.9, metalness: 0.02 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.58;
+      body.castShadow = true;
+      group.add(body);
+
+      const headGeo = new THREE.SphereGeometry(0.16, 10, 8);
+      const headMat = new THREE.MeshStandardMaterial({ color: '#f0c39b', roughness: 0.9, metalness: 0.01 });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 1.16;
+      head.castShadow = true;
+      group.add(head);
+
+      const dirX = fleeDirection.x || 0;
+      const dirZ = fleeDirection.z || 0;
+      const dirLen = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
+
+      group.position.copy(position);
+      group.quaternion.setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        Math.atan2(dirX, dirZ)
+      );
+      agentRoot.add(group);
+
+      fleeingNpcs.push({
+        root: group,
+        direction: new THREE.Vector3(dirX / dirLen, 0, dirZ / dirLen),
+        speed: 4.5,
+        elapsed: 0,
+        lifetime: 5,
+        baseY: position.y
+      });
     },
 
     sampleCollision(origin, direction, far) {
@@ -182,6 +245,54 @@ export function createNpcCrowdSystem({ config, state }) {
       return vehicleRuntime?.laneRuntime
         ? summarizeTrafficLaneRuntime(vehicleRuntime.laneRuntime)
         : 'Traffic: n/a';
+    },
+
+    findNearbyStoppedTrafficVehicle(position, maxDistance = 6) {
+      if (!vehicleRuntime || !position?.isVector3) return null;
+
+      let closest = null;
+      let closestDist = Infinity;
+
+      for (const agent of vehicleRuntime.agents) {
+        const crowdAgent = vehicleRuntime.crowd.agents[agent.agentId];
+        if (!crowdAgent) continue;
+
+        const speed = Math.hypot(
+          crowdAgent.velocity[0] || 0,
+          crowdAgent.velocity[1] || 0,
+          crowdAgent.velocity[2] || 0
+        );
+        if (speed > 0.5) continue;
+
+        const pos = crowdAgent.position;
+        const dx = (pos[0] || 0) - position.x;
+        const dy = (pos[1] || 0) - position.y;
+        const dz = (pos[2] || 0) - position.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < maxDistance && dist < closestDist) {
+          closest = agent;
+          closestDist = dist;
+        }
+      }
+
+      return closest;
+    },
+
+    removeTrafficAgent(agent) {
+      if (!vehicleRuntime) return;
+
+      const index = vehicleRuntime.agents.indexOf(agent);
+      if (index === -1) return;
+
+      if (colliderRuntime) {
+        destroyNpcCollider(colliderRuntime, agent);
+      }
+
+      crowd.removeAgent(vehicleRuntime.crowd, agent.agentId);
+      if (agent.actor?.root?.parent) {
+        agent.actor.root.parent.remove(agent.actor.root);
+      }
+      vehicleRuntime.agents.splice(index, 1);
     },
 
     dispose() {

@@ -4,6 +4,7 @@ import './style.css';
 import { VehicleValidationDialog } from './vehicle-validation-dialog.jsx';
 import { TireValidationDialog } from './tire-validation-dialog.jsx';
 import { VehiclePreviewDialog } from './vehicle-preview-dialog.jsx';
+import { CarBuilder } from './car-builder.jsx';
 
 const DEFAULT_PRESET = {
   exposure: 1.15,
@@ -119,6 +120,7 @@ function app() {
   const [validatorOpen, setValidatorOpen] = createSignal(false);
   const [tirePreviewConfig, setTirePreviewConfig] = createSignal(null);
   const [vehiclePreviewOpen, setVehiclePreviewOpen] = createSignal(false);
+  const [builderOpen, setBuilderOpen] = createSignal(false);
 
   const selectedVehicle = createMemo(() => {
     return vehicles().find((vehicle) => vehicle.id === selectedId()) || null;
@@ -570,6 +572,7 @@ function app() {
   }
 
   return (
+    <Show when={!builderOpen()} fallback={<CarBuilder onClose={() => setBuilderOpen(false)} />}>
     <div class="asset-manager-shell">
       <header class="asset-header">
         <div>
@@ -580,6 +583,9 @@ function app() {
           </p>
         </div>
         <div class="asset-actions">
+          <button type="button" class="ghost-button" onClick={() => setBuilderOpen(true)}>
+            Car Builder
+          </button>
           <button type="button" class="ghost-button" onClick={() => window.location.assign('/')}>
             Open Garage
           </button>
@@ -1082,6 +1088,7 @@ function app() {
         onApply={(presetPatch) => tirePreviewConfig()?.onApply?.(presetPatch)}
       />
     </div>
+    </Show>
   );
 }
 

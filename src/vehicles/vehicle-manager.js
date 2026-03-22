@@ -632,9 +632,79 @@ export function createVehicleManager({
     syncParkedVehicleProxies(context);
   }
 
+  function mountStolenTrafficVehicle(context, trafficAgent) {
+    if (!trafficAgent?.actor?.root) return false;
+
+    const actorRoot = trafficAgent.actor.root;
+    const visualMount = actorRoot.children[0];
+    if (!visualMount) return false;
+
+    // The traffic vehicle actor's visual root contains bodyMount and wheelMount
+    const trafficActorRoot = visualMount.children[0];
+    if (!trafficActorRoot) return false;
+
+    const sourceBody = trafficActorRoot.children[0];
+    const sourceWheels = trafficActorRoot.children[1];
+    if (!sourceBody || !sourceWheels) return false;
+
+    // Park the current active vehicle as a proxy
+    placeOrReplaceVehicleProxy(
+      context,
+      state.activeVehicleKind,
+      createActiveVehicleProxy(context, state.activeVehicleKind)
+    );
+
+    clearGroup(context.carMount);
+    clearGroup(context.wheelMount);
+    state.doorRig = null;
+    state.steeringWheelRig = null;
+    state.doorOpen = false;
+    state.doorAngle = 0;
+    state.characterVehicleState = 'on_foot';
+    state.characterEnterTimer = 0;
+    ui.toggleDoor.textContent = 'Door: Closed';
+
+    const body = sourceBody.clone(true);
+    const wheels = sourceWheels.clone(true);
+    context.carMount.add(body);
+    context.wheelMount.add(wheels);
+    prepareRenderable(body);
+    prepareRenderable(wheels);
+    primeCarWheelRuntimeState(wheels);
+
+    state.carMetrics = measureObjectBounds(body);
+    state.carWheelAnchors = collectWheelAnchors(body);
+    state.doorRig = createDoorRig(body);
+    ui.toggleDoor.disabled = !state.doorRig;
+    state.steeringWheelRig = collectSteeringWheelRig(body) || mountSteeringWheelAttachment(body);
+    state.activeVehicleKind = 'car';
+    context.carMount.userData.vehicleKind = 'car';
+    context.carMount.userData.chassisHeightMode = 'body';
+    context.carMount.userData.rootVisualOffsetY = 0;
+    context.carMount.userData.wheelSpinDirection = 1;
+    context.carMount.userData.steerDirection = -1;
+    context.carMount.userData.bikeSteeringRig = null;
+    applySceneMaterialState(context.carMount, context.wheelMount);
+    applySteeringWheelState();
+
+    // Get position/yaw from the agent's last known state
+    const pos = trafficAgent.lastPosition.clone();
+    const yaw = trafficAgent.yaw || 0;
+
+    if (callbacks.getGameRuntime()) {
+      applyGarageSnapshot(syncGarageScene(callbacks.getGameRuntime()));
+      applyGarageSnapshot(setGarageVehicleKind(callbacks.getGameRuntime(), 'car'));
+      applyGarageSnapshot(setChassisHeight(callbacks.getGameRuntime(), state.chassisHeight));
+      applyGarageSnapshot(teleportGarageVehicle(callbacks.getGameRuntime(), pos, yaw));
+    }
+
+    return { position: pos, yaw };
+  }
+
   return {
     mountCarAsset,
     mountBikeAsset,
+    mountStolenTrafficVehicle,
     restoreActiveVehicleFromProxy,
     syncParkedVehicleProxies,
     tryMountNearbyVehicle,

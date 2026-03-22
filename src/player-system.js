@@ -700,6 +700,13 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return;
     }
 
+    if (state.characterVehicleState === 'wipeout') {
+      setCharacterVisible(context.characterController, true);
+      setPlayerMode('Wipeout');
+      setPlayerHint('');
+      return;
+    }
+
     if (state.characterVehicleState === 'entering') {
       setCharacterVisible(context.characterController, true);
       setPlayerMode('Entering car');
@@ -1162,8 +1169,252 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     }
   }
 
+  // --- Bike wipeout state ---
+  const WIPEOUT_QUATERNION = new THREE.Quaternion();
+  const WIPEOUT_EULER = new THREE.Euler();
+  const wipeout = {
+    timer: 0,
+    phase: 'launch', // 'launch' | 'airborne' | 'slide' | 'getup'
+    launchPosition: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
+    yaw: 0,
+    groundY: 0,
+    slideTimer: 0,
+    getupTimer: 0,
+    impactSpeed: 0,
+    tumbleRateX: 0,
+    tumbleRateY: 0,
+    tumbleRateZ: 0,
+    tumbleX: 0,
+    tumbleY: 0,
+    tumbleZ: 0
+  };
+
+  function beginBikeWipeout(context, trigger) {
+    if (!context?.characterController) {
+      return;
+    }
+
+    wipeout.impactSpeed = Math.abs(trigger.impactSpeed);
+    wipeout.yaw = trigger.yaw;
+    wipeout.timer = 0;
+    wipeout.phase = 'launch';
+    wipeout.slideTimer = 0;
+    wipeout.getupTimer = 0;
+
+    // Detach character from vehicle to world
+    clearDriveInputs(context);
+    applySnapshot(context, setDriveMode(context.gameRuntime, false));
+    state.characterVehicleState = 'wipeout';
+    attachCharacterToWorld(context);
+
+    // Position character at the bike seat world position
+    const seatPos = getResolvedSeatRootLocalPosition(context);
+    if (seatPos) {
+      const worldSeat = context.vehicleRoot.localToWorld(seatPos.clone());
+      wipeout.launchPosition.copy(worldSeat);
+    } else {
+      wipeout.launchPosition.copy(state.vehiclePosition);
+      wipeout.launchPosition.y += 1.0;
+    }
+
+    // Launch velocity: forward + upward arc (2x distance)
+    const forwardX = Math.sin(wipeout.yaw);
+    const forwardZ = Math.cos(wipeout.yaw);
+    const launchSpeed = Math.min(wipeout.impactSpeed * 1.7, 40);
+    wipeout.velocity.set(
+      forwardX * launchSpeed,
+      Math.min(launchSpeed * 0.55, 14),
+      forwardZ * launchSpeed
+    );
+
+    // Random tumble rotation rates
+    wipeout.tumbleRateX = (Math.random() - 0.3) * 8;
+    wipeout.tumbleRateY = (Math.random() - 0.5) * 6;
+    wipeout.tumbleRateZ = (Math.random() - 0.5) * 5;
+    wipeout.tumbleX = 0;
+    wipeout.tumbleY = 0;
+    wipeout.tumbleZ = 0;
+
+    // Sample ground at launch position
+    const sampleGround = context.stage?.sampleGround;
+    if (sampleGround) {
+      const hit = sampleGround(wipeout.launchPosition.x, wipeout.launchPosition.z);
+      wipeout.groundY = hit ? hit.height : 0;
+    } else {
+      wipeout.groundY = 0;
+    }
+
+    // Play falling animation
+    playCharacterAction(context.characterController, 'fallingIdle');
+    setOnFootTransform(context.characterController, wipeout.launchPosition, wipeout.yaw);
+    setCharacterVisible(context.characterController, true);
+    setStatus('Wipeout!');
+  }
+
+  function updateBikeWipeout(context, deltaSeconds) {
+    if (!context?.characterController || state.characterVehicleState !== 'wipeout') {
+      return;
+    }
+
+    const controller = context.characterController;
+    const sampleGround = context.stage?.sampleGround;
+    const dt = Math.min(deltaSeconds, 1 / 30);
+    wipeout.timer += dt;
+
+    if (wipeout.phase === 'launch' || wipeout.phase === 'airborne') {
+      // Apply gravity
+      wipeout.velocity.y -= 15 * dt;
+
+      // Apply air drag
+      wipeout.velocity.x *= (1 - 0.3 * dt);
+      wipeout.velocity.z *= (1 - 0.3 * dt);
+
+      // Integrate position
+      wipeout.launchPosition.x += wipeout.velocity.x * dt;
+      wipeout.launchPosition.y += wipeout.velocity.y * dt;
+      wipeout.launchPosition.z += wipeout.velocity.z * dt;
+
+      // Sample ground
+      if (sampleGround) {
+        const hit = sampleGround(wipeout.launchPosition.x, wipeout.launchPosition.z);
+        if (hit) {
+          wipeout.groundY = hit.height;
+        }
+      }
+
+      // Transition from launch to airborne after a brief initial period
+      if (wipeout.phase === 'launch' && wipeout.timer > 0.1) {
+        wipeout.phase = 'airborne';
+      }
+
+      // Random tumble rotation
+      wipeout.tumbleX += wipeout.tumbleRateX * dt;
+      wipeout.tumbleY += wipeout.tumbleRateY * dt;
+      wipeout.tumbleZ += wipeout.tumbleRateZ * dt;
+      controller.position.copy(wipeout.launchPosition);
+      WIPEOUT_EULER.set(wipeout.tumbleX, wipeout.yaw + wipeout.tumbleY, wipeout.tumbleZ, 'YXZ');
+      WIPEOUT_QUATERNION.setFromEuler(WIPEOUT_EULER);
+      controller.root.position.copy(wipeout.launchPosition);
+      controller.root.quaternion.copy(WIPEOUT_QUATERNION);
+
+      // Check ground contact
+      if (wipeout.launchPosition.y <= wipeout.groundY && wipeout.velocity.y < 0) {
+        wipeout.launchPosition.y = wipeout.groundY;
+        wipeout.velocity.y = 0;
+        wipeout.phase = 'slide';
+        wipeout.slideTimer = 0;
+        // Switch to falling idle (played on ground = sliding pose)
+        playCharacterAction(context.characterController, 'fallingIdle');
+      }
+    }
+
+    if (wipeout.phase === 'slide') {
+      wipeout.slideTimer += dt;
+
+      // Friction deceleration on ground
+      const friction = 8;
+      const hSpeed = Math.sqrt(wipeout.velocity.x ** 2 + wipeout.velocity.z ** 2);
+      if (hSpeed > 0.1) {
+        const decel = Math.min(friction * dt, hSpeed);
+        const scale = (hSpeed - decel) / hSpeed;
+        wipeout.velocity.x *= scale;
+        wipeout.velocity.z *= scale;
+      } else {
+        wipeout.velocity.x = 0;
+        wipeout.velocity.z = 0;
+      }
+
+      // Integrate position on ground
+      wipeout.launchPosition.x += wipeout.velocity.x * dt;
+      wipeout.launchPosition.z += wipeout.velocity.z * dt;
+
+      // Stay on ground
+      if (sampleGround) {
+        const hit = sampleGround(wipeout.launchPosition.x, wipeout.launchPosition.z);
+        if (hit) {
+          wipeout.launchPosition.y = hit.height;
+        }
+      }
+
+      // fallingIdle animation already has character face-down, just set position and yaw
+      setOnFootTransform(controller, wipeout.launchPosition, wipeout.yaw);
+
+      // After sliding stops, get up
+      const slideEndTime = Math.max(0.4, hSpeed / friction);
+      if (wipeout.slideTimer >= slideEndTime || hSpeed < 0.2) {
+        wipeout.phase = 'getup';
+        wipeout.getupTimer = 0;
+        playCharacterAction(context.characterController, 'gettingUp');
+        const getupAction = context.characterController.actions?.get('gettingUp');
+        if (getupAction) {
+          getupAction.setLoop(THREE.LoopOnce);
+          getupAction.clampWhenFinished = true;
+        }
+        setOnFootTransform(controller, wipeout.launchPosition, wipeout.yaw);
+        controller.yaw = wipeout.yaw;
+      }
+    }
+
+    if (wipeout.phase === 'getup') {
+      wipeout.getupTimer += dt;
+
+      const getupDuration = getCharacterActionDuration(controller, 'gettingUp');
+      if (wipeout.getupTimer >= getupDuration) {
+        finishBikeWipeout(context);
+        return;
+      }
+
+      // Hold position, just play the animation in place
+      setOnFootTransform(controller, wipeout.launchPosition, wipeout.yaw);
+    }
+
+    advanceCharacterAnimation(controller, dt, {
+      consumeRootMotion: false,
+      stabilizeVertical: true
+    });
+
+    // Camera follows character during wipeout — pulled back to see the action
+    const camForward = VEHICLE_FORWARD.set(Math.sin(wipeout.yaw), 0, Math.cos(wipeout.yaw));
+    const camTarget = WORLD_POSITION.copy(wipeout.launchPosition);
+    camTarget.y += 1.2;
+    context.camera.far = 12000;
+    context.camera.updateProjectionMatrix();
+    context.controls.minDistance = 4;
+    context.controls.maxDistance = 30;
+    context.controls.maxPolarAngle = Math.PI * 0.48;
+    context.controls.target.copy(camTarget);
+    context.camera.position.copy(camTarget)
+      .addScaledVector(camForward, -12)
+      .setY(camTarget.y + 5);
+    context.controls.update();
+  }
+
+  function finishBikeWipeout(context) {
+    state.characterVehicleState = 'on_foot';
+    wipeout.timer = 0;
+    wipeout.phase = 'launch';
+    playCharacterAction(context.characterController, 'idle');
+    setOnFootTransform(
+      context.characterController,
+      wipeout.launchPosition,
+      wipeout.yaw
+    );
+    snapCharacterToGround(context, 2);
+    syncOverlay(context);
+    focusCurrentTarget(context, context.focusOptions);
+    setStatus('On foot');
+  }
+
   function updateDrivingCharacter(context, deltaSeconds) {
     if (!context?.characterController || state.characterVehicleState !== 'driving') {
+      return;
+    }
+
+    // Check for bike wipeout trigger
+    if (state.activeVehicleKind === 'bike' && state.bikeWipeoutTrigger) {
+      beginBikeWipeout(context, state.bikeWipeoutTrigger);
+      state.bikeWipeoutTrigger = null;
       return;
     }
 
@@ -1176,6 +1427,12 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
   }
 
   function updateFrame(context, deltaSeconds) {
+    if (state.characterVehicleState === 'wipeout') {
+      updateBikeWipeout(context, deltaSeconds);
+      syncOverlay(context);
+      return;
+    }
+
     if (state.characterVehicleState === 'entering') {
       updateEnteringVehicle(context, deltaSeconds);
       syncOverlay(context);

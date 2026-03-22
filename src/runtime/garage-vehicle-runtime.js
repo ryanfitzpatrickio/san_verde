@@ -307,6 +307,7 @@ export function createGarageVehicleRuntime({
     state.wheelSpin = snapshot.wheelSpin;
     state.wheelRadius = snapshot.wheelRadius;
     state.chassisHeight = snapshot.chassisHeight;
+    state.bikeWipeoutTrigger = snapshot.bikeWipeoutTrigger || null;
     applyEngineSnapshot(snapshot.engine);
     applySteeringWheelState();
     ui.toggleLap.textContent = `Drive mode: ${state.driveMode ? 'On' : 'Off'}`;

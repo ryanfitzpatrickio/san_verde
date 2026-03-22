@@ -55,6 +55,37 @@
       }
     },
     {
+      "id": "truck",
+      "order": 15,
+      "label": "Truck",
+      "kind": "car",
+      "body": {
+        "url": "/models/truck.glb",
+        "sourceLabel": "public/models/truck.glb"
+      },
+      "tires": null,
+      "preset": {
+        "engineId": "mustang_390_v8_5mt",
+        "exposure": 1.15,
+        "environmentIntensity": 1.2,
+        "tireScale": 1,
+        "frontAxleRatio": 0.18,
+        "rearAxleRatio": 0.245,
+        "rideHeight": 0.13,
+        "chassisHeight": 0.13,
+        "sideInset": 0.07,
+        "bodyVisualOffsetY": -0.14,
+        "tireRotation": [
+          0,
+          -3.141592653589793,
+          0
+        ],
+        "rightSideTireRotation": [
+          3.141592653589793
+        ]
+      }
+    },
+    {
       "id": "sendan",
       "order": 999,
       "label": "Sendan",

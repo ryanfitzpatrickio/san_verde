@@ -1,0 +1,21 @@
+{
+  "id": "traffic_truck",
+  "order": 15,
+  "label": "Traffic Truck",
+  "kind": "npc",
+  "crowdKind": "vehicle",
+  "subtype": "traffic_vehicle",
+  "behaviorClass": "traffic",
+  "movementMode": "crowd_nav",
+  "collisionProxy": {
+    "shape": "box",
+    "size": [2.2, 2.8, 6.0]
+  },
+  "presentation": {
+    "driver": "traffic_vehicle_runtime",
+    "vehicleId": "truck",
+    "modelUrl": "/models/truck.glb",
+    "targetSpan": 7.0,
+    "yawDegrees": 0
+  }
+}

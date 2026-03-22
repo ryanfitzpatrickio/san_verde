@@ -71,9 +71,33 @@ function loadTexture(name) {
 
 
 const ROAD_KIND_STYLE = {
-  boulevard: { roadWidth: 28, sidewalkWidth: 7, medianWidth: 5 },
-  avenue: { roadWidth: 22, sidewalkWidth: 6, medianWidth: 0 },
-  street: { roadWidth: 18, sidewalkWidth: 5.2, medianWidth: 0 }
+  boulevard: {
+    roadWidth: 28, sidewalkWidth: 7, medianWidth: 5,
+    // 3 lanes per direction, each side 11.5 wide, lane ~3.83
+    edgeInset: 1.0,
+    laneDividers: [-6.33, -2.5, 2.5, 6.33], // dashed white between lanes (skip median zone)
+    centerLines: [-2.8, 2.8],                // solid yellow at median edges
+    centerDashes: [],
+    dashLength: 3.6, gapLength: 5.0
+  },
+  avenue: {
+    roadWidth: 22, sidewalkWidth: 6, medianWidth: 0,
+    // 2 lanes per direction, each half 11 wide, lane 5.5
+    edgeInset: 1.0,
+    laneDividers: [-5.5, 5.5], // dashed white lane dividers
+    centerLines: [-0.22, 0.22], // solid yellow no-passing double line
+    centerDashes: [],
+    dashLength: 3.6, gapLength: 5.0
+  },
+  street: {
+    roadWidth: 18, sidewalkWidth: 5.2, medianWidth: 0,
+    // 1 lane per direction
+    edgeInset: 1.0,
+    laneDividers: [],
+    centerLines: [],
+    centerDashes: [0], // dashed yellow center
+    dashLength: 3.0, gapLength: 6.0
+  }
 };
 const RIVER_RUNTIME_WIDTH_SCALE = 1.72;
 const TERRAIN_PADDING = 100;
@@ -180,7 +204,9 @@ const MATERIALS = {
   buildingRoofDark: new THREE.MeshStandardMaterial({ color: '#444851', roughness: 0.95, metalness: 0.02 }),
   buildingRoofLight: new THREE.MeshStandardMaterial({ color: '#7a7d82', roughness: 0.95, metalness: 0.02 }),
   trunk: new THREE.MeshStandardMaterial({ color: '#5c493d', roughness: 0.92, metalness: 0.02 }),
-  leaf: new THREE.MeshStandardMaterial({ color: '#5c7448', roughness: 0.98, metalness: 0.01 })
+  leaf: new THREE.MeshStandardMaterial({ color: '#5c7448', roughness: 0.98, metalness: 0.01 }),
+  lineWhite: new THREE.MeshStandardMaterial({ color: '#d8dce0', roughness: 0.85, metalness: 0.01, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }),
+  lineYellow: new THREE.MeshStandardMaterial({ color: '#c8a832', roughness: 0.85, metalness: 0.01, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 })
 };
 
 for (const material of Object.values(MATERIALS)) {
@@ -681,7 +707,108 @@ function createRoad(road) {
   roadMesh.receiveShadow = true;
   group.add(roadMesh);
 
+  group.add(createRoadMarkings(curve, style, length, samples));
+
   return group;
+}
+
+function createRoadMarkings(curve, style, length, samples) {
+  const group = new THREE.Group();
+  const markY = 0.024;
+  const lineWidth = 0.18;
+  const halfRoad = style.roadWidth * 0.5;
+  const lineSamples = Math.max(8, Math.round(length / 6));
+
+  // Solid white edge / curb lines
+  for (const sign of [-1, 1]) {
+    const edgeOffset = sign * (halfRoad - style.edgeInset);
+    const edgeLine = createTrackRibbon(curve, {
+      width: lineWidth,
+      samples: lineSamples,
+      y: markY,
+      offset: edgeOffset
+    });
+    edgeLine.material = MATERIALS.lineWhite;
+    group.add(edgeLine);
+  }
+
+  // Solid center lines (yellow, no-passing divider or median edge)
+  for (const offset of (style.centerLines || [])) {
+    const line = createTrackRibbon(curve, {
+      width: lineWidth,
+      samples: lineSamples,
+      y: markY,
+      offset
+    });
+    line.material = MATERIALS.lineYellow;
+    group.add(line);
+  }
+
+  // Dashed white lane dividers
+  for (const offset of (style.laneDividers || [])) {
+    group.add(createDashedLineInstances(curve, {
+      offset,
+      y: markY + 0.002,
+      dashLength: style.dashLength,
+      gapLength: style.gapLength,
+      lineWidth,
+      material: MATERIALS.lineWhite,
+      totalLength: length
+    }));
+  }
+
+  // Dashed yellow center line (streets)
+  for (const offset of (style.centerDashes || [])) {
+    group.add(createDashedLineInstances(curve, {
+      offset,
+      y: markY + 0.002,
+      dashLength: style.dashLength,
+      gapLength: style.gapLength,
+      lineWidth,
+      material: MATERIALS.lineYellow,
+      totalLength: length
+    }));
+  }
+
+  return group;
+}
+
+function createDashedLineInstances(curve, options) {
+  const { offset, y, dashLength, gapLength, lineWidth, material, totalLength } = options;
+  const stride = dashLength + gapLength;
+  const dashCount = Math.max(1, Math.floor(totalLength / stride));
+
+  const dashGeo = new THREE.PlaneGeometry(lineWidth, dashLength);
+  const mesh = new THREE.InstancedMesh(dashGeo, material, dashCount);
+  mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+
+  const mat = new THREE.Matrix4();
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const scale = new THREE.Vector3(1, 1, 1);
+  const forward = new THREE.Vector3(0, 0, 1);
+  const xRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI * 0.5);
+  const side = new THREE.Vector3();
+
+  for (let i = 0; i < dashCount; i++) {
+    const along = (i + 0.5) * stride;
+    const t = Math.min(along / totalLength, 0.999);
+    const point = curve.getPointAt(t);
+    const tangent = curve.getTangentAt(t).setY(0).normalize();
+    side.set(-tangent.z, 0, tangent.x);
+
+    pos.copy(point).addScaledVector(side, offset);
+    pos.y = y;
+
+    quat.setFromUnitVectors(forward, tangent);
+    quat.multiply(xRot);
+
+    mat.compose(pos, quat, scale);
+    mesh.setMatrixAt(i, mat);
+  }
+
+  mesh.instanceMatrix.needsUpdate = true;
+  return mesh;
 }
 
 function createRiver(river, riverField = null) {

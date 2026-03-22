@@ -287,7 +287,9 @@ export const MODEL_CONFIG = {
       enterCar: resolveModelUrl('/models/Locomotion Pack/Entering Car.fbx'),
       drive: resolveModelUrl('/models/Locomotion Pack/Driving.fbx'),
       exitCar: resolveModelUrl('/models/Locomotion Pack/Exiting Car.fbx'),
-      honk: resolveModelUrl('/models/Locomotion Pack/Honking Horn.fbx')
+      honk: resolveModelUrl('/models/Locomotion Pack/Honking Horn.fbx'),
+      fallingIdle: resolveModelUrl('/animations/Falling Idle.fbx'),
+      gettingUp: resolveModelUrl('/animations/Getting Up.fbx')
     },
     height: 1.9,
     walkSpeed: 3.4,

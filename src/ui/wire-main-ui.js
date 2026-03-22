@@ -207,7 +207,14 @@ export function wireMainUi(options) {
 
     if (context.characterController) {
       if (!vehicleManager.tryMountNearbyVehicle(context) && !playerSystem.tryEnterVehicle(context)) {
-        setStatus('Move closer to a vehicle to drive');
+        const nearbyTraffic = context.agentSystem?.findNearbyStoppedTrafficVehicle?.(
+          context.characterController.position, 6
+        );
+        if (nearbyTraffic) {
+          tryCarjack(nearbyTraffic);
+        } else {
+          setStatus('Move closer to a vehicle to drive');
+        }
       }
       return;
     }
@@ -364,6 +371,41 @@ export function wireMainUi(options) {
     setDriveInput(context.gameRuntime, 'right', false);
   };
 
+  const tryCarjack = (trafficAgent) => {
+    const result = vehicleManager.mountStolenTrafficVehicle(context, trafficAgent);
+    if (!result) {
+      setStatus('Move closer to a vehicle to drive');
+      return;
+    }
+
+    // Spawn fleeing NPC at the driver side, running away from the player
+    const playerPos = context.characterController.position;
+    const vehiclePos = result.position;
+    // Perpendicular to vehicle facing = driver side
+    const sideX = Math.sin(result.yaw + Math.PI * 0.5);
+    const sideZ = Math.cos(result.yaw + Math.PI * 0.5);
+    const spawnPos = vehiclePos.clone();
+    spawnPos.x += sideX * 1.4;
+    spawnPos.z += sideZ * 1.4;
+    // Flee away from player
+    const fleeDir = { x: spawnPos.x - playerPos.x, y: 0, z: spawnPos.z - playerPos.z };
+    const fleeDirLen = Math.sqrt(fleeDir.x * fleeDir.x + fleeDir.z * fleeDir.z);
+    if (fleeDirLen > 0.01) {
+      fleeDir.x /= fleeDirLen;
+      fleeDir.z /= fleeDirLen;
+    } else {
+      fleeDir.x = sideX;
+      fleeDir.z = sideZ;
+    }
+    context.agentSystem?.spawnFleeingNpc?.(spawnPos, { x: fleeDir.x, y: 0, z: fleeDir.z });
+
+    context.agentSystem.removeTrafficAgent(trafficAgent);
+    if (!playerSystem.tryEnterVehicle(context)) {
+      playerSystem.directMountVehicle(context);
+    }
+    setStatus('Stole a car');
+  };
+
   window.addEventListener('keydown', (event) => {
     unlockEngineAudio(context.gameRuntime);
 
@@ -381,7 +423,15 @@ export function wireMainUi(options) {
         }
       } else if (context.characterController) {
         if (!vehicleManager.tryMountNearbyVehicle(context) && !playerSystem.tryEnterVehicle(context)) {
-          setStatus('Move closer to a vehicle to drive');
+          // Try carjacking a stopped NPC traffic vehicle
+          const nearbyTraffic = context.agentSystem?.findNearbyStoppedTrafficVehicle?.(
+            context.characterController.position, 6
+          );
+          if (nearbyTraffic) {
+            tryCarjack(nearbyTraffic);
+          } else {
+            setStatus('Move closer to a vehicle to drive');
+          }
         }
       } else {
         playerSystem.enterVehicle(context);

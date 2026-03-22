@@ -424,6 +424,10 @@ export function setDriveMode(runtime, enabled) {
       physics.bundle.chassisBody.clearForces();
       physics.bundle.chassisBody.commitChanges();
     }
+    if (physics.bundle?.kinematicState) {
+      physics.bundle.kinematicState.speed = 0;
+      physics.bundle.kinematicState.lean = 0;
+    }
   }
   controller.longitudinalAccel = 0;
   controller.lateralAccel = 0;
@@ -722,7 +726,8 @@ export function getGarageSnapshot(runtime) {
     suspensionHeave: getVehicleComponent(runtime, COMPONENTS.suspension).heave,
     suspensionPitch: getVehicleComponent(runtime, COMPONENTS.suspension).pitch,
     suspensionRoll: getVehicleComponent(runtime, COMPONENTS.suspension).roll,
-    engine: engine.snapshot
+    engine: engine.snapshot,
+    bikeWipeoutTrigger: controller.bikeWipeoutTrigger || null
   };
 }
 
@@ -859,13 +864,16 @@ function updateDriveSystem(runtime, deltaSeconds) {
         });
 
         if (stepped) {
-          const nextSteppedSpeed = (!hasDriveIntent && Math.abs(stepped.speed) < 0.06) ? 0 : stepped.speed;
+          let nextSteppedSpeed = (!hasDriveIntent && Math.abs(stepped.speed) < 0.06) ? 0 : stepped.speed;
           if (physics.vehicleKind === 'bike' && (stage.dynamicSampleCollision || stage.sampleCollision)) {
             TRAVEL_DELTA.copy(stepped.position).sub(KINEMATIC_PRE_STEP_POSITION);
             transform.position.copy(KINEMATIC_PRE_STEP_POSITION);
+            controller.speed = nextSteppedSpeed;
             resolveForwardCollision(runtime, transform, controller, stage, TRAVEL_DELTA, {
               sampleCollision: stage.dynamicSampleCollision || stage.sampleCollision
             });
+            // resolveForwardCollision may reduce controller.speed on collision
+            nextSteppedSpeed = controller.speed;
             transform.position.add(TRAVEL_DELTA);
             if (physics.bundle?.chassisBody) {
               physics.bundle.chassisBody.position.set([
@@ -909,6 +917,21 @@ function updateDriveSystem(runtime, deltaSeconds) {
 
         controller.longitudinalAccel = deltaSeconds > 0 ? (controller.speed - previousSpeed) / deltaSeconds : 0;
         controller.lateralAccel = controller.speed * controller.yawRate;
+
+        // Detect bike wipeout: abrupt collision stop
+        if (
+          physics.vehicleKind === 'bike' &&
+          Math.abs(previousSpeed) > 5 &&
+          Math.abs(controller.speed) < Math.abs(previousSpeed) * 0.5
+        ) {
+          controller.bikeWipeoutTrigger = {
+            impactSpeed: previousSpeed,
+            yaw: transform.yaw,
+            position: transform.position.clone()
+          };
+        } else {
+          controller.bikeWipeoutTrigger = null;
+        }
       } else {
         const body = physics.bundle?.chassisBody;
         if (!body) {

@@ -546,3 +546,265 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+/* Car Builder */
+
+.builder-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.builder-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #2a2d2e;
+  color: #d4d4d4;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.builder-toolbar-left,
+.builder-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.builder-divider {
+  width: 1px;
+  height: 20px;
+  background: #555;
+  margin: 0 4px;
+}
+
+.builder-mode-btn {
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.builder-mode-btn:hover {
+  background: #3a3d3e;
+}
+
+.builder-mode-btn.is-active {
+  background: #094771;
+  color: #fff;
+  border-color: #1177bb;
+}
+
+.builder-status-bar {
+  padding: 4px 12px;
+  background: #1e1e1e;
+  color: #888;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.builder-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  flex: 1;
+  min-height: 0;
+}
+
+.builder-panel {
+  background: #252526;
+  color: #ccc;
+  overflow-y: auto;
+  font-size: 0.82rem;
+}
+
+.builder-left-panel {
+  border-right: 1px solid #333;
+}
+
+.builder-right-panel {
+  border-left: 1px solid #333;
+}
+
+.builder-section {
+  padding: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.builder-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin: 0 0 6px;
+}
+
+.builder-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.builder-check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  color: #777;
+  font-size: 0.78rem;
+}
+
+.builder-check-item.is-matched {
+  color: #5cb85c;
+}
+
+.builder-scene-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-scene-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.builder-scene-item:hover {
+  background: #2a2d2e;
+}
+
+.builder-scene-item.is-selected {
+  background: #094771;
+}
+
+.builder-vis-toggle {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 0.75rem;
+  min-width: 14px;
+}
+
+.builder-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-item-type {
+  color: #555;
+  font-size: 0.7rem;
+}
+
+.builder-rename-input {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 1px 4px;
+  font-size: 0.8rem;
+  border-radius: 2px;
+}
+
+.builder-viewport {
+  position: relative;
+  background: #d6dbde;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.builder-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.builder-transform-group {
+  margin-bottom: 6px;
+}
+
+.builder-transform-group label {
+  display: block;
+  font-size: 0.72rem;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.builder-vec3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 3px;
+}
+
+.builder-vec3 input {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 3px 4px;
+  font-size: 0.78rem;
+  border-radius: 2px;
+  width: 100%;
+}
+
+.builder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.builder-actions .ghost-button,
+.builder-actions .solid-button,
+.builder-actions .danger-button {
+  width: 100%;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+}
+
+.builder-toolbar .ghost-button,
+.builder-toolbar .solid-button {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+}
+
+.builder-slider {
+  width: 100%;
+  accent-color: #1177bb;
+  margin: 2px 0 4px;
+}
+
+.builder-wheel-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+
+.builder-wheel-btn {
+  padding: 4px 6px;
+  border: 2px solid #555;
+  border-radius: 3px;
+  background: #1e1e1e;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.builder-wheel-btn:hover {
+  background: #2a2d2e;
+}
+
+.builder-wheel-btn.is-active {
+  background: #094771;
+  color: #fff;
+}
