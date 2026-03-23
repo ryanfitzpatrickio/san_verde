@@ -60,8 +60,8 @@
       "label": "Truck",
       "kind": "car",
       "body": {
-        "url": "/models/truck.glb",
-        "sourceLabel": "public/models/truck.glb"
+        "url": "/models/truck-done-validated.glb",
+        "sourceLabel": "public/models/truck-done-validated.glb"
       },
       "tires": null,
       "preset": {
@@ -87,7 +87,7 @@
     },
     {
       "id": "dominator",
-      "order": 999,
+      "order": 20,
       "label": "Dominator",
       "kind": "car",
       "body": {

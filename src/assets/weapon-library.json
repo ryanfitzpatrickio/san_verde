@@ -1,0 +1,118 @@
+{
+  "weapons": [
+    {
+      "id": "pistol",
+      "label": "Pistol",
+      "asset": {
+        "url": "/models/pistol.glb",
+        "sourceLabel": "public/models/pistol.glb"
+      },
+      "proceduralModel": null,
+      "grip": {
+        "offset": [
+          0.0103,
+          0.1866,
+          0.0484
+        ],
+        "rotation": [
+          0.2517,
+          -0.0758,
+          -1.5513
+        ],
+        "scale": 0.155
+      },
+      "sockets": {
+        "muzzle": [
+          0,
+          0.018,
+          0.42
+        ],
+        "offHand": [
+          0,
+          -0.035,
+          0.12
+        ],
+        "casingEject": [
+          0.05,
+          0.03,
+          0.04
+        ],
+        "aim": [
+          0,
+          0.04,
+          0.16
+        ]
+      },
+      "combat": {
+        "fireCooldownSeconds": 0.12
+      },
+      "locomotionSet": {
+        "idle": "pistolIdle",
+        "walk": "pistolWalk",
+        "run": "pistolRun",
+        "walkBackward": "pistolWalkBackward",
+        "runBackward": "pistolRunBackward",
+        "strafeLeft": "pistolStrafeLeft",
+        "strafeRight": "pistolStrafeRight"
+      },
+      "notes": ""
+    },
+    {
+      "id": "shotgun",
+      "label": "Shotgun",
+      "asset": {
+        "url": "/models/shotgun.glb",
+        "sourceLabel": "public/models/shotgun.glb"
+      },
+      "proceduralModel": null,
+      "grip": {
+        "offset": [
+          -0.0254,
+          0.2748,
+          0.0122
+        ],
+        "rotation": [
+          0.0395,
+          -0.2093,
+          -1.4148
+        ],
+        "scale": 0.52
+      },
+      "sockets": {
+        "muzzle": [
+          0,
+          0,
+          0
+        ],
+        "offHand": [
+          0,
+          0,
+          0
+        ],
+        "casingEject": [
+          0,
+          0,
+          0
+        ],
+        "aim": [
+          0,
+          0,
+          0
+        ]
+      },
+      "combat": {
+        "fireCooldownSeconds": 0.55
+      },
+      "locomotionSet": {
+        "idle": "shotgunIdle",
+        "walk": "shotgunWalk",
+        "run": "shotgunRun",
+        "walkBackward": "shotgunWalkBackward",
+        "runBackward": "shotgunRunBackward",
+        "strafeLeft": "shotgunStrafeLeft",
+        "strafeRight": "shotgunStrafeRight"
+      },
+      "notes": "Procedural fallback until a shotgun GLB is added."
+    }
+  ]
+}

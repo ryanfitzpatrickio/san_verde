@@ -4,8 +4,8 @@
   "label": "Truck",
   "kind": "car",
   "body": {
-    "url": "/models/truck.glb",
-    "sourceLabel": "public/models/truck.glb"
+    "url": "/models/truck-done-validated.glb",
+    "sourceLabel": "public/models/truck-done-validated.glb"
   },
   "tires": null,
   "preset": {
@@ -19,6 +19,7 @@
     "chassisHeight": 0.13,
     "sideInset": 0.07,
     "bodyVisualOffsetY": -0.14,
+    "wheelSpinDirection": -1,
     "tireRotation": [
       0,
       -3.141592653589793,

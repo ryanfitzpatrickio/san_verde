@@ -37,6 +37,14 @@ const DOORWAY_POSITION = new THREE.Vector3();
 const ENTRY_TARGET_POSITION = new THREE.Vector3();
 const ENTRY_MOVE_DIRECTION = new THREE.Vector3();
 const ENTRY_LOOK_TARGET = new THREE.Vector3();
+const IDLE_CHARACTER_INPUT = Object.freeze({
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  run: false,
+  jump: false
+});
 
 const PLAYER_DEBUG = true;
 
@@ -59,7 +67,7 @@ function formatDebugVector(vector) {
   return vector.toArray().map((value) => Number(value.toFixed(4)));
 }
 
-export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel }) {
+export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel, weaponRuntime, rangeRuntime }) {
   function getCharacterActionDuration(controller, actionName) {
     const duration = controller?.actions?.get(actionName)?.getClip?.().duration;
     return Number.isFinite(duration) && duration > 0 ? duration : 0.1;
@@ -686,6 +694,8 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
   }
 
   function syncOverlay(context) {
+    weaponRuntime?.syncCharacterWeapon?.(context);
+    rangeRuntime?.syncHud?.(context);
     const hasCharacter = Boolean(context?.characterController) && state.characterLoaded;
     ui.toggleLap.textContent = `Drive mode: ${state.driveMode ? 'On' : 'Off'}`;
     const transmissionMode = config.drivingStyles?.[state.drivingStyle]?.transmissionMode || 'manual';
@@ -730,10 +740,15 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
 
     setCharacterVisible(context.characterController, true);
     const readyToEnter = canEnterVehicle(context);
+    const rangeHint = rangeRuntime?.getPlayerHint?.(context);
     setPlayerMode('On foot');
-    setPlayerHint(readyToEnter
-      ? 'Move to the driver door and press F'
-      : 'WASD move, Shift run, Space jump, enter near the driver door');
+    if (state.weaponWheelOpen) {
+      setPlayerHint('Hold Q, move the mouse, release Q to equip');
+      return;
+    }
+    setPlayerHint(rangeHint || (readyToEnter
+      ? 'Hold Q for weapons, move to the driver door, press F'
+      : 'WASD move, Shift run, Space jump, hold Q for weapons, enter near the driver door'));
   }
 
   function applySnapshot(context, snapshot) {
@@ -825,6 +840,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return false;
     }
 
+    void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
     computeVehicleInteractionPoints(context);
     clearCharacterInput();
     clearDriveInputs(context);
@@ -872,6 +888,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return;
     }
 
+    void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
     const interaction = ensureInteraction(context);
     const doorwayPose = computeDriverDoorInteractionPose(context);
 
@@ -911,6 +928,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return;
     }
 
+    void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
     clearCharacterInput();
     clearDriveInputs(context);
     state.characterVehicleState = 'driving';
@@ -945,6 +963,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       return;
     }
 
+    void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
     clearDriveInputs(context);
     applySnapshot(context, setDriveMode(context.gameRuntime, false));
     state.characterVehicleState = 'on_foot';
@@ -979,6 +998,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       });
       context.characterController = controller;
       context.characterMount.add(controller.root);
+      await weaponRuntime?.loadCharacterWeaponAssets?.(context);
       state.characterLoaded = true;
       computeVehicleInteractionPoints(context);
       placeCharacterAtVehicle(context);
@@ -988,6 +1008,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
         vehicleYaw: state.vehicleYaw
       });
       setCharacterVisible(controller, !state.driveMode);
+      weaponRuntime?.syncCharacterWeapon?.(context);
       syncOverlay(context);
       setStatus('Character loaded');
       return true;
@@ -1427,6 +1448,8 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
   }
 
   function updateFrame(context, deltaSeconds) {
+    weaponRuntime?.updateFrame?.(deltaSeconds);
+    rangeRuntime?.updateFrame?.(context, deltaSeconds);
     if (state.characterVehicleState === 'wipeout') {
       updateBikeWipeout(context, deltaSeconds);
       syncOverlay(context);
@@ -1460,10 +1483,11 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
       deltaSeconds,
       config: config.character,
       camera: context.camera,
-      input: state.characterInput,
+      input: state.weaponWheelOpen ? IDLE_CHARACTER_INPUT : state.characterInput,
       driveBounds: context.stage?.driveBounds,
       sampleGround: context.stage?.sampleGround,
-      sampleCollision: context.playerSampleCollision || context.stage?.sampleCollision
+      sampleCollision: context.playerSampleCollision || context.stage?.sampleCollision,
+      resolveLocomotionState: weaponRuntime?.resolveLocomotionState
     });
     if (resolveCharacterVehiclePenetration(context)) {
       snapCharacterToGround(context, 1);

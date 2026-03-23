@@ -131,9 +131,29 @@ export async function loadTrafficVehicleActor(archetype) {
     }
   });
   carRuntime.state.engine = engine;
+  let rigClaimed = false;
 
   return {
     root: actorRoot,
+    claimMountedRig() {
+      if (rigClaimed) {
+        return null;
+      }
+
+      rigClaimed = true;
+      return {
+        body: presentation.body,
+        wheelMount,
+        doorRig: presentation.doorRig || null,
+        steeringWheelRig,
+        wheelSpinDirection: Number(manifest?.preset?.wheelSpinDirection || 1),
+        metrics: presentation.metrics,
+        anchors: presentation.anchors,
+        embeddedWheels: presentation.embeddedWheels || null,
+        wheelRadius,
+        manifest
+      };
+    },
     update({
       position,
       yaw = 0,
@@ -187,6 +207,7 @@ export async function loadTrafficVehicleActor(archetype) {
       });
     },
     dispose() {
+      rigClaimed = true;
       actorRoot.removeFromParent();
     }
   };

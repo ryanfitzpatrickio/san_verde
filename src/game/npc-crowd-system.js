@@ -131,7 +131,8 @@ export function createNpcCrowdSystem({ config, state }) {
           agentRoot,
           debugRoot,
           colliderRuntime,
-          stageNavigation: stage?.navigation
+          stageNavigation: stage?.navigation,
+          sharedState: state
         });
         mountRuntime(vehicleRuntime);
       }
@@ -141,7 +142,8 @@ export function createNpcCrowdSystem({ config, state }) {
           agentRoot,
           debugRoot,
           colliderRuntime,
-          stageNavigation: stage?.navigation
+          stageNavigation: stage?.navigation,
+          sharedState: state
         });
         mountRuntime(pedestrianRuntime);
       }
@@ -165,6 +167,10 @@ export function createNpcCrowdSystem({ config, state }) {
       if (!enabled) return;
 
       const dt = Math.min(deltaSeconds, 0.1);
+      state.trafficTakeoverBlockGraceSeconds = Math.max(
+        0,
+        Number(state.trafficTakeoverBlockGraceSeconds || 0) - dt
+      );
       const focusPos = followPosition || new THREE.Vector3();
       const despawnDist = config.agentTraffic.despawnDistance;
 
@@ -278,11 +284,40 @@ export function createNpcCrowdSystem({ config, state }) {
       return closest;
     },
 
-    removeTrafficAgent(agent) {
+    clearNearbyTrafficVehicles(position, radius = 5.5, maxCount = 5) {
+      if (!vehicleRuntime || !position?.isVector3) {
+        return 0;
+      }
+
+      const radiusSq = radius * radius;
+      const candidates = [];
+      for (const agent of vehicleRuntime.agents) {
+        const dx = (agent.lastPosition?.x || 0) - position.x;
+        const dz = (agent.lastPosition?.z || 0) - position.z;
+        const distSq = dx * dx + dz * dz;
+        if (distSq > radiusSq) {
+          continue;
+        }
+        candidates.push({ agent, distSq });
+      }
+
+      candidates.sort((left, right) => left.distSq - right.distSq);
+      let removed = 0;
+      for (const candidate of candidates) {
+        if (removed >= maxCount) {
+          break;
+        }
+        this.removeTrafficAgent(candidate.agent);
+        removed += 1;
+      }
+      return removed;
+    },
+
+    detachTrafficAgent(agent) {
       if (!vehicleRuntime) return;
 
       const index = vehicleRuntime.agents.indexOf(agent);
-      if (index === -1) return;
+      if (index === -1) return null;
 
       if (colliderRuntime) {
         destroyNpcCollider(colliderRuntime, agent);
@@ -293,6 +328,12 @@ export function createNpcCrowdSystem({ config, state }) {
         agent.actor.root.parent.remove(agent.actor.root);
       }
       vehicleRuntime.agents.splice(index, 1);
+      return agent;
+    },
+
+    removeTrafficAgent(agent) {
+      const detachedAgent = this.detachTrafficAgent(agent);
+      detachedAgent?.actor?.dispose?.();
     },
 
     dispose() {
@@ -396,6 +437,7 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
     debugRoot: roots.debugRoot,
     colliderRuntime: roots.colliderRuntime || null,
     stageNavigation: roots.stageNavigation || null,
+    sharedState: roots.sharedState || null,
     laneRuntime: kind === 'vehicle' ? createTrafficLaneRuntime(roots.stageNavigation) : null,
     debugHelper
   };
@@ -699,6 +741,7 @@ function resolveVehicleLaneRoute(runtime, agent, position, speed, deltaSeconds) 
 function resolvePlayerTrafficBlock(runtime, agent, position, focusPos, playerVelocity, laneRoute, deltaSeconds) {
   if (
     agent.kind !== 'vehicle' ||
+    Number(runtime.sharedState?.trafficTakeoverBlockGraceSeconds || 0) > 0 ||
     !focusPos?.isVector3 ||
     runtime.stageNavigation?.mode !== 'roadGraph' ||
     !laneRoute?.targetTangent

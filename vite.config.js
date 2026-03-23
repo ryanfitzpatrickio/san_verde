@@ -20,6 +20,13 @@ import {
   tireLibraryPublicPath,
   writeTireLibrary
 } from './scripts/tire-library-utils.mjs';
+import {
+  createWeaponLibraryPayload,
+  loadWeaponLibrary,
+  normalizeWeaponRecord,
+  weaponLibraryPublicPath,
+  writeWeaponLibrary
+} from './scripts/weapon-library-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -129,6 +136,12 @@ async function rebuildTireLibrary() {
   return payload;
 }
 
+async function rebuildWeaponLibrary() {
+  const payload = createWeaponLibraryPayload();
+  writeJsonFile(weaponLibraryPublicPath, payload);
+  return payload;
+}
+
 async function saveVehicleManifest(payload) {
   const previousId = typeof payload.previousId === 'string' ? payload.previousId.trim() : '';
   const manifest = normalizeVehicleManifest(payload.manifest);
@@ -186,6 +199,28 @@ async function deleteTireRecord(payload) {
 
   const tires = loadTireLibrary().filter((entry) => entry.id !== id);
   return writeTireLibrary(tires);
+}
+
+async function saveWeaponRecord(payload) {
+  const previousId = typeof payload.previousId === 'string' ? payload.previousId.trim() : '';
+  const record = normalizeWeaponRecord(payload.record);
+  const weapons = loadWeaponLibrary().filter((entry) => entry.id !== previousId && entry.id !== record.id);
+  weapons.push(record);
+  const library = writeWeaponLibrary(weapons);
+  return {
+    record,
+    library
+  };
+}
+
+async function deleteWeaponRecord(payload) {
+  const id = typeof payload.id === 'string' ? payload.id.trim() : '';
+  if (!id) {
+    throw new Error('Weapon id is required.');
+  }
+
+  const weapons = loadWeaponLibrary().filter((entry) => entry.id !== id);
+  return writeWeaponLibrary(weapons);
 }
 
 function attachVehicleAssetRoutes(middlewares) {
@@ -334,6 +369,79 @@ function attachTireAssetRoutes(middlewares) {
   });
 }
 
+function attachWeaponAssetRoutes(middlewares) {
+  middlewares.use('/__editor/weapons', async (req, res, next) => {
+    if (req.method === 'GET') {
+      try {
+        jsonResponse(res, 200, {
+          weapons: loadWeaponLibrary(),
+          libraryPath: 'public/data/weapon-library.json'
+        });
+      } catch (error) {
+        jsonResponse(res, 500, {
+          error: 'Failed to read weapon library.',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return;
+    }
+
+    if (req.method !== 'POST') {
+      next();
+      return;
+    }
+
+    try {
+      const payload = await readJsonBody(req);
+      const action = typeof payload.action === 'string' ? payload.action.trim() : '';
+
+      if (action === 'save') {
+        const result = await saveWeaponRecord(payload);
+        jsonResponse(res, 200, {
+          ok: true,
+          weapon: result.record,
+          weapons: loadWeaponLibrary(),
+          libraryPath: 'public/data/weapon-library.json',
+          library: result.library
+        });
+        return;
+      }
+
+      if (action === 'delete') {
+        const library = await deleteWeaponRecord(payload);
+        jsonResponse(res, 200, {
+          ok: true,
+          weapons: loadWeaponLibrary(),
+          libraryPath: 'public/data/weapon-library.json',
+          library
+        });
+        return;
+      }
+
+      if (action === 'rebuild') {
+        const library = await rebuildWeaponLibrary();
+        jsonResponse(res, 200, {
+          ok: true,
+          weapons: loadWeaponLibrary(),
+          libraryPath: 'public/data/weapon-library.json',
+          library
+        });
+        return;
+      }
+
+      jsonResponse(res, 400, {
+        error: 'Unknown weapon action.',
+        action
+      });
+    } catch (error) {
+      jsonResponse(res, 500, {
+        error: 'Failed to process weapon asset request.',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+}
+
 function sanitizeModelFilename(filename) {
   const trimmed = typeof filename === 'string' ? filename.trim() : '';
   const base = path.basename(trimmed);
@@ -433,6 +541,53 @@ function attachTireModelRoutes(middlewares) {
     } catch (error) {
       jsonResponse(res, 500, {
         error: 'Failed to save tire GLB.',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+}
+
+function attachWeaponModelRoutes(middlewares) {
+  middlewares.use('/__editor/weapon-models', async (req, res, next) => {
+    if (req.method !== 'POST') {
+      next();
+      return;
+    }
+
+    try {
+      let filename = '';
+      let buffer = null;
+      const contentType = String(req.headers['content-type'] || '');
+
+      if (contentType.includes('application/octet-stream')) {
+        filename = sanitizeModelFilename(getEditorFilename(req));
+        buffer = await readBinaryBody(req);
+      } else {
+        const payload = await readJsonBody(req);
+        filename = sanitizeModelFilename(payload.filename);
+        const glbBase64 = typeof payload.glbBase64 === 'string' ? payload.glbBase64.trim() : '';
+        if (!glbBase64) {
+          throw new Error('GLB payload is required.');
+        }
+        buffer = Buffer.from(glbBase64, 'base64');
+      }
+
+      if (!buffer?.length) {
+        throw new Error('GLB payload is required.');
+      }
+
+      const outputPath = path.join(PUBLIC_MODELS_PATH, filename);
+      await fs.mkdir(PUBLIC_MODELS_PATH, { recursive: true });
+      await fs.writeFile(outputPath, buffer);
+
+      jsonResponse(res, 200, {
+        ok: true,
+        url: `/models/${filename}`,
+        sourceLabel: `public/models/${filename}`
+      });
+    } catch (error) {
+      jsonResponse(res, 500, {
+        error: 'Failed to save weapon GLB.',
         message: error instanceof Error ? error.message : String(error)
       });
     }
@@ -577,16 +732,20 @@ function editorPlugin() {
       attachSanVerdeMapRoute(server.middlewares);
       attachVehicleAssetRoutes(server.middlewares);
       attachTireAssetRoutes(server.middlewares);
+      attachWeaponAssetRoutes(server.middlewares);
       attachVehicleModelRoutes(server.middlewares);
       attachTireModelRoutes(server.middlewares);
+      attachWeaponModelRoutes(server.middlewares);
       attachVehicleAutoLocatorRoutes(server.middlewares);
     },
     configurePreviewServer(server) {
       attachSanVerdeMapRoute(server.middlewares);
       attachVehicleAssetRoutes(server.middlewares);
       attachTireAssetRoutes(server.middlewares);
+      attachWeaponAssetRoutes(server.middlewares);
       attachVehicleModelRoutes(server.middlewares);
       attachTireModelRoutes(server.middlewares);
+      attachWeaponModelRoutes(server.middlewares);
       attachVehicleAutoLocatorRoutes(server.middlewares);
     }
   };

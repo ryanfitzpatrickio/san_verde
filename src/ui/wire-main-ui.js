@@ -5,6 +5,8 @@ export function wireMainUi(options) {
     context,
     vehicleManager,
     playerSystem,
+    weaponRuntime,
+    shootingRangeRuntime,
     applyGarageSnapshot,
     setEngineType,
     setStageId,
@@ -197,7 +199,7 @@ export function wireMainUi(options) {
 
   ui.toggleLap.addEventListener('click', () => {
     if (state.driveMode) {
-      if (state.activeVehicleKind === 'bike') {
+      if (state.activeVehicleKind === 'bike' || state.activeVehicleSource === 'traffic') {
         playerSystem.directExitVehicle(context);
       } else {
         playerSystem.exitVehicle(context);
@@ -371,6 +373,8 @@ export function wireMainUi(options) {
     setDriveInput(context.gameRuntime, 'right', false);
   };
 
+  let clickFirePointer = null;
+
   const tryCarjack = async (trafficAgent) => {
     // Grab position/yaw before removing the agent
     const vehiclePos = trafficAgent.lastPosition.clone();
@@ -394,26 +398,42 @@ export function wireMainUi(options) {
     }
     context.agentSystem?.spawnFleeingNpc?.(spawnPos, fleeDir);
 
-    // Remove traffic agent from the crowd
-    context.agentSystem.removeTrafficAgent(trafficAgent);
+    const detachedTrafficAgent = context.agentSystem?.detachTrafficAgent?.(trafficAgent);
+    if (!detachedTrafficAgent) {
+      setStatus('Failed to take over traffic car');
+      return;
+    }
+    context.agentSystem?.clearNearbyTrafficVehicles?.(vehiclePos, 5.5, 5);
 
     setStatus('Stealing car...');
 
-    // Load and mount the vehicle (async — loads body + tire GLBs)
-    const result = await vehicleManager.mountStolenTrafficVehicle(context, trafficAgent);
+    const result = await vehicleManager.mountStolenTrafficVehicle(context, detachedTrafficAgent);
     if (!result) {
       setStatus('Failed to steal car');
       return;
     }
 
-    if (!playerSystem.tryEnterVehicle(context)) {
-      playerSystem.directMountVehicle(context);
-    }
+    playerSystem.directMountVehicle(context);
     setStatus('Stole a car');
   };
 
   window.addEventListener('keydown', (event) => {
     unlockEngineAudio(context.gameRuntime);
+
+    if (!event.repeat && event.code === 'KeyQ' && weaponRuntime?.openWeaponWheel?.(context)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (!event.repeat && event.code === 'KeyE' && shootingRangeRuntime?.startNearestSession?.(context)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (!state.driveMode && state.weaponWheelOpen) {
+      event.preventDefault();
+      return;
+    }
 
     if (setDriveKey(event.code, true)) {
       event.preventDefault();
@@ -422,7 +442,7 @@ export function wireMainUi(options) {
 
     if (!event.repeat && event.code === 'KeyF') {
       if (state.driveMode) {
-        if (state.activeVehicleKind === 'bike') {
+        if (state.activeVehicleKind === 'bike' || state.activeVehicleSource === 'traffic') {
           playerSystem.directExitVehicle(context);
         } else {
           playerSystem.exitVehicle(context);
@@ -498,17 +518,75 @@ export function wireMainUi(options) {
   });
 
   window.addEventListener('keyup', (event) => {
+    if (event.code === 'KeyQ' && state.weaponWheelOpen) {
+      void weaponRuntime?.closeWeaponWheel?.(context);
+      event.preventDefault();
+      return;
+    }
+
+    if (!state.driveMode && state.weaponWheelOpen) {
+      event.preventDefault();
+      return;
+    }
+
     if (setDriveKey(event.code, false)) {
       event.preventDefault();
     }
   });
 
+  window.addEventListener(
+    'pointermove',
+    (event) => {
+      weaponRuntime?.updateWeaponWheelPointer?.(event.clientX, event.clientY);
+    },
+    { passive: true }
+  );
+
+  context.renderer.domElement.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    clickFirePointer = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      startedAt: performance.now()
+    };
+  });
+
+  context.renderer.domElement.addEventListener('pointerup', (event) => {
+    if (event.button !== 0 || !clickFirePointer) {
+      return;
+    }
+
+    const dx = event.clientX - clickFirePointer.clientX;
+    const dy = event.clientY - clickFirePointer.clientY;
+    const dt = performance.now() - clickFirePointer.startedAt;
+    const isClick = dx * dx + dy * dy <= 64 && dt <= 260;
+    clickFirePointer = null;
+    if (!isClick || !weaponRuntime?.canFireWeapon?.(context)) {
+      return;
+    }
+
+    const shot = weaponRuntime.fireEquippedWeapon(context, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      onShot: (payload) => shootingRangeRuntime?.handleWeaponShot?.(context, payload)
+    });
+    if (shot) {
+      event.preventDefault();
+    }
+  });
+
   window.addEventListener('blur', () => {
+    clickFirePointer = null;
+    void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
     clearDriveInputs();
   });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      void weaponRuntime?.closeWeaponWheel?.(context, { commit: false });
       clearDriveInputs();
     }
   });

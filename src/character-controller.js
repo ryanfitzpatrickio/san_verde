@@ -86,7 +86,8 @@ export function updateCharacterController(controller, options) {
     input,
     driveBounds,
     sampleGround,
-    sampleCollision
+    sampleCollision,
+    resolveLocomotionState
   } = options;
 
   if (!controller) {
@@ -95,18 +96,18 @@ export function updateCharacterController(controller, options) {
 
   let moving = false;
   MOVE_DIRECTION.set(0, 0, 0);
+  camera.getWorldDirection(CAMERA_FORWARD);
+  CAMERA_FORWARD.y = 0;
+  if (CAMERA_FORWARD.lengthSq() < 1e-6) {
+    CAMERA_FORWARD.set(0, 0, 1);
+  } else {
+    CAMERA_FORWARD.normalize();
+  }
+  CAMERA_SIDE.set(-CAMERA_FORWARD.z, 0, CAMERA_FORWARD.x);
 
   const inputX = Number(input.right) - Number(input.left);
   const inputZ = Number(input.forward) - Number(input.backward);
   if (inputX !== 0 || inputZ !== 0) {
-    camera.getWorldDirection(CAMERA_FORWARD);
-    CAMERA_FORWARD.y = 0;
-    if (CAMERA_FORWARD.lengthSq() < 1e-6) {
-      CAMERA_FORWARD.set(0, 0, 1);
-    } else {
-      CAMERA_FORWARD.normalize();
-    }
-    CAMERA_SIDE.set(-CAMERA_FORWARD.z, 0, CAMERA_FORWARD.x);
     MOVE_DIRECTION
       .addScaledVector(CAMERA_FORWARD, inputZ)
       .addScaledVector(CAMERA_SIDE, inputX);
@@ -124,10 +125,26 @@ export function updateCharacterController(controller, options) {
     deltaSeconds
   );
 
-  if (moving && controller.moveSpeed > 0.01) {
+  const locomotionState = resolveLocomotionState
+    ? resolveLocomotionState({
+      controller,
+      input,
+      moving,
+      inputX,
+      inputZ,
+      moveDirection: MOVE_DIRECTION,
+      cameraForward: CAMERA_FORWARD,
+      cameraSide: CAMERA_SIDE
+    })
+    : null;
+  const targetYaw = Number.isFinite(locomotionState?.targetYaw)
+    ? locomotionState.targetYaw
+    : (moving && controller.moveSpeed > 0.01 ? Math.atan2(MOVE_DIRECTION.x, MOVE_DIRECTION.z) : null);
+
+  if ((moving && controller.moveSpeed > 0.01) || locomotionState?.forceFacing) {
     controller.yaw = dampAngle(
       controller.yaw,
-      Math.atan2(MOVE_DIRECTION.x, MOVE_DIRECTION.z),
+      Number.isFinite(targetYaw) ? targetYaw : controller.yaw,
       config.turnRate,
       deltaSeconds
     );
@@ -135,13 +152,15 @@ export function updateCharacterController(controller, options) {
 
   setCharacterAction(
     controller,
-    moving && controller.moveSpeed > config.walkSpeed * 0.82
+    locomotionState?.actionName || (
+      moving && controller.moveSpeed > config.walkSpeed * 0.82
       ? input.run && controller.actions.has('run')
         ? 'run'
         : 'walk'
       : moving && controller.actions.has('walk')
         ? 'walk'
-      : 'idle'
+        : 'idle'
+    )
   );
 
   const jumpPressed = Boolean(input.jump);

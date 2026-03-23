@@ -2,7 +2,34 @@ import * as THREE from 'three';
 
 import { createDefaultEngineState } from './engine-system.js';
 import { resolveModelUrl, resolvePublicUrl } from './assets/asset-base-url.js';
+import { BUILT_IN_WEAPONS } from './assets/weapon-library.js';
 import { mountHUD } from './ui/HUD.jsx';
+
+const BUILT_IN_WEAPON_CONFIGS = Object.fromEntries(
+  BUILT_IN_WEAPONS.map((weapon) => [
+    weapon.id,
+    {
+      id: weapon.id,
+      label: weapon.label,
+      modelUrl: weapon.modelUrl,
+      asset: weapon.asset,
+      proceduralModel: weapon.proceduralModel,
+      gripOffset: [...weapon.gripOffset],
+      gripRotation: [...weapon.gripRotation],
+      gripScale: weapon.gripScale,
+      sockets: {
+        muzzle: [...weapon.sockets.muzzle],
+        offHand: [...weapon.sockets.offHand],
+        casingEject: [...weapon.sockets.casingEject],
+        aim: [...weapon.sockets.aim]
+      },
+      fireCooldownSeconds: weapon.fireCooldownSeconds,
+      locomotionSet: { ...weapon.locomotionSet }
+    }
+  ])
+);
+
+const DEFAULT_WEAPON_INVENTORY_IDS = ['unarmed', ...BUILT_IN_WEAPONS.map((weapon) => weapon.id)];
 
 export const MODEL_CONFIG = {
   defaultCarId: 'mustang',
@@ -286,12 +313,33 @@ export const MODEL_CONFIG = {
       idle: resolveModelUrl('/models/Locomotion Pack/idle.fbx'),
       walk: resolveModelUrl('/models/Locomotion Pack/walking.fbx'),
       run: resolveModelUrl('/models/Locomotion Pack/running.fbx'),
+      pistolIdle: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol idle.fbx'),
+      pistolWalk: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol walk.fbx'),
+      pistolRun: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol run.fbx'),
+      pistolWalkBackward: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol walk backward.fbx'),
+      pistolRunBackward: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol run backward.fbx'),
+      pistolStrafeLeft: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol strafe.fbx'),
+      pistolStrafeRight: resolveModelUrl('/animations/Pistol_Handgun Locomotion Pack/pistol strafe (2).fbx'),
+      shotgunIdle: resolveModelUrl('/animations/Pro Rifle Pack (1)/idle aiming.fbx'),
+      shotgunWalk: resolveModelUrl('/animations/Pro Rifle Pack (1)/walk forward.fbx'),
+      shotgunRun: resolveModelUrl('/animations/Pro Rifle Pack (1)/run forward.fbx'),
+      shotgunWalkBackward: resolveModelUrl('/animations/Pro Rifle Pack (1)/walk backward.fbx'),
+      shotgunRunBackward: resolveModelUrl('/animations/Pro Rifle Pack (1)/run backward.fbx'),
+      shotgunStrafeLeft: resolveModelUrl('/animations/Pro Rifle Pack (1)/walk left.fbx'),
+      shotgunStrafeRight: resolveModelUrl('/animations/Pro Rifle Pack (1)/walk right.fbx'),
       enterCar: resolveModelUrl('/models/Locomotion Pack/Entering Car.fbx'),
       drive: resolveModelUrl('/models/Locomotion Pack/Driving.fbx'),
       exitCar: resolveModelUrl('/models/Locomotion Pack/Exiting Car.fbx'),
       honk: resolveModelUrl('/models/Locomotion Pack/Honking Horn.fbx'),
       fallingIdle: resolveModelUrl('/animations/Falling Idle.fbx'),
       gettingUp: resolveModelUrl('/animations/Getting Up.fbx')
+    },
+    weapons: {
+      unarmed: {
+        id: 'unarmed',
+        label: 'Unarmed'
+      },
+      ...BUILT_IN_WEAPON_CONFIGS
     },
     height: 1.9,
     walkSpeed: 3.4,
@@ -639,6 +687,10 @@ export function createInitialState(ui) {
     characterVehicleState: 'on_foot',
     characterEnterTimer: 0,
     canEnterVehicle: false,
+    weaponInventoryIds: [...DEFAULT_WEAPON_INVENTORY_IDS],
+    equippedWeaponId: 'unarmed',
+    weaponWheelOpen: false,
+    weaponWheelSelectionId: 'unarmed',
     driveSpeed: 0,
     steerAngle: 0,
     bikeLeanAngle: 0,
@@ -655,6 +707,10 @@ export function createInitialState(ui) {
     doorAngle: 0,
     doorRig: null,
     steeringWheelRig: null,
+    activeVehicleSource: 'garage',
+    activeCarProxy: null,
+    activeCarSuspensionOverrides: null,
+    trafficTakeoverBlockGraceSeconds: 0,
     activeVehicleKind: 'car',
     parkedVehicleProxies: {
       car: null,

@@ -12,6 +12,15 @@ export function createRenderStageRuntime({
   ui,
   callbacks
 }) {
+  const CHARACTER_LIGHT_POSITION = new THREE.Vector3();
+  const CHARACTER_LIGHT_TARGET = new THREE.Vector3();
+  const CHARACTER_KEY_DIRECTION = new THREE.Vector3();
+  const CHARACTER_VIEW_DIRECTION = new THREE.Vector3();
+  const CHARACTER_FILL_DIRECTION = new THREE.Vector3();
+  const CHARACTER_RIM_DIRECTION = new THREE.Vector3();
+  const CHARACTER_CAMERA_BIAS = new THREE.Vector3();
+  const CHARACTER_CAMERA_FLAT = new THREE.Vector3();
+
   const {
     getStageBehaviorId,
     applySceneMaterialState,
@@ -47,6 +56,167 @@ export function createRenderStageRuntime({
     shadowCamera.near = 1;
     shadowCamera.far = behaviorStageId === 'test_course' || behaviorStageId === 'san_verde' ? 70 : 110;
     shadowCamera.updateProjectionMatrix();
+  }
+
+  function shouldUseCharacterLighting(context) {
+    return Boolean(
+      context?.characterController &&
+      state.characterLoaded &&
+      !state.driveMode &&
+      (
+        state.characterVehicleState === 'on_foot' ||
+        state.characterVehicleState === 'entering' ||
+        state.characterVehicleState === 'exiting' ||
+        state.characterVehicleState === 'wipeout'
+      )
+    );
+  }
+
+  function hideCharacterLighting(lights) {
+    if (!lights) {
+      return;
+    }
+
+    lights.fill.visible = false;
+    lights.rim.visible = false;
+    lights.overheadCard.visible = false;
+    lights.sideCard.visible = false;
+  }
+
+  function getCharacterLightingProfile(stageId = state.selectedStageId) {
+    stageId = getStageBehaviorId(stageId);
+    if (stageId === 'test_course' || stageId === 'san_verde') {
+      return {
+        fillIntensity: 12,
+        fillBoost: 10,
+        rimIntensity: 8,
+        rimBoost: 4,
+        fillDistance: 24,
+        rimDistance: 18
+      };
+    }
+
+    if (stageId === 'bloomville') {
+      return {
+        fillIntensity: 10,
+        fillBoost: 8,
+        rimIntensity: 7,
+        rimBoost: 3,
+        fillDistance: 22,
+        rimDistance: 16
+      };
+    }
+
+    return {
+      fillIntensity: 9,
+      fillBoost: 6,
+      rimIntensity: 6,
+      rimBoost: 2.5,
+      fillDistance: 20,
+      rimDistance: 15
+    };
+  }
+
+  function updateCharacterLighting(context) {
+    const lights = context?.lightingRig?.userData?.lights;
+    if (!lights) {
+      return;
+    }
+
+    if (!shouldUseCharacterLighting(context)) {
+      hideCharacterLighting(lights);
+      return;
+    }
+
+    const controller = context.characterController;
+    const camera = context.camera;
+    const key = lights.key;
+    if (!controller || !camera || !key) {
+      hideCharacterLighting(lights);
+      return;
+    }
+
+    CHARACTER_LIGHT_POSITION.copy(controller.position);
+    CHARACTER_LIGHT_TARGET.copy(controller.position);
+    CHARACTER_LIGHT_TARGET.y += 1.15;
+    CHARACTER_LIGHT_POSITION.y += 1.1;
+
+    CHARACTER_KEY_DIRECTION.subVectors(key.position, CHARACTER_LIGHT_TARGET);
+    CHARACTER_KEY_DIRECTION.y = 0;
+    if (CHARACTER_KEY_DIRECTION.lengthSq() < 1e-6) {
+      CHARACTER_KEY_DIRECTION.set(0.65, 0, 0.35);
+    } else {
+      CHARACTER_KEY_DIRECTION.normalize();
+    }
+
+    CHARACTER_VIEW_DIRECTION.subVectors(camera.position, CHARACTER_LIGHT_TARGET);
+    CHARACTER_VIEW_DIRECTION.y = 0;
+    if (CHARACTER_VIEW_DIRECTION.lengthSq() < 1e-6) {
+      CHARACTER_VIEW_DIRECTION.set(0, 0, 1);
+    } else {
+      CHARACTER_VIEW_DIRECTION.normalize();
+    }
+
+    const backlightFactor = THREE.MathUtils.clamp(
+      (1 - CHARACTER_VIEW_DIRECTION.dot(CHARACTER_KEY_DIRECTION)) * 0.5,
+      0,
+      1
+    );
+    const profile = getCharacterLightingProfile(state.selectedStageId);
+
+    CHARACTER_CAMERA_FLAT
+      .subVectors(CHARACTER_LIGHT_TARGET, camera.position)
+      .setY(0);
+    if (CHARACTER_CAMERA_FLAT.lengthSq() < 1e-6) {
+      CHARACTER_CAMERA_FLAT.copy(CHARACTER_VIEW_DIRECTION).negate();
+    } else {
+      CHARACTER_CAMERA_FLAT.normalize();
+    }
+
+    CHARACTER_FILL_DIRECTION
+      .copy(CHARACTER_KEY_DIRECTION)
+      .negate()
+      .multiplyScalar(0.74);
+    CHARACTER_CAMERA_BIAS.copy(CHARACTER_CAMERA_FLAT).multiplyScalar(0.9);
+    CHARACTER_FILL_DIRECTION.add(CHARACTER_CAMERA_BIAS);
+    CHARACTER_FILL_DIRECTION.y = 0;
+    if (CHARACTER_FILL_DIRECTION.lengthSq() < 1e-6) {
+      CHARACTER_FILL_DIRECTION.copy(CHARACTER_CAMERA_FLAT);
+    } else {
+      CHARACTER_FILL_DIRECTION.normalize();
+    }
+
+    lights.fill.visible = true;
+    lights.fill.intensity = profile.fillIntensity + backlightFactor * profile.fillBoost;
+    lights.fill.distance = profile.fillDistance;
+    lights.fill.position.copy(CHARACTER_LIGHT_POSITION)
+      .addScaledVector(CHARACTER_FILL_DIRECTION, 2.6)
+      .addScaledVector(CHARACTER_KEY_DIRECTION, -0.8);
+    lights.fill.position.y += 1.5;
+    lights.fill.target.position.copy(CHARACTER_LIGHT_TARGET);
+
+    CHARACTER_RIM_DIRECTION
+      .copy(CHARACTER_VIEW_DIRECTION)
+      .negate()
+      .multiplyScalar(0.68)
+      .addScaledVector(CHARACTER_KEY_DIRECTION, 0.7);
+    CHARACTER_RIM_DIRECTION.y = 0;
+    if (CHARACTER_RIM_DIRECTION.lengthSq() < 1e-6) {
+      CHARACTER_RIM_DIRECTION.copy(CHARACTER_KEY_DIRECTION);
+    } else {
+      CHARACTER_RIM_DIRECTION.normalize();
+    }
+
+    lights.rim.visible = backlightFactor > 0.08;
+    lights.rim.intensity = profile.rimIntensity + backlightFactor * profile.rimBoost;
+    lights.rim.distance = profile.rimDistance;
+    lights.rim.position.copy(CHARACTER_LIGHT_POSITION)
+      .addScaledVector(CHARACTER_RIM_DIRECTION, 2.2);
+    lights.rim.position.y += 2.4;
+    lights.rim.target.position.copy(CHARACTER_LIGHT_TARGET);
+
+    lights.overheadCard.visible = false;
+    lights.sideCard.visible = false;
   }
 
   function shouldUseCheapDirectionalShadows(stageId) {
@@ -531,6 +701,7 @@ export function createRenderStageRuntime({
 
   return {
     updateKeyLightShadowFocus,
+    updateCharacterLighting,
     shouldUseCheapDirectionalShadows,
     applyStageShadowPolicy,
     createVehicleContactShadow,

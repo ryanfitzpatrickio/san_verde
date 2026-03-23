@@ -4,6 +4,7 @@ import { createBloomvilleStage } from './bloomville-stage.js';
 import { BUILDING_ASSET_MODE_GLB_ONLY } from './catalog-lod.js';
 import { createCityStage } from './city-stage.js';
 import { createSanVerdeStage } from './san-verde-stage.js';
+import { createTestCourseShootingRange } from './test-course-shooting-range.js';
 import { resolveModelUrl } from '../assets/asset-base-url.js';
 
 let testGroundTexture = null;
@@ -129,6 +130,8 @@ function createTestCourseStage() {
   group.add(createSandboxCones(78));
   group.add(createSuspensionTestFeatures());
   group.add(createCourseBoundaryWalls(TEST_WALL_HALF));
+  const shootingRange = createTestCourseShootingRange();
+  group.add(shootingRange.group);
 
   // Portal
   const PORTAL_SPECS = [
@@ -160,6 +163,7 @@ function createTestCourseStage() {
       new THREE.Vector3(-92, 0, 0),
       new THREE.Vector3(-68, 0, 68)
     ]),
+    shootingRange,
     agentNavigation: null,
     agentNavigationRevision: 0,
     update(vehiclePosition) {
@@ -167,6 +171,7 @@ function createTestCourseStage() {
       for (const portal of portalObjects) {
         portal.mesh.userData.ring.rotation.z = t * 0.7;
       }
+      shootingRange.updatePlayer(vehiclePosition);
       for (const portal of portalObjects) {
         const dx = vehiclePosition.x - portal.position.x;
         const dz = vehiclePosition.z - portal.position.z;

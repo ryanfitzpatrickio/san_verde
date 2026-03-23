@@ -24,6 +24,7 @@ import { mrt, normalView, output, pass, renderOutput } from 'three/tsl';
 import { createGarageAssetLoader } from './assets/garage-asset-loader.js';
 import { EngineAudioSystem } from './engine-system.js';
 import { createNpcCrowdSystem } from './game/npc-crowd-system.js';
+import { createCharacterWeaponRuntime } from './game/character-weapon-runtime.js';
 import { STAGE_OPTIONS, createStage, getStageLabel } from './game/stages.js';
 import { createBounceStagePhysics, destroyBounceStagePhysics } from './game/bounce-physics.js';
 import { disposeStageFeedback, initializeStageFeedback } from './game/stage-feedback.js';
@@ -68,6 +69,7 @@ import {
 import { createGarageVehicleRuntime } from './runtime/garage-vehicle-runtime.js';
 import { createRenderStageRuntime } from './runtime/render-stage-runtime.js';
 import { createSceneUtilsRuntime } from './runtime/scene-utils-runtime.js';
+import { createShootingRangeRuntime } from './runtime/shooting-range-runtime.js';
 import { createStageRuntime } from './runtime/stage-runtime.js';
 import { createVehicleMaterialRuntime } from './runtime/vehicle-material-runtime.js';
 import { assetExists, createSceneHelpers } from './scene-helpers.js';
@@ -119,6 +121,15 @@ const {
 } = sceneUtilsRuntime;
 
 let playerSystem = null;
+const characterWeaponRuntime = createCharacterWeaponRuntime({
+  state,
+  config: MODEL_CONFIG,
+  setStatus
+});
+const shootingRangeRuntime = createShootingRangeRuntime({
+  state,
+  setStatus
+});
 
 const renderStageRuntime = createRenderStageRuntime({
   THREE,
@@ -140,6 +151,7 @@ const renderStageRuntime = createRenderStageRuntime({
 });
 const {
   updateKeyLightShadowFocus,
+  updateCharacterLighting,
   shouldUseCheapDirectionalShadows,
   applyStageShadowPolicy,
   createVehicleContactShadow,
@@ -636,6 +648,7 @@ const vehicleManager = createVehicleManager({
     syncGarageScene: (runtime) => syncGarageScene(runtime),
     teleportGarageVehicle: (runtime, position, yaw) => teleportGarageVehicle(runtime, position, yaw),
     setGarageVehicleKind: (runtime, vehicleKind) => setGarageVehicleKind(runtime, vehicleKind),
+    setEngineType: (runtime, engineTypeId) => setEngineType(runtime, engineTypeId),
     setChassisHeight: (runtime, chassisHeight) => setChassisHeight(runtime, chassisHeight),
     setSuspensionOverrides: (runtime, overrides) => setSuspensionOverrides(runtime, overrides),
     setStatus: (message) => setStatus(message),
@@ -974,7 +987,9 @@ async function bootstrap() {
     ui,
     config: MODEL_CONFIG,
     setStatus,
-    getStageLabel
+    getStageLabel,
+    weaponRuntime: characterWeaponRuntime,
+    rangeRuntime: shootingRangeRuntime
   });
   playerSystem.focusCurrentTarget(context, context.focusOptions);
   playerSystem.syncOverlay(context);
@@ -986,6 +1001,8 @@ async function bootstrap() {
     context,
     vehicleManager,
     playerSystem,
+    weaponRuntime: characterWeaponRuntime,
+    shootingRangeRuntime,
     applyGarageSnapshot,
     setEngineType,
     setStageId: rebuildStage,
@@ -1074,6 +1091,7 @@ async function bootstrap() {
     agentSystem.update(currentStage, playerSystem.getActiveStagePosition(context), deltaSeconds);
     updateStageMinimapOverlay(context);
     updateKeyLightShadowFocus(context);
+    updateCharacterLighting(context);
     updateVehicleContactShadow(context);
     renderer.info.reset();
     performanceAttribution.resetFrame();

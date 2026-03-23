@@ -397,6 +397,13 @@ pre {
   background: linear-gradient(180deg, #edf0ee 0%, #cbd1ce 100%);
 }
 
+.weapon-preview-viewport {
+  min-height: 420px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #edf0ee 0%, #cbd1ce 100%);
+}
+
 .validator-canvas {
   display: block;
   width: 100%;
@@ -504,6 +511,63 @@ pre {
 
 .hidden-file-input {
   display: none;
+}
+
+.preview-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) auto;
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: end;
+}
+
+.preview-meta {
+  color: #4a524d;
+  font-size: 0.92rem;
+}
+
+.preview-mode-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.preview-mode-group .ghost-button.is-active {
+  border-color: rgba(46, 79, 64, 0.42);
+  background: rgba(244, 232, 204, 0.9);
+}
+
+.preview-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.preview-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: #283028;
+}
+
+.preview-chip-red {
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.preview-chip-green {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.preview-chip-blue {
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.preview-chip-gold {
+  border: 1px solid rgba(245, 158, 11, 0.28);
 }
 
 @media (max-width: 1180px) {

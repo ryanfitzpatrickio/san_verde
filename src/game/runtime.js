@@ -969,7 +969,10 @@ function updateDriveSystem(runtime, deltaSeconds) {
       const speed = controller.speed;
       const speedAbs = Math.abs(speed);
       const speedSign = Math.sign(speed) || 1;
-      const hasDriveIntent = throttleInput > 0.02 || brakeInput > 0.02;
+      const hasDriveIntent =
+        Number(driveInput?.forward || 0) > 0.02 ||
+        Number(driveInput?.reverse || 0) > 0.02 ||
+        Number(engine.snapshot?.engineThrottle || 0) > 0.02;
       const stopHoldSpeed = drivingStyle.stopHoldSpeedMps ?? 0.32;
       const stopHoldForce = vehiclePhysics.massKg * 9.81 * (drivingStyle.stopHoldForceCoeff ?? 0.22);
       const airDensity = 1.225;

@@ -95,6 +95,9 @@ export function createNpcActor({ archetype, crowdKind, index = 0 }) {
     subtype: resolvedArchetype.subtype || crowdKind,
     archetype: resolvedArchetype,
     root,
+    claimMountedRig() {
+      return trafficVehicle?.claimMountedRig?.() || null;
+    },
     updatePresentation({
       position,
       yaw = 0,

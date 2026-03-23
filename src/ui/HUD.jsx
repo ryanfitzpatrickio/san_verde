@@ -1,8 +1,9 @@
-import { Show } from 'solid-js';
+import { For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import {
   engineName, engineGear, engineRpm, vehicleSpeed,
-  playerMode, playerHint,
+  playerMode, playerHint, weaponName, weaponWheelOpen, weaponWheelSelection, weaponWheelOptions,
+  rangeVisible, rangeTitle, rangeStatus, rangeScore, rangeShots, rangeLastShot,
   uiOpen, performanceOpen,
   playerHidden, setPlayerHidden,
   controlsHidden, setControlsHidden,
@@ -46,6 +47,10 @@ function PlayerOverlay() {
         <span class="label">Target</span>
         <span class="value">{playerMode()}</span>
       </div>
+      <div class="player-status-row">
+        <span class="label">Weapon</span>
+        <span class="value">{weaponName()}</span>
+      </div>
       <div class="player-controls-row">
         <span class="player-hint">{playerHint()}</span>
         <button class="player-overlay-hide" onClick={hide}>Hide</button>
@@ -85,7 +90,7 @@ function ControlsOverlay() {
       </div>
       <div class="controls-grid">
         <span class="controls-cat">On foot</span>
-        <span class="controls-desc"><kbd>WASD</kbd> move <kbd>Shift</kbd> run <kbd>Space</kbd> jump</span>
+        <span class="controls-desc"><kbd>WASD</kbd> move <kbd>Shift</kbd> run <kbd>Space</kbd> jump <kbd>Q</kbd> weapon wheel</span>
         <span class="controls-cat" />
         <span class="controls-desc"><kbd>F</kbd> enter car at driver door</span>
         <span class="controls-cat">Driving</span>
@@ -111,6 +116,66 @@ function MinimapOverlay() {
         <span class="value">{minimapLabel()}</span>
       </div>
     </div>
+  );
+}
+
+function WeaponWheelOverlay() {
+  const radius = 112;
+
+  return (
+    <Show when={weaponWheelOpen()}>
+      <div class="weapon-wheel-overlay">
+        <div class="weapon-wheel-frame">
+          <div class="weapon-wheel-core">
+            <span class="label">Weapon</span>
+            <span class="value">{weaponName()}</span>
+            <span class="hint">Release Q to equip</span>
+          </div>
+          <For each={weaponWheelOptions()}>
+            {(option, index) => {
+              const angle = ((index() / Math.max(weaponWheelOptions().length, 1)) * Math.PI * 2) - Math.PI * 0.5;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              return (
+                <div
+                  class="weapon-wheel-slot"
+                  classList={{ 'is-active': weaponWheelSelection() === option.id }}
+                  style={{ transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}
+                >
+                  <span class="weapon-wheel-slot-label">{option.label}</span>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+      </div>
+    </Show>
+  );
+}
+
+function ShootingRangeOverlay() {
+  return (
+    <Show when={rangeVisible()}>
+      <div class="range-overlay">
+        <div class="range-overlay-title">{rangeTitle()}</div>
+        <div class="range-overlay-row">
+          <span class="label">Status</span>
+          <span class="value">{rangeStatus()}</span>
+        </div>
+        <div class="range-overlay-row">
+          <span class="label">Score</span>
+          <span class="value">{rangeScore()}</span>
+        </div>
+        <div class="range-overlay-row">
+          <span class="label">Shots</span>
+          <span class="value">{rangeShots()}</span>
+        </div>
+        <div class="range-overlay-row">
+          <span class="label">Last</span>
+          <span class="value">{rangeLastShot()}</span>
+        </div>
+      </div>
+    </Show>
   );
 }
 
@@ -145,6 +210,8 @@ function HUD() {
         <ControlsOverlay />
       </Show>
       <MinimapOverlay />
+      <ShootingRangeOverlay />
+      <WeaponWheelOverlay />
     </>
   );
 }

@@ -8,7 +8,19 @@ export const [vehicleSpeed, setVehicleSpeed] = createSignal('0 mph');
 
 // Player overlay
 export const [playerMode, setPlayerMode] = createSignal('On foot');
-export const [playerHint, setPlayerHint] = createSignal('WASD move, Shift run, F enter car');
+export const [playerHint, setPlayerHint] = createSignal('WASD move, Shift run, Space jump, Q weapon wheel, F enter car');
+export const [weaponName, setWeaponName] = createSignal('Unarmed');
+export const [weaponWheelOpen, setWeaponWheelOpen] = createSignal(false);
+export const [weaponWheelSelection, setWeaponWheelSelection] = createSignal('unarmed');
+export const [weaponWheelOptions, setWeaponWheelOptions] = createSignal([]);
+
+// Shooting range overlay
+export const [rangeVisible, setRangeVisible] = createSignal(false);
+export const [rangeTitle, setRangeTitle] = createSignal('');
+export const [rangeStatus, setRangeStatus] = createSignal('');
+export const [rangeScore, setRangeScore] = createSignal('');
+export const [rangeShots, setRangeShots] = createSignal('');
+export const [rangeLastShot, setRangeLastShot] = createSignal('');
 
 // Overlay visibility
 export const [uiOpen, setUiOpen] = createSignal(!localStorage.getItem('uiDismissed'));

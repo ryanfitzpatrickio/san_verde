@@ -1,10 +1,11 @@
-import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
+import { For, Match, Show, Switch, createMemo, createSignal, onMount } from 'solid-js';
 import { render } from 'solid-js/web';
 import './style.css';
 import { VehicleValidationDialog } from './vehicle-validation-dialog.jsx';
 import { TireValidationDialog } from './tire-validation-dialog.jsx';
 import { VehiclePreviewDialog } from './vehicle-preview-dialog.jsx';
 import { CarBuilder } from './car-builder.jsx';
+import { WeaponTab } from './weapon-tab.jsx';
 
 const DEFAULT_PRESET = {
   exposure: 1.15,
@@ -49,6 +50,42 @@ function createBlankTire() {
     label: '',
     url: '',
     sourceLabel: '',
+    notes: ''
+  };
+}
+
+function createBlankWeapon() {
+  return {
+    id: '',
+    label: '',
+    asset: {
+      url: '',
+      sourceLabel: ''
+    },
+    proceduralModel: null,
+    grip: {
+      offset: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: 1
+    },
+    sockets: {
+      muzzle: [0, 0, 0.6],
+      offHand: [0, -0.04, 0.28],
+      casingEject: [0.04, 0.03, 0.02],
+      aim: [0, 0.04, 0.18]
+    },
+    combat: {
+      fireCooldownSeconds: 0.12
+    },
+    locomotionSet: {
+      idle: 'idle',
+      walk: 'walk',
+      run: 'run',
+      walkBackward: 'walk',
+      runBackward: 'run',
+      strafeLeft: 'walk',
+      strafeRight: 'walk'
+    },
     notes: ''
   };
 }
@@ -104,19 +141,25 @@ function updateDraftValue(draft, path, value) {
 
 function app() {
   let tireImportInputRef;
+  let weaponImportInputRef;
   const [vehicles, setVehicles] = createSignal([]);
   const [tireLibrary, setTireLibrary] = createSignal([]);
+  const [weaponLibrary, setWeaponLibrary] = createSignal([]);
   const [selectedId, setSelectedId] = createSignal('');
   const [activeTab, setActiveTab] = createSignal('vehicles');
   const [selectedTireId, setSelectedTireId] = createSignal('');
+  const [selectedWeaponId, setSelectedWeaponId] = createSignal('');
   const [draft, setDraft] = createSignal(createBlankVehicle());
   const [tireDraft, setTireDraft] = createSignal(createBlankTire());
+  const [weaponDraft, setWeaponDraft] = createSignal(createBlankWeapon());
   const [previousId, setPreviousId] = createSignal('');
   const [previousTireId, setPreviousTireId] = createSignal('');
+  const [previousWeaponId, setPreviousWeaponId] = createSignal('');
   const [status, setStatus] = createSignal('Loading vehicle manifests...');
   const [busy, setBusy] = createSignal(false);
   const [registryPath, setRegistryPath] = createSignal('public/data/vehicle-registry.json');
   const [tireLibraryPath, setTireLibraryPath] = createSignal('public/data/tire-library.json');
+  const [weaponLibraryPath, setWeaponLibraryPath] = createSignal('public/data/weapon-library.json');
   const [validatorOpen, setValidatorOpen] = createSignal(false);
   const [tirePreviewConfig, setTirePreviewConfig] = createSignal(null);
   const [vehiclePreviewOpen, setVehiclePreviewOpen] = createSignal(false);
@@ -188,18 +231,29 @@ function app() {
 
   const jsonPreview = createMemo(() => JSON.stringify(draft(), null, 2));
   const tireJsonPreview = createMemo(() => JSON.stringify(tireDraft(), null, 2));
+  const weaponJsonPreview = createMemo(() => JSON.stringify(weaponDraft(), null, 2));
+  const weaponPresentationMode = createMemo(() => {
+    return weaponDraft().proceduralModel ? 'procedural' : 'asset';
+  });
 
-  async function loadAssets(selectedVehicleId = selectedId(), selectedLibraryTireId = selectedTireId()) {
+  async function loadAssets(
+    selectedVehicleId = selectedId(),
+    selectedLibraryTireId = selectedTireId(),
+    selectedLibraryWeaponId = selectedWeaponId()
+  ) {
     setBusy(true);
     try {
-      const [vehiclePayload, tirePayload] = await Promise.all([
+      const [vehiclePayload, tirePayload, weaponPayload] = await Promise.all([
         requestJson('/__editor/vehicles'),
-        requestJson('/__editor/tires')
+        requestJson('/__editor/tires'),
+        requestJson('/__editor/weapons')
       ]);
       setVehicles(vehiclePayload.vehicles || []);
       setTireLibrary(tirePayload.tires || []);
+      setWeaponLibrary(weaponPayload.weapons || []);
       setRegistryPath(vehiclePayload.registryPath || registryPath());
       setTireLibraryPath(tirePayload.libraryPath || tireLibraryPath());
+      setWeaponLibraryPath(weaponPayload.libraryPath || weaponLibraryPath());
 
       const fallbackId = vehiclePayload.vehicles?.[0]?.id || '';
       const nextSelectedId = selectedVehicleId && vehiclePayload.vehicles.some((vehicle) => vehicle.id === selectedVehicleId)
@@ -219,7 +273,17 @@ function app() {
       const nextTire = tirePayload.tires.find((tire) => tire.id === nextSelectedTireId) || createBlankTire();
       setTireDraft(cloneValue(nextTire));
       setPreviousTireId(nextTire.id || '');
-      setStatus(`Loaded ${vehiclePayload.vehicles.length} vehicle manifests and ${tirePayload.tires.length} tire records`);
+      const fallbackWeaponId = weaponPayload.weapons?.[0]?.id || '';
+      const nextSelectedWeaponId = selectedLibraryWeaponId && weaponPayload.weapons.some((weapon) => weapon.id === selectedLibraryWeaponId)
+        ? selectedLibraryWeaponId
+        : fallbackWeaponId;
+      setSelectedWeaponId(nextSelectedWeaponId);
+      const nextWeapon = weaponPayload.weapons.find((weapon) => weapon.id === nextSelectedWeaponId) || createBlankWeapon();
+      setWeaponDraft(cloneValue(nextWeapon));
+      setPreviousWeaponId(nextWeapon.id || '');
+      setStatus(
+        `Loaded ${vehiclePayload.vehicles.length} vehicle manifests, ${tirePayload.tires.length} tire records, and ${weaponPayload.weapons.length} weapon records`
+      );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     } finally {
@@ -241,6 +305,14 @@ function app() {
     setTireDraft(cloneValue(record));
     setPreviousTireId(record.id);
     setStatus(`Editing tire ${record.label}`);
+  }
+
+  function selectWeapon(record) {
+    setActiveTab('weapons');
+    setSelectedWeaponId(record.id);
+    setWeaponDraft(cloneValue(record));
+    setPreviousWeaponId(record.id);
+    setStatus(`Editing weapon ${record.label}`);
   }
 
   function editVehicleFromTireUsage(usage) {
@@ -355,6 +427,14 @@ function app() {
     setStatus('Creating new tire library record');
   }
 
+  function createWeapon() {
+    setActiveTab('weapons');
+    setSelectedWeaponId('');
+    setPreviousWeaponId('');
+    setWeaponDraft(createBlankWeapon());
+    setStatus('Creating new weapon library record');
+  }
+
   async function importTireFile(file) {
     if (!file) {
       return;
@@ -392,6 +472,51 @@ function app() {
     } finally {
       if (tireImportInputRef) {
         tireImportInputRef.value = '';
+      }
+      setBusy(false);
+    }
+  }
+
+  async function importWeaponFile(file) {
+    if (!file) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const response = await fetch(`/__editor/weapon-models?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: await file.arrayBuffer()
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || payload.error || 'Request failed');
+      }
+
+      const inferredId = createIdFromFilename(file.name);
+      setActiveTab('weapons');
+      setSelectedWeaponId('');
+      setPreviousWeaponId('');
+      setWeaponDraft((current) => ({
+        ...createBlankWeapon(),
+        ...current,
+        id: current.id || inferredId,
+        label: current.label || createLabelFromId(inferredId),
+        asset: {
+          url: payload.url,
+          sourceLabel: payload.sourceLabel
+        },
+        proceduralModel: null
+      }));
+      setStatus(`Imported weapon GLB ${payload.sourceLabel}. Save Weapon to add it to the library.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (weaponImportInputRef) {
+        weaponImportInputRef.value = '';
       }
       setBusy(false);
     }
@@ -460,6 +585,31 @@ function app() {
     }
   }
 
+  async function saveWeapon() {
+    setBusy(true);
+    try {
+      const payload = await requestJson('/__editor/weapons', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'save',
+          previousId: previousWeaponId(),
+          record: weaponDraft()
+        })
+      });
+
+      setWeaponLibrary(payload.weapons || []);
+      setWeaponLibraryPath(payload.libraryPath || weaponLibraryPath());
+      setSelectedWeaponId(payload.weapon.id);
+      setPreviousWeaponId(payload.weapon.id);
+      setWeaponDraft(cloneValue(payload.weapon));
+      setStatus(`Saved weapon ${payload.weapon.label}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteVehicle() {
     const current = draft();
     if (!current.id) {
@@ -519,6 +669,35 @@ function app() {
     }
   }
 
+  async function deleteWeapon() {
+    const current = weaponDraft();
+    if (!current.id) {
+      setStatus('Save the weapon before deleting it.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const payload = await requestJson('/__editor/weapons', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'delete',
+          id: current.id
+        })
+      });
+      setWeaponLibrary(payload.weapons || []);
+      const nextWeapon = payload.weapons?.[0] || createBlankWeapon();
+      setSelectedWeaponId(nextWeapon.id || '');
+      setPreviousWeaponId(nextWeapon.id || '');
+      setWeaponDraft(cloneValue(nextWeapon));
+      setStatus(`Deleted weapon ${current.label || current.id}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function rebuildRegistry() {
     setBusy(true);
     try {
@@ -537,12 +716,73 @@ function app() {
     }
   }
 
+  async function rebuildTireLibraryRecords() {
+    setBusy(true);
+    try {
+      const payload = await requestJson('/__editor/tires', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'rebuild'
+        })
+      });
+      setTireLibrary(payload.tires || []);
+      setTireLibraryPath(payload.libraryPath || tireLibraryPath());
+      setStatus(`Rebuilt tire library at ${payload.libraryPath || tireLibraryPath()}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rebuildWeaponLibraryRecords() {
+    setBusy(true);
+    try {
+      const payload = await requestJson('/__editor/weapons', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'rebuild'
+        })
+      });
+      setWeaponLibrary(payload.weapons || []);
+      setWeaponLibraryPath(payload.libraryPath || weaponLibraryPath());
+      setStatus(`Rebuilt weapon library at ${payload.libraryPath || weaponLibraryPath()}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   onMount(() => {
     loadAssets();
   });
 
   function updateTireField(path, rawValue) {
     setTireDraft((current) => updateDraftValue(current, path, rawValue));
+  }
+
+  function updateWeaponField(path, rawValue, options = {}) {
+    const value = options.numeric ? Number(rawValue) : rawValue;
+    setWeaponDraft((current) => updateDraftValue(current, path, value));
+  }
+
+  function setWeaponPresentationMode(mode) {
+    setWeaponDraft((current) => {
+      const next = cloneValue(current);
+      if (mode === 'procedural') {
+        next.asset = null;
+        next.proceduralModel = next.proceduralModel || 'shotgun';
+      } else {
+        next.asset = next.asset || { url: '', sourceLabel: '' };
+        next.proceduralModel = null;
+      }
+      return next;
+    });
+  }
+
+  function openWeaponImportDialog() {
+    weaponImportInputRef?.click();
   }
 
   function findLibraryTireByUrl(url) {
@@ -571,15 +811,63 @@ function app() {
     });
   }
 
+  function saveActiveTab() {
+    if (activeTab() === 'vehicles') {
+      void saveVehicle();
+      return;
+    }
+    if (activeTab() === 'tires') {
+      void saveTire();
+      return;
+    }
+    void saveWeapon();
+  }
+
+  function rebuildActiveTab() {
+    if (activeTab() === 'vehicles') {
+      void rebuildRegistry();
+      return;
+    }
+    if (activeTab() === 'tires') {
+      void rebuildTireLibraryRecords();
+      return;
+    }
+    void rebuildWeaponLibraryRecords();
+  }
+
+  function getActiveAssetPath() {
+    if (activeTab() === 'vehicles') {
+      return registryPath();
+    }
+    if (activeTab() === 'tires') {
+      return tireLibraryPath();
+    }
+    return weaponLibraryPath();
+  }
+
+  function getActiveSaveLabel() {
+    if (activeTab() === 'vehicles') {
+      return 'Save Manifest';
+    }
+    if (activeTab() === 'tires') {
+      return 'Save Tire';
+    }
+    return 'Save Weapon';
+  }
+
+  function getActiveRebuildLabel() {
+    return activeTab() === 'vehicles' ? 'Rebuild Registry' : 'Rebuild Library';
+  }
+
   return (
     <Show when={!builderOpen()} fallback={<CarBuilder onClose={() => setBuilderOpen(false)} />}>
     <div class="asset-manager-shell">
       <header class="asset-header">
         <div>
           <p class="asset-kicker">Cruise Pipeline</p>
-          <h1>Vehicle Asset Manager</h1>
+          <h1>Asset Manager</h1>
           <p class="asset-subtitle">
-            Edit manifest source files, then rebuild the browser registry used by the game and future tools.
+            Edit vehicle, tire, and weapon source records, then rebuild the browser data used by the game and tools.
           </p>
         </div>
         <div class="asset-actions">
@@ -592,27 +880,18 @@ function app() {
           <button type="button" class="ghost-button" onClick={() => loadAssets()} disabled={busy()}>
             Refresh
           </button>
-          <button type="button" class="ghost-button" onClick={rebuildRegistry} disabled={busy()}>
-            Rebuild Registry
+          <button type="button" class="ghost-button" onClick={rebuildActiveTab} disabled={busy()}>
+            {getActiveRebuildLabel()}
           </button>
-          <Show
-            when={activeTab() === 'vehicles'}
-            fallback={
-              <button type="button" class="solid-button" onClick={saveTire} disabled={busy()}>
-                Save Tire
-              </button>
-            }
-          >
-            <button type="button" class="solid-button" onClick={saveVehicle} disabled={busy()}>
-              Save Manifest
-            </button>
-          </Show>
+          <button type="button" class="solid-button" onClick={saveActiveTab} disabled={busy()}>
+            {getActiveSaveLabel()}
+          </button>
         </div>
       </header>
 
       <div class="asset-status-bar">
         <span>{status()}</span>
-        <span>{activeTab() === 'vehicles' ? registryPath() : tireLibraryPath()}</span>
+        <span>{getActiveAssetPath()}</span>
       </div>
 
       <div class="asset-tabs">
@@ -630,11 +909,17 @@ function app() {
         >
           Tires
         </button>
+        <button
+          type="button"
+          class={`asset-tab${activeTab() === 'weapons' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('weapons')}
+        >
+          Weapons
+        </button>
       </div>
 
-      <Show
-        when={activeTab() === 'vehicles'}
-        fallback={
+      <Switch>
+        <Match when={activeTab() === 'tires'}>
           <main class="asset-grid">
             <aside class="asset-sidebar panel">
               <div class="panel-header">
@@ -820,8 +1105,28 @@ function app() {
               <pre class="json-preview">{tireJsonPreview()}</pre>
             </aside>
           </main>
-        }
-      >
+        </Match>
+        <Match when={activeTab() === 'weapons'}>
+          <WeaponTab
+            busy={busy()}
+            weaponLibrary={weaponLibrary()}
+            selectedWeaponId={selectedWeaponId()}
+            weaponDraft={weaponDraft()}
+            weaponJsonPreview={weaponJsonPreview()}
+            presentationMode={weaponPresentationMode()}
+            setImportInputRef={(element) => {
+              weaponImportInputRef = element;
+            }}
+            onCreateWeapon={createWeapon}
+            onDeleteWeapon={deleteWeapon}
+            onImportWeaponFile={importWeaponFile}
+            onOpenImportDialog={openWeaponImportDialog}
+            onSelectWeapon={selectWeapon}
+            onSetPresentationMode={setWeaponPresentationMode}
+            onUpdateField={updateWeaponField}
+          />
+        </Match>
+        <Match when={true}>
       <main class="asset-grid">
         <aside class="asset-sidebar panel">
           <div class="panel-header">
@@ -1065,7 +1370,8 @@ function app() {
           </Show>
         </aside>
       </main>
-      </Show>
+        </Match>
+      </Switch>
 
       <VehicleValidationDialog
         open={validatorOpen()}

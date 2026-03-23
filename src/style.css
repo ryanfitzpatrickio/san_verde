@@ -258,6 +258,126 @@ select {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
+.weapon-wheel-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(6, 10, 18, 0.08), rgba(3, 6, 10, 0.46));
+  backdrop-filter: blur(6px);
+}
+
+.weapon-wheel-frame {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at center, rgba(167, 191, 255, 0.09), transparent 40%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.03), transparent 68%);
+  box-shadow: 0 18px 80px rgba(0, 0, 0, 0.35);
+}
+
+.weapon-wheel-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 4px;
+  width: 132px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(8, 14, 24, 0.78);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.weapon-wheel-core .label,
+.weapon-wheel-slot-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8da3c7;
+}
+
+.weapon-wheel-core .value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f4f8ff;
+}
+
+.weapon-wheel-core .hint {
+  font-size: 0.72rem;
+  color: #b2c0d9;
+}
+
+.weapon-wheel-slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 112px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(8, 14, 24, 0.72);
+  text-align: center;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.weapon-wheel-slot.is-active {
+  border-color: rgba(135, 190, 255, 0.5);
+  background: rgba(18, 34, 54, 0.92);
+  box-shadow: 0 18px 50px rgba(42, 112, 255, 0.18), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.range-overlay {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 12;
+  display: grid;
+  gap: 6px;
+  width: min(240px, calc(100vw - 48px));
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(7, 13, 21, 0.78);
+  backdrop-filter: blur(24px) saturate(1.35);
+  box-shadow: 0 12px 42px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.range-overlay-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f4f8ff;
+}
+
+.range-overlay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.range-overlay-row .label {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8da3c7;
+}
+
+.range-overlay-row .value {
+  font-size: 0.86rem;
+  color: #ecf1fb;
+}
+
 .minimap-canvas {
   display: block;
   width: 100%;
