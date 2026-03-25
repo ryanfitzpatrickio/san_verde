@@ -43,7 +43,7 @@ const TRAFFIC_STYLE = {
   lookaheadDistance: 8.5
 };
 
-export async function loadTrafficVehicleActor(archetype) {
+export async function loadTrafficVehicleActor(archetype, { gltfLoader = SHARED_GLTF_LOADER } = {}) {
   const manifest = resolveTrafficVehicleManifest(archetype);
   const bodyUrl = manifest?.body?.url || archetype?.presentation?.modelUrl;
   if (!bodyUrl) {
@@ -84,10 +84,10 @@ export async function loadTrafficVehicleActor(archetype) {
   });
 
   const [bodyTemplate, frontTireTemplate, rearTireTemplate] = await Promise.all([
-    loadVehicleTemplate(bodyUrl),
-    manifest?.tires?.front?.url ? loadVehicleTemplate(manifest.tires.front.url) : Promise.resolve(null),
+    loadVehicleTemplate(bodyUrl, gltfLoader),
+    manifest?.tires?.front?.url ? loadVehicleTemplate(manifest.tires.front.url, gltfLoader) : Promise.resolve(null),
     manifest?.tires?.rear?.url && manifest.tires.rear.url !== manifest?.tires?.front?.url
-      ? loadVehicleTemplate(manifest.tires.rear.url)
+      ? loadVehicleTemplate(manifest.tires.rear.url, gltfLoader)
       : Promise.resolve(null)
   ]);
 
@@ -248,14 +248,15 @@ function createTrafficPreviewState(manifest, archetype) {
   };
 }
 
-async function loadVehicleTemplate(modelUrl) {
-  if (!VEHICLE_TEMPLATE_CACHE.has(modelUrl)) {
+async function loadVehicleTemplate(modelUrl, gltfLoader = SHARED_GLTF_LOADER) {
+  const cacheKey = `${modelUrl}::${gltfLoader === SHARED_GLTF_LOADER ? 'shared' : 'custom'}`;
+  if (!VEHICLE_TEMPLATE_CACHE.has(cacheKey)) {
     VEHICLE_TEMPLATE_CACHE.set(
-      modelUrl,
-      SHARED_GLTF_LOADER.loadAsync(modelUrl).then((gltf) => gltf.scene || gltf.scenes?.[0] || null)
+      cacheKey,
+      gltfLoader.loadAsync(modelUrl).then((gltf) => gltf.scene || gltf.scenes?.[0] || null)
     );
   }
-  return VEHICLE_TEMPLATE_CACHE.get(modelUrl);
+  return VEHICLE_TEMPLATE_CACHE.get(cacheKey);
 }
 
 function resolvePosition(position) {

@@ -27,7 +27,7 @@ const VEHICLE_TEMPLATE_CACHE = new Map();
 const HUMANOID_IDLE_SPEED = 0.08;
 const HUMANOID_RUN_SPEED = 2.4;
 
-export function createNpcActor({ archetype, crowdKind, index = 0 }) {
+export function createNpcActor({ archetype, crowdKind, index = 0, gltfLoader = SHARED_GLTF_LOADER }) {
   const resolvedArchetype = archetype || createFallbackArchetype(crowdKind);
   const root = new THREE.Group();
   root.name = `${resolvedArchetype.id}:${index}`;
@@ -62,7 +62,7 @@ export function createNpcActor({ archetype, crowdKind, index = 0 }) {
       console.error(`[npc-actor] failed to load ${resolvedArchetype.id}`, error);
     });
   } else if (resolvedArchetype.presentation?.driver === 'traffic_vehicle_runtime') {
-    loadTrafficVehicleActor(resolvedArchetype).then((actor) => {
+    loadTrafficVehicleActor(resolvedArchetype, { gltfLoader }).then((actor) => {
       if (disposed) {
         return;
       }
@@ -76,7 +76,7 @@ export function createNpcActor({ archetype, crowdKind, index = 0 }) {
       console.error(`[npc-actor] failed to load ${resolvedArchetype.id}`, error);
     });
   } else if (resolvedArchetype.presentation?.driver === 'vehicle_glb' && resolvedArchetype.presentation?.modelUrl) {
-    loadVehicleActor(resolvedArchetype).then((actor) => {
+    loadVehicleActor(resolvedArchetype, { gltfLoader }).then((actor) => {
       if (disposed) {
         return;
       }
@@ -178,8 +178,8 @@ export function createNpcActor({ archetype, crowdKind, index = 0 }) {
   };
 }
 
-async function loadVehicleActor(archetype) {
-  const template = await loadVehicleTemplate(archetype.presentation.modelUrl);
+async function loadVehicleActor(archetype, { gltfLoader = SHARED_GLTF_LOADER } = {}) {
+  const template = await loadVehicleTemplate(archetype.presentation.modelUrl, gltfLoader);
   const root = template.clone(true);
   normalizeVehicleToTargetSpan(root, archetype.presentation.targetSpan || 5.4);
   const hasExplicitYaw = Object.hasOwn(archetype.presentation || {}, 'yawDegrees');
@@ -191,14 +191,15 @@ async function loadVehicleActor(archetype) {
   return { root, wheels };
 }
 
-async function loadVehicleTemplate(modelUrl) {
-  if (!VEHICLE_TEMPLATE_CACHE.has(modelUrl)) {
+async function loadVehicleTemplate(modelUrl, gltfLoader = SHARED_GLTF_LOADER) {
+  const cacheKey = `${modelUrl}::${gltfLoader === SHARED_GLTF_LOADER ? 'shared' : 'custom'}`;
+  if (!VEHICLE_TEMPLATE_CACHE.has(cacheKey)) {
     VEHICLE_TEMPLATE_CACHE.set(
-      modelUrl,
-      SHARED_GLTF_LOADER.loadAsync(modelUrl).then((gltf) => gltf.scene || gltf.scenes?.[0] || null)
+      cacheKey,
+      gltfLoader.loadAsync(modelUrl).then((gltf) => gltf.scene || gltf.scenes?.[0] || null)
     );
   }
-  return VEHICLE_TEMPLATE_CACHE.get(modelUrl);
+  return VEHICLE_TEMPLATE_CACHE.get(cacheKey);
 }
 
 function normalizeVehicleToTargetSpan(root, targetSpan) {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SimplifyModifier } from 'three/examples/jsm/modifiers/SimplifyModifier.js';
+import { resolveModelUrl } from '../assets/asset-base-url.js';
 import { assetExists } from '../scene-helpers.js';
 
 export const BUILDING_ASSET_MODE_FALLBACK = 'fallback';
@@ -75,14 +76,14 @@ export function resolveCatalogLodModelUrl(entry) {
 
   const model = typeof entry.lod1?.model === 'string' ? entry.lod1.model.trim() : '';
   if (!model) {
-    return `/models/buildings/${entry.id}.glb`;
+    return resolveModelUrl(`/models/buildings/${entry.id}.glb`);
   }
 
   if (/^(https?:)?\/\//.test(model) || model.startsWith('/')) {
-    return model;
+    return normalizeCatalogModelPath(model);
   }
 
-  return `/models/lod1/${model.replace(/^\/+/, '')}`;
+  return resolveModelUrl(`/models/lod1/${model.replace(/^\/+/, '')}`);
 }
 
 export function resolveCatalogLodTierModelUrls(entry, modelUrl = resolveCatalogLodModelUrl(entry)) {
@@ -325,10 +326,13 @@ function pathExtensionOrDefault(modelUrl) {
 }
 
 function normalizeCatalogModelPath(model) {
-  if (/^(https?:)?\/\//.test(model) || model.startsWith('/')) {
+  if (/^(https?:)?\/\//.test(model)) {
     return model;
   }
-  return `/models/lod1/${model.replace(/^\/+/, '')}`;
+  if (model.startsWith('/')) {
+    return resolveModelUrl(model);
+  }
+  return resolveModelUrl(`/models/lod1/${model.replace(/^\/+/, '')}`);
 }
 
 function assetExistsCached(modelUrl) {

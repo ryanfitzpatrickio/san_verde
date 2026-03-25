@@ -75,6 +75,7 @@ export function createNpcCrowdSystem({ config, state }) {
   agentRoot.visible = false;
   debugRoot.visible = false;
 
+  let gltfLoader = null;
   let activeStage = null;
   let activeRevision = -1;
   let vehicleRuntime = null;
@@ -105,6 +106,9 @@ export function createNpcCrowdSystem({ config, state }) {
   return {
     agentRoot,
     debugRoot,
+    setAssetLoaders(loaders = {}) {
+      gltfLoader = loaders.gltfLoader || null;
+    },
 
     syncStage(stage, focusPosition) {
       if (
@@ -132,7 +136,8 @@ export function createNpcCrowdSystem({ config, state }) {
           debugRoot,
           colliderRuntime,
           stageNavigation: stage?.navigation,
-          sharedState: state
+          sharedState: state,
+          gltfLoader
         });
         mountRuntime(vehicleRuntime);
       }
@@ -143,7 +148,8 @@ export function createNpcCrowdSystem({ config, state }) {
           debugRoot,
           colliderRuntime,
           stageNavigation: stage?.navigation,
-          sharedState: state
+          sharedState: state,
+          gltfLoader
         });
         mountRuntime(pedestrianRuntime);
       }
@@ -385,7 +391,8 @@ function createCrowdRuntime(kind, count, navMesh, focusPosition, config, roots) 
     const actor = createNpcActor({
       archetype,
       crowdKind: kind,
-      index: i
+      index: i,
+      gltfLoader: roots.gltfLoader || null
     });
     actor.updatePresentation({
       position: spawn.position,

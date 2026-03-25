@@ -884,6 +884,7 @@ async function bootstrap() {
     renderer,
     resolvePublicUrl
   });
+  agentSystem.setAssetLoaders({ gltfLoader });
 
   const lightingRig = createLightingRig();
   const contactShadow = createVehicleContactShadow();
