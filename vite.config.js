@@ -30,6 +30,7 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const DEFAULT_PRODUCTION_BASE = '/san_verde/';
 const SAN_VERDE_PUBLIC_PATH = path.join(__dirname, 'public/data/san-verde-map.json');
 const SAN_VERDE_SRC_PATH = path.join(__dirname, 'src/game/san-verde-map.json');
 const PUBLIC_MODELS_PATH = path.join(__dirname, 'public/models');
@@ -37,6 +38,14 @@ const TMP_ROOT = path.join(__dirname, '.tmp', 'vehicle-validator');
 const MUSTANG_REFERENCE_PATH = path.join(__dirname, 'public/models/mustang.glb');
 const AUTO_LOCATOR_SCRIPT_PATH = path.join(__dirname, 'scripts/auto_place_vehicle_locators.py');
 const execFileAsync = promisify(execFile);
+
+function normalizeBasePath(value) {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed || trimmed === '/') {
+    return '/';
+  }
+  return `/${trimmed.replace(/^\/+|\/+$/g, '')}/`;
+}
 
 function jsonResponse(res, status, payload) {
   res.statusCode = status;
@@ -751,18 +760,26 @@ function editorPlugin() {
   };
 }
 
-export default defineConfig({
-  plugins: [solid(), editorPlugin()],
-  resolve: {
-    alias: [{ find: /^three$/, replacement: 'three/webgpu' }]
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-        assets: path.resolve(__dirname, 'asset-manager.html'),
-        buildings: path.resolve(__dirname, 'building-manager.html')
+export default defineConfig(({ command }) => {
+  const configuredBase = normalizeBasePath(process.env.VITE_BASE_PATH || '');
+  const base = configuredBase === '/'
+    ? (command === 'build' ? DEFAULT_PRODUCTION_BASE : '/')
+    : configuredBase;
+
+  return {
+    base,
+    plugins: [solid(), editorPlugin()],
+    resolve: {
+      alias: [{ find: /^three$/, replacement: 'three/webgpu' }]
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          assets: path.resolve(__dirname, 'asset-manager.html'),
+          buildings: path.resolve(__dirname, 'building-manager.html')
+        }
       }
     }
-  }
+  };
 });

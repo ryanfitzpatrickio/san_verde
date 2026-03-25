@@ -146,7 +146,10 @@ async function optimizeVehicleGlb(inputPath, outputPath, config) {
       effort: config.textures.data.effort,
       slots: /(metallicRoughnessTexture|occlusionTexture)$/i
     }),
-    prune(),
+    // Vehicle runtime depends on authored empty locator nodes for wheel anchors,
+    // steering, seat, and door interaction points. Preserve leaf transforms so
+    // production-optimized GLBs still support entering cars and door rigs.
+    prune({ keepLeaves: true }),
     draco({ quantizationVolume: 'scene' })
   );
   await io.write(outputPath, doc);

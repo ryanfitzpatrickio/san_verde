@@ -38,6 +38,8 @@ npm run dev
 
 Open http://localhost:5173
 
+Production builds default to the GitHub Pages base path `/san_verde/`. Override that with `VITE_BASE_PATH=/your-base/ npm run build` when deploying elsewhere.
+
 ### Drop in your own models
 
 Drag any `.glb` file into the viewport to swap the car or tires at runtime. Built-in vehicles live in `src/assets/built-in-vehicles/` as JSON manifests pointing to models in `public/models/`.
@@ -86,7 +88,7 @@ src/
 
 ## Asset Pipeline
 
-Large binary assets (`.glb`, `.fbx`) are excluded from the repo and served from a GCS bucket in production. The `VITE_ASSETS_BASE_URL` environment variable controls where models are fetched from — unset locally (uses `public/models/`), set to the bucket URL in CI.
+Bucket-backed production assets are resolved through `VITE_ASSETS_BASE_URL` for `public/models/`, `public/textures/`, and `public/full textures/`. Other committed public assets, including `public/animations/`, continue to load from the app's own public base.
 
 ```bash
 # Vehicle manifests

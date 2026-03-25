@@ -23,7 +23,7 @@ import {
 } from './catalog-lod.js';
 import { buildSanVerdeNpcNavmesh } from './san-verde-navmesh.js';
 import SAN_VERDE_MAP_DATA from './san-verde-map.json';
-import { resolveModelUrl } from '../assets/asset-base-url.js';
+import { resolveModelUrl, resolvePublicUrl } from '../assets/asset-base-url.js';
 import { ChunkGrid } from './chunk-grid.js';
 
 function yieldToMain() {
@@ -381,7 +381,7 @@ const ZONE_BUILDING_STYLE = {
 
 async function loadMapData() {
   try {
-    const response = await fetch(`/data/san-verde-map.json?ts=${Date.now()}`, {
+    const response = await fetch(`${resolvePublicUrl('/data/san-verde-map.json')}?ts=${Date.now()}`, {
       cache: 'no-store'
     });
     if (response.ok) {
