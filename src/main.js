@@ -94,6 +94,7 @@ const {
   measureObjectBounds,
   measureTireProfile,
   createFallbackMountedWheel,
+  createGenericVehicleHeadlightDecor,
   collectWheelAnchors,
   createDoorRig,
   findNamedObject,
@@ -155,7 +156,9 @@ const {
   shouldUseCheapDirectionalShadows,
   applyStageShadowPolicy,
   createVehicleContactShadow,
+  createVehicleHeadlightRig,
   updateVehicleContactShadow,
+  updateVehicleHeadlights,
   createRenderPipeline,
   createLightingRig,
   syncStageRenderingMode,
@@ -634,6 +637,7 @@ const vehicleManager = createVehicleManager({
     prepareRenderable,
     measureObjectBounds,
     collectWheelAnchors,
+    createGenericVehicleHeadlightDecor,
     createDoorRig,
     collectSteeringWheelRig,
     mountSteeringWheelAttachment,
@@ -887,6 +891,7 @@ async function bootstrap() {
   agentSystem.setAssetLoaders({ gltfLoader });
 
   const lightingRig = createLightingRig();
+  const vehicleHeadlightRig = createVehicleHeadlightRig();
   const contactShadow = createVehicleContactShadow();
   const agentMount = agentSystem.agentRoot;
   const navigationDebugMount = agentSystem.debugRoot;
@@ -912,6 +917,7 @@ async function bootstrap() {
     scene,
     stage,
     lightingRig,
+    vehicleHeadlightRig,
     contactShadow,
     agentMount,
     navigationDebugMount,
@@ -961,6 +967,7 @@ async function bootstrap() {
     camera,
     controls,
     lightingRig,
+    vehicleHeadlightRig,
     pmrem,
     skyRig,
     gltfLoader,
@@ -1094,6 +1101,7 @@ async function bootstrap() {
     updateKeyLightShadowFocus(context);
     updateCharacterLighting(context);
     updateVehicleContactShadow(context);
+    updateVehicleHeadlights(context);
     renderer.info.reset();
     performanceAttribution.resetFrame();
     if (context.useSimpleForwardRender) {

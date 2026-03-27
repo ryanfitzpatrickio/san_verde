@@ -77,6 +77,7 @@ export async function loadTrafficVehicleActor(archetype, { gltfLoader = SHARED_G
       collectSteeringWheelRig: helpers.collectSteeringWheelRig,
       mountSteeringWheelAttachment: helpers.mountSteeringWheelAttachment,
       createDoorRig: helpers.createDoorRig,
+      createGenericVehicleHeadlightDecor: helpers.createGenericVehicleHeadlightDecor,
       createWheelSpinMarker: helpers.createWheelSpinMarker,
       createFallbackMountedWheel: helpers.createFallbackMountedWheel,
       axisToRotationProperty: helpers.axisToRotationProperty
@@ -108,6 +109,10 @@ export async function loadTrafficVehicleActor(archetype, { gltfLoader = SHARED_G
   });
 
   bodyMount.add(presentation.body);
+  const genericHeadlights = helpers.createGenericVehicleHeadlightDecor(presentation.metrics, 'car');
+  if (genericHeadlights) {
+    presentation.body.add(genericHeadlights);
+  }
   for (const child of [...presentation.wheelMount.children]) {
     presentation.wheelMount.remove(child);
     wheelMount.add(child);

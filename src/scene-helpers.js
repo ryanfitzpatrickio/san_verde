@@ -198,6 +198,150 @@ export function createSceneHelpers({ state, ui, config }) {
     return marker;
   }
 
+  function createHeadlightGlowTexture() {
+    const size = 96;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(
+      size * 0.5,
+      size * 0.5,
+      size * 0.05,
+      size * 0.5,
+      size * 0.5,
+      size * 0.5
+    );
+    gradient.addColorStop(0, 'rgba(255, 250, 220, 1)');
+    gradient.addColorStop(0.2, 'rgba(255, 240, 185, 0.95)');
+    gradient.addColorStop(0.48, 'rgba(255, 224, 150, 0.45)');
+    gradient.addColorStop(1, 'rgba(255, 214, 120, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  function createHeadlightSpillTexture() {
+    const width = 160;
+    const height = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    const gradient = ctx.createRadialGradient(
+      width * 0.18,
+      height * 0.5,
+      width * 0.02,
+      width * 0.18,
+      height * 0.5,
+      width * 0.72
+    );
+    gradient.addColorStop(0, 'rgba(255, 244, 190, 0.42)');
+    gradient.addColorStop(0.28, 'rgba(255, 232, 156, 0.24)');
+    gradient.addColorStop(0.65, 'rgba(255, 220, 132, 0.08)');
+    gradient.addColorStop(1, 'rgba(255, 214, 120, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(width * 0.44, height * 0.5, width * 0.48, height * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  function createGenericVehicleHeadlightDecor(metrics, kind = 'car') {
+    if (!metrics?.size || !metrics?.min || !metrics?.max) {
+      return null;
+    }
+
+    const width = Math.max(metrics.size.x || 0, 0.8);
+    const height = Math.max(metrics.size.y || 0, 0.8);
+    const depth = Math.max(metrics.size.z || 0, 1.2);
+    const frontZ = metrics.max.z + Math.min(depth * 0.018, 0.08);
+    const lampY = metrics.min.y + height * (kind === 'bike' ? 0.58 : 0.54);
+    const lampRadius = kind === 'bike'
+      ? THREE.MathUtils.clamp(width * 0.1, 0.08, 0.14)
+      : THREE.MathUtils.clamp(width * 0.075, 0.06, 0.11);
+    const spillLength = kind === 'bike'
+      ? THREE.MathUtils.clamp(depth * 0.95, 0.9, 1.7)
+      : THREE.MathUtils.clamp(depth * 0.82, 0.95, 1.8);
+    const spillWidth = kind === 'bike'
+      ? THREE.MathUtils.clamp(width * 0.26, 0.22, 0.4)
+      : THREE.MathUtils.clamp(width * 0.18, 0.18, 0.38);
+
+    const group = new THREE.Group();
+    group.name = `${kind}-generic-headlights`;
+
+    const lampCoreMaterial = new THREE.MeshBasicMaterial({
+      color: '#fff4c2',
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+      toneMapped: false
+    });
+    const lampGlowMaterial = new THREE.SpriteMaterial({
+      map: createHeadlightGlowTexture(),
+      color: '#ffe9ab',
+      transparent: true,
+      opacity: kind === 'bike' ? 0.4 : 0.34,
+      depthWrite: false,
+      toneMapped: false
+    });
+    const spillMaterial = new THREE.MeshBasicMaterial({
+      map: createHeadlightSpillTexture(),
+      color: '#ffe8a3',
+      transparent: true,
+      opacity: kind === 'bike' ? 0.12 : 0.09,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false
+    });
+
+    const addLamp = (x) => {
+      const lampCore = new THREE.Mesh(
+        new THREE.CircleGeometry(lampRadius * 0.46, 18),
+        lampCoreMaterial.clone()
+      );
+      lampCore.position.set(x, lampY, frontZ);
+      lampCore.renderOrder = 3;
+      lampCore.castShadow = false;
+      lampCore.receiveShadow = false;
+      group.add(lampCore);
+
+      const lampGlow = new THREE.Sprite(lampGlowMaterial.clone());
+      lampGlow.position.set(x, lampY, frontZ + 0.02);
+      lampGlow.scale.setScalar(lampRadius * (kind === 'bike' ? 2.8 : 3.2));
+      lampGlow.renderOrder = 4;
+      group.add(lampGlow);
+
+      const spill = new THREE.Mesh(
+        new THREE.PlaneGeometry(spillLength, spillWidth),
+        spillMaterial.clone()
+      );
+      spill.rotation.x = -Math.PI / 2;
+      spill.position.set(x, metrics.min.y + 0.035, frontZ + spillLength * 0.33);
+      spill.renderOrder = 2;
+      spill.castShadow = false;
+      spill.receiveShadow = false;
+      group.add(spill);
+    };
+
+    if (kind === 'bike') {
+      addLamp(metrics.center?.x || 0);
+      return group;
+    }
+
+    const lateralOffset = THREE.MathUtils.clamp(width * 0.23, 0.24, 0.62);
+    addLamp((metrics.center?.x || 0) - lateralOffset);
+    addLamp((metrics.center?.x || 0) + lateralOffset);
+    return group;
+  }
+
   function collectWheelAnchors(rootObject) {
     const anchors = new Map();
     rootObject.updateMatrixWorld(true);
@@ -797,6 +941,7 @@ export function createSceneHelpers({ state, ui, config }) {
     measureObjectBounds,
     measureTireProfile,
     createFallbackMountedWheel,
+    createGenericVehicleHeadlightDecor,
     createWheelSpinMarker,
     collectWheelAnchors,
     createDoorRig,

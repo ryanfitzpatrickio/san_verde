@@ -20,6 +20,7 @@ export function createVehicleManager({
     prepareRenderable,
     measureObjectBounds,
     collectWheelAnchors,
+    createGenericVehicleHeadlightDecor,
     createDoorRig,
     collectSteeringWheelRig,
     mountSteeringWheelAttachment,
@@ -351,6 +352,11 @@ export function createVehicleManager({
       child.castShadow = false;
       child.receiveShadow = false;
     });
+    const bodyMetrics = measureObjectBounds(body);
+    const headlightDecor = createGenericVehicleHeadlightDecor(bodyMetrics, kind === 'bike' ? 'bike' : 'car');
+    if (headlightDecor) {
+      body.add(headlightDecor);
+    }
     return {
       kind,
       sourceType,
@@ -359,7 +365,7 @@ export function createVehicleManager({
       wheels,
       yaw,
       drivePosition: drivePosition.clone(),
-      bodyMetrics: measureObjectBounds(body)
+      bodyMetrics
     };
   }
 
@@ -546,6 +552,10 @@ export function createVehicleManager({
   }
 
   function getNearbyVehicleProxy(context) {
+    return getNearbyVehicleProxyCandidate(context)?.proxy || null;
+  }
+
+  function getNearbyVehicleProxyCandidate(context) {
     if (!context.characterController || state.characterVehicleState !== 'on_foot') {
       return null;
     }
@@ -559,7 +569,11 @@ export function createVehicleManager({
       const distance = context.characterController.position.distanceTo(proxy.group.position);
       const interactionDistance = getVehicleProxyInteractionDistance(proxy);
       if (distance < interactionDistance && distance < closestDistance) {
-        closest = proxy;
+        closest = {
+          proxy,
+          distance,
+          interactionDistance
+        };
         closestDistance = distance;
       }
     }
@@ -772,20 +786,45 @@ export function createVehicleManager({
     );
   }
 
-  function tryMountNearbyVehicle(context) {
+  function mountActiveBike(context) {
+    if (!canMountActiveBike(context)) {
+      return false;
+    }
+
     const playerSystem = getPlayerSystem();
+    playerSystem.directMountVehicle(context);
+    setStatus('Mounted motorcycle');
+    return true;
+  }
+
+  function findNearbyVehicleInteractionCandidate(context) {
     if (canMountActiveBike(context)) {
-      playerSystem.directMountVehicle(context);
-      setStatus('Mounted motorcycle');
-      return true;
+      return {
+        type: 'bike',
+        kind: 'bike',
+        distance: context.characterController.position.distanceTo(state.vehiclePosition),
+        execute: () => mountActiveBike(context)
+      };
     }
 
-    const nearbyProxy = getNearbyVehicleProxy(context);
-    if (nearbyProxy) {
-      return switchToVehicleProxy(context, nearbyProxy);
+    const proxyCandidate = getNearbyVehicleProxyCandidate(context);
+    if (!proxyCandidate) {
+      return null;
     }
 
-    return false;
+    return {
+      type: 'proxy',
+      kind: proxyCandidate.proxy.kind,
+      sourceType: proxyCandidate.proxy.sourceType || 'garage',
+      distance: proxyCandidate.distance,
+      interactionDistance: proxyCandidate.interactionDistance,
+      execute: () => switchToVehicleProxy(context, proxyCandidate.proxy)
+    };
+  }
+
+  function tryMountNearbyVehicle(context) {
+    const candidate = findNearbyVehicleInteractionCandidate(context);
+    return candidate ? candidate.execute() : false;
   }
 
   function updateBikeWheelFit(context) {
@@ -906,6 +945,7 @@ export function createVehicleManager({
   }
 
   return {
+    findNearbyVehicleInteractionCandidate,
     mountCarAsset,
     mountBikeAsset,
     mountStolenTrafficVehicle,

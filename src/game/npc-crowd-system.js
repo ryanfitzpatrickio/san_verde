@@ -682,6 +682,7 @@ function updateAgentStuckState(runtime, agent, crowdAgent, deltaSeconds, focusPo
   if (blockedByTraffic && agent.blockedSeconds > 3.25) {
     if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
       agent.navState.lastDecisionKey = null;
+      agent.navState.plannedTransition = null;
       agent.laneTargetRefresh = 0;
       agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
     } else {
@@ -698,6 +699,8 @@ function updateAgentStuckState(runtime, agent, crowdAgent, deltaSeconds, focusPo
     }
   } else if (agent.stuckSeconds > 2.2) {
     if (agent.navState && runtime.stageNavigation?.mode === 'roadGraph') {
+      agent.navState.lastDecisionKey = null;
+      agent.navState.plannedTransition = null;
       agent.laneTargetRefresh = 0;
       agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
     } else {
@@ -835,7 +838,9 @@ function tryShiftVehicleLane(runtime, agent, laneRoute) {
     }
   }
 
-  const nextLaneIndex = candidates.find((index) => index !== currentIndex);
+  const nextLaneIndex = candidates.find((index) =>
+    index !== currentIndex && canMoveVehicleIntoLane(runtime, agent, laneRoute, index)
+  );
   if (!Number.isInteger(nextLaneIndex)) {
     return false;
   }
@@ -863,9 +868,63 @@ function tryMoveVehicleTowardLane(runtime, agent, laneRoute, targetLaneIndex) {
     return false;
   }
 
-  agent.navState.laneIndex = currentIndex + Math.sign(clampedTargetIndex - currentIndex);
+  const nextLaneIndex = currentIndex + Math.sign(clampedTargetIndex - currentIndex);
+  if (!canMoveVehicleIntoLane(runtime, agent, laneRoute, nextLaneIndex)) {
+    return false;
+  }
+
+  agent.navState.laneIndex = nextLaneIndex;
   agent.laneTargetRefresh = 0;
   agent.lastLaneTarget.set(Number.NaN, Number.NaN, Number.NaN);
+  return true;
+}
+
+function canMoveVehicleIntoLane(runtime, agent, laneRoute, targetLaneIndex) {
+  const lanes = runtime.stageNavigation?.roadsById
+    ?.get(laneRoute?.roadId)
+    ?.lanesByDirection?.[laneRoute?.direction];
+  if (!lanes?.length) {
+    return false;
+  }
+
+  const clampedIndex = THREE.MathUtils.clamp(targetLaneIndex, 0, lanes.length - 1);
+  const targetLane = lanes[clampedIndex];
+  if (!targetLane?.id) {
+    return false;
+  }
+
+  const occupancy = runtime.laneRuntime?.occupancyByLaneId?.get(targetLane.id) || [];
+  if (!occupancy.length) {
+    return true;
+  }
+
+  const currentDistanceAlong =
+    agent.trafficLaneFrame?.distanceAlong ??
+    laneRoute?.currentDistanceAlong ??
+    0;
+  const currentSpeed = agent.trafficLaneFrame?.speed ?? agent.baseMaxSpeed ?? 0;
+  const minAheadGap = Math.max(8.5, currentSpeed * 0.95 + 4.5);
+  const minBehindGap = Math.max(5.5, currentSpeed * 0.5 + 3.5);
+  const nodeBuffer = laneRoute?.approachingIntersection ? 5.5 : 0;
+
+  for (const entry of occupancy) {
+    if (!entry || entry.agentId === agent.agentId) {
+      continue;
+    }
+
+    const delta = entry.distanceAlong - currentDistanceAlong;
+    if (delta >= 0) {
+      if (delta < minAheadGap + nodeBuffer) {
+        return false;
+      }
+      continue;
+    }
+
+    if (Math.abs(delta) < minBehindGap) {
+      return false;
+    }
+  }
+
   return true;
 }
 

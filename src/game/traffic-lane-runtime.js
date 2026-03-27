@@ -14,7 +14,12 @@ export function createTrafficLaneRuntime(stageNavigation) {
     occupancyByLaneId: new Map(),
     reservationsByNodeKey: new Map(),
     activeAgentIds: new Set(),
+    agentById: new Map(),
     agentStateById: new Map(),
+    stats: {
+      blockedVehicles: 0,
+      stuckVehicles: 0
+    },
     nodeControllersByKey: buildNodeControllers(stageNavigation)
   };
 }
@@ -25,7 +30,10 @@ export function beginTrafficLaneFrame(runtime, agents, crowdState, deltaSeconds 
   }
 
   runtime.activeAgentIds.clear();
+  runtime.agentById.clear();
   runtime.agentStateById.clear();
+  runtime.stats.blockedVehicles = 0;
+  runtime.stats.stuckVehicles = 0;
   for (const entries of runtime.occupancyByLaneId.values()) {
     entries.length = 0;
   }
@@ -35,6 +43,7 @@ export function beginTrafficLaneFrame(runtime, agents, crowdState, deltaSeconds 
     if (agent.kind !== 'vehicle' || !agent.navState) {
       continue;
     }
+    runtime.agentById.set(agent.agentId, agent);
 
     const crowdAgent = crowdState.agents[agent.agentId];
     if (!crowdAgent) {
@@ -72,6 +81,13 @@ export function beginTrafficLaneFrame(runtime, agents, crowdState, deltaSeconds 
       runtime.occupancyByLaneId.set(laneRecord.id, bucket);
     }
     bucket.push(entry);
+
+    if ((agent.blockedSeconds || 0) > 0.9) {
+      runtime.stats.blockedVehicles += 1;
+    }
+    if ((agent.stuckSeconds || 0) > 1.2) {
+      runtime.stats.stuckVehicles += 1;
+    }
   }
 
   for (const entries of runtime.occupancyByLaneId.values()) {
@@ -84,7 +100,7 @@ export function beginTrafficLaneFrame(runtime, agents, crowdState, deltaSeconds 
       continue;
     }
 
-    const owner = agents.find((agent) => agent.agentId === reservation.agentId);
+    const owner = runtime.agentById.get(reservation.agentId) || null;
     const route = owner?.lastLaneRoute;
     if (!route) {
       runtime.reservationsByNodeKey.delete(nodeKey);
@@ -95,10 +111,12 @@ export function beginTrafficLaneFrame(runtime, agents, crowdState, deltaSeconds 
       route.roadId === reservation.sourceRoadId &&
       route.nodeKey === nodeKey &&
       route.approachingIntersection;
-    const stillClearingOnTarget =
-      route.roadId === reservation.plannedRoadId &&
-      Number.isFinite(route.currentDistanceAlong) &&
-      route.currentDistanceAlong < 18;
+    const stillClearingOnTarget = isReservationStillClearingOnTarget(
+      runtime,
+      nodeKey,
+      reservation,
+      route
+    );
 
     reservation.heldSeconds = (reservation.heldSeconds || 0) + Math.max(deltaSeconds || 0, 0);
     if (stillApproachingFromSource && Number.isFinite(route.distanceToNode)) {
@@ -163,6 +181,7 @@ export function evaluateTrafficLaneBehavior(runtime, agent, laneRoute) {
   let stopDistance = Number.POSITIVE_INFINITY;
   let reservedBySelf = false;
   const leftTurnYield = evaluateLeftTurnYield(runtime, agent, laneRoute);
+  const targetLaneClear = isPlannedExitLaneClear(runtime, laneRoute, preferredLaneIndex);
   if (laneRoute.nodeKey && Number.isFinite(laneRoute.distanceToNode)) {
     stopDistance = Math.max(laneRoute.distanceToNode - 4.8, 0);
     const reservation = runtime.reservationsByNodeKey.get(laneRoute.nodeKey);
@@ -174,12 +193,13 @@ export function evaluateTrafficLaneBehavior(runtime, agent, laneRoute) {
       const reservationClear = !reservation;
       const closeEnoughToReserve = stopDistance < 7.5;
       const leadClear = leadDistance > 7.5 || !Number.isFinite(leadDistance);
-      if (phaseAllowsEntry && reservationClear && closeEnoughToReserve && leadClear) {
+      if (phaseAllowsEntry && reservationClear && closeEnoughToReserve && leadClear && targetLaneClear) {
         runtime.reservationsByNodeKey.set(laneRoute.nodeKey, {
           agentId: agent.agentId,
           sourceRoadId: laneRoute.roadId,
           roadId: laneRoute.roadId,
           plannedRoadId: laneRoute.plannedRoadId || null,
+          plannedDirection: laneRoute.plannedDirection || null,
           heldSeconds: 0,
           stalledSeconds: 0,
           lastDistanceToNode: laneRoute.distanceToNode
@@ -225,7 +245,9 @@ export function summarizeTrafficLaneRuntime(runtime) {
 
   const reservations = runtime.reservationsByNodeKey.size;
   const phasedNodes = runtime.nodeControllersByKey.size;
-  return `Traffic: lanes ${occupiedLanes} | queue ${queuedVehicles} | reservations ${reservations} | phased ${phasedNodes}`;
+  const blockedVehicles = runtime.stats?.blockedVehicles || 0;
+  const stuckVehicles = runtime.stats?.stuckVehicles || 0;
+  return `Traffic: lanes ${occupiedLanes} | queue ${queuedVehicles} | reservations ${reservations} | phased ${phasedNodes} | blocked ${blockedVehicles} | stuck ${stuckVehicles}`;
 }
 
 function resolvePreferredLaneIndex(turnType, laneCount, currentLaneIndex) {
@@ -250,6 +272,80 @@ function computeStopLineSpeed(stopDistance, maxSpeed, leadDistance = Number.POSI
     return maxSpeed;
   }
   return THREE.MathUtils.clamp((stopDistance - 0.75) * 0.9, 0, maxSpeed);
+}
+
+function isReservationStillClearingOnTarget(runtime, nodeKey, reservation, route) {
+  if (
+    route?.roadId !== reservation?.plannedRoadId ||
+    !Number.isFinite(route?.currentDistanceAlong) ||
+    !runtime?.navigation?.roadsById
+  ) {
+    return false;
+  }
+
+  const plannedRoad = runtime.navigation.roadsById.get(reservation.plannedRoadId);
+  const junction = plannedRoad?.junctionsByKey?.get(nodeKey) || null;
+  if (!junction) {
+    return false;
+  }
+
+  const plannedDirection = Number(reservation.plannedDirection) || 1;
+  const distanceAfterJunction = getDistanceAfterJunction(
+    route.currentDistanceAlong,
+    junction.distanceAlong,
+    plannedDirection
+  );
+  return distanceAfterJunction >= 0 && distanceAfterJunction < resolveLaneExitBuffer(plannedRoad);
+}
+
+function isPlannedExitLaneClear(runtime, laneRoute, laneIndex) {
+  if (
+    !runtime?.navigation?.roadsById ||
+    !laneRoute?.plannedRoadId ||
+    !laneRoute?.nodeKey
+  ) {
+    return true;
+  }
+
+  const plannedRoad = runtime.navigation.roadsById.get(laneRoute.plannedRoadId);
+  const plannedDirection = Number(laneRoute.plannedDirection) || 1;
+  const plannedLane = getRoadLaneRecord(plannedRoad, plannedDirection, laneIndex);
+  const junction = plannedRoad?.junctionsByKey?.get(laneRoute.nodeKey) || null;
+  if (!plannedLane?.id || !junction) {
+    return true;
+  }
+
+  const occupancy = runtime.occupancyByLaneId.get(plannedLane.id) || [];
+  if (!occupancy.length) {
+    return true;
+  }
+
+  const exitBuffer = resolveLaneExitBuffer(plannedRoad);
+  for (const entry of occupancy) {
+    const distanceAfterJunction = getDistanceAfterJunction(entry.distanceAlong, junction.distanceAlong, plannedDirection);
+    if (distanceAfterJunction >= 0 && distanceAfterJunction < exitBuffer) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getDistanceAfterJunction(distanceAlong, junctionDistanceAlong, direction) {
+  return direction > 0
+    ? distanceAlong - junctionDistanceAlong
+    : junctionDistanceAlong - distanceAlong;
+}
+
+function resolveLaneExitBuffer(roadRecord) {
+  switch (roadRecord?.road?.classification) {
+    case 'primary':
+      return 18;
+    case 'secondary':
+      return 15;
+    default:
+      return 12;
+  }
 }
 
 function evaluateLeftTurnYield(runtime, agent, laneRoute) {

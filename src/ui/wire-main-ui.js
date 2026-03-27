@@ -208,16 +208,7 @@ export function wireMainUi(options) {
     }
 
     if (context.characterController) {
-      if (!vehicleManager.tryMountNearbyVehicle(context) && !playerSystem.tryEnterVehicle(context)) {
-        const nearbyTraffic = context.agentSystem?.findNearbyStoppedTrafficVehicle?.(
-          context.characterController.position, 6
-        );
-        if (nearbyTraffic) {
-          void tryCarjack(nearbyTraffic);
-        } else {
-          setStatus('Move closer to a vehicle to drive');
-        }
-      }
+      handleOnFootVehicleInteraction();
       return;
     }
 
@@ -375,6 +366,27 @@ export function wireMainUi(options) {
 
   let clickFirePointer = null;
 
+  const getStoppedTrafficInteractionCandidate = () => {
+    if (!context.characterController) {
+      return null;
+    }
+
+    const agent = context.agentSystem?.findNearbyStoppedTrafficVehicle?.(
+      context.characterController.position,
+      6
+    );
+    if (!agent?.lastPosition) {
+      return null;
+    }
+
+    return {
+      type: 'traffic',
+      distance: context.characterController.position.distanceTo(agent.lastPosition),
+      priority: 1,
+      agent
+    };
+  };
+
   const tryCarjack = async (trafficAgent) => {
     // Grab position/yaw before removing the agent
     const vehiclePos = trafficAgent.lastPosition.clone();
@@ -417,6 +429,58 @@ export function wireMainUi(options) {
     setStatus('Stole a car');
   };
 
+  const handleOnFootVehicleInteraction = () => {
+    if (!context.characterController) {
+      playerSystem.enterVehicle(context);
+      return true;
+    }
+
+    const candidates = [];
+    const activeVehicleCandidate = playerSystem.getEnterVehicleCandidate?.(context);
+    if (activeVehicleCandidate?.canEnter) {
+      candidates.push({
+        type: 'activeVehicle',
+        distance: activeVehicleCandidate.distance,
+        priority: 0,
+        execute: () => playerSystem.tryEnterVehicle(context)
+      });
+    }
+
+    const nearbyVehicleCandidate = vehicleManager.findNearbyVehicleInteractionCandidate?.(context);
+    if (nearbyVehicleCandidate) {
+      candidates.push({
+        ...nearbyVehicleCandidate,
+        priority: nearbyVehicleCandidate.type === 'bike' ? 0 : 2
+      });
+    }
+
+    const trafficCandidate = getStoppedTrafficInteractionCandidate();
+    if (trafficCandidate) {
+      candidates.push(trafficCandidate);
+    }
+
+    if (!candidates.length) {
+      setStatus('Move closer to a vehicle to drive');
+      return false;
+    }
+
+    candidates.sort((left, right) => {
+      const distanceDelta = left.distance - right.distance;
+      if (Math.abs(distanceDelta) > 0.35) {
+        return distanceDelta;
+      }
+      return (left.priority || 0) - (right.priority || 0);
+    });
+
+    const candidate = candidates[0];
+    if (candidate.type === 'traffic') {
+      void tryCarjack(candidate.agent);
+      return true;
+    }
+
+    return candidate.execute?.() !== false;
+  };
+
   window.addEventListener('keydown', (event) => {
     unlockEngineAudio(context.gameRuntime);
 
@@ -447,20 +511,8 @@ export function wireMainUi(options) {
         } else {
           playerSystem.exitVehicle(context);
         }
-      } else if (context.characterController) {
-        if (!vehicleManager.tryMountNearbyVehicle(context) && !playerSystem.tryEnterVehicle(context)) {
-          // Try carjacking a stopped NPC traffic vehicle
-          const nearbyTraffic = context.agentSystem?.findNearbyStoppedTrafficVehicle?.(
-            context.characterController.position, 6
-          );
-          if (nearbyTraffic) {
-            void tryCarjack(nearbyTraffic);
-          } else {
-            setStatus('Move closer to a vehicle to drive');
-          }
-        }
       } else {
-        playerSystem.enterVehicle(context);
+        handleOnFootVehicleInteraction();
       }
       event.preventDefault();
       return;

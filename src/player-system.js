@@ -671,15 +671,20 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
   }
 
   function canEnterVehicle(context) {
+    const candidate = getEnterVehicleCandidate(context);
+    return Boolean(candidate?.canEnter);
+  }
+
+  function getEnterVehicleCandidate(context) {
     if (!context?.characterController || state.characterVehicleState !== 'on_foot') {
       state.canEnterVehicle = false;
-      return false;
+      return null;
     }
 
     const interactionPose = computeDriverDoorInteractionPose(context);
     if (!interactionPose) {
       state.canEnterVehicle = false;
-      return false;
+      return null;
     }
 
     const vehicleMetrics = getVehicleLocalMetrics(context);
@@ -687,10 +692,20 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     const extraDistance = size
       ? Math.min(0.6, Math.max(size.x, size.z) * 0.12)
       : 0;
-    state.canEnterVehicle =
-      getCharacterDistanceToVehicle(context.characterController, interactionPose.targetPosition)
-        <= (config.character.interactionDistance + extraDistance);
-    return state.canEnterVehicle;
+    const maxDistance = config.character.interactionDistance + extraDistance;
+    const distance = getCharacterDistanceToVehicle(
+      context.characterController,
+      interactionPose.targetPosition
+    );
+    const canEnter = distance <= maxDistance;
+    state.canEnterVehicle = canEnter;
+    return {
+      canEnter,
+      distance,
+      maxDistance,
+      source: interactionPose.source,
+      targetPosition: interactionPose.targetPosition.clone()
+    };
   }
 
   function syncOverlay(context) {
@@ -1513,6 +1528,7 @@ export function createPlayerSystem({ state, ui, config, setStatus, getStageLabel
     exitVehicle,
     focusCurrentTarget,
     getActiveStagePosition,
+    getEnterVehicleCandidate,
     isCharacterActive,
     loadCharacterAssets,
     placeCharacterAtVehicle,

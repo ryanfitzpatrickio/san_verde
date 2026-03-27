@@ -102,6 +102,7 @@ export function createSceneAssemblyRuntime({
   scene,
   stage,
   lightingRig,
+  vehicleHeadlightRig,
   contactShadow,
   agentMount,
   navigationDebugMount,
@@ -115,6 +116,7 @@ export function createSceneAssemblyRuntime({
   const characterMount = new THREE.Group();
 
   setPerfCategory(lightingRig, 'lights');
+  setPerfCategory(vehicleHeadlightRig, 'vehicle lights');
   setPerfCategory(stageMount, 'stage');
   setPerfCategory(auxVehicleMount, 'parked');
   setPerfCategory(contactShadow, 'contact shadow');
@@ -135,6 +137,7 @@ export function createSceneAssemblyRuntime({
     agentMount,
     navigationDebugMount,
     vehicleRoot,
+    vehicleHeadlightRig,
     characterMount
   );
 
@@ -144,7 +147,8 @@ export function createSceneAssemblyRuntime({
     vehicleRoot,
     carMount,
     wheelMount,
-    characterMount
+    characterMount,
+    vehicleHeadlightRig
   };
 }
 
@@ -159,6 +163,7 @@ export function createAppContextRuntime({
   camera,
   controls,
   lightingRig,
+  vehicleHeadlightRig,
   pmrem,
   skyRig,
   gltfLoader,
@@ -188,6 +193,7 @@ export function createAppContextRuntime({
     camera,
     controls,
     lightingRig,
+    vehicleHeadlightRig,
     pmrem,
     skyRig,
     gltfLoader,
